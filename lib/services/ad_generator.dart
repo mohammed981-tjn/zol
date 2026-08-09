@@ -1,6 +1,7 @@
 import '../models/ad_brief.dart';
 import '../models/business_category.dart';
 import '../models/generated_ad.dart';
+import '../models/seasonal_theme.dart';
 
 /// مولّد المحتوى الإعلاني — يعمل بالكامل على الجهاز (الطبقة 1).
 ///
@@ -64,6 +65,7 @@ class AdGenerator {
       ..._hashtagsByPlatform[brief.platform] ??
           _hashtagsByPlatform.values.first,
       ...category.hashtags,
+      if (brief.season != null) brief.season!.hashtag,
     ];
     final productTag = '#${product.replaceAll(' ', '_')}';
     final cta = category.cta;
@@ -71,6 +73,9 @@ class AdGenerator {
 
     // الوصف الاختياري يُدمج جملةً كاملة بدل إقحامه كما هو.
     final aboutClause = about.isEmpty ? '' : ' $about.';
+    // الموسم يضيف طابعًا احتفاليًا فوق مفردات النشاط، لا يستبدلها.
+    final seasonClause =
+        brief.season == null ? '' : ' ${brief.season!.campaignPhrase}.';
 
     return [
       GeneratedAd(
@@ -80,7 +85,7 @@ class AdGenerator {
         body:
             'سيناريو ${brief.format} من 15 ثانية: لقطة افتتاحية لـ$product، '
             'ثم تعليق صوتي بأسلوب ${brief.tone} يذكر أن $benefit،'
-            '$aboutClause وختام بدعوة واضحة «$cta».',
+            '$aboutClause$seasonClause وختام بدعوة واضحة «$cta».',
         hashtags: _dedupe([...tags, productTag]),
         score: _score(brief, AdKind.video, seed),
         cta: cta,
@@ -92,7 +97,7 @@ class AdGenerator {
         headline: headline,
         body:
             'تصميم ${brief.format} يُبرز $product بإضاءة تُظهر تفاصيله، '
-            'ونصّ جانبي يؤكد أن $benefitAlt.$aboutClause',
+            'ونصّ جانبي يؤكد أن $benefitAlt.$aboutClause$seasonClause',
         hashtags: _dedupe(tags),
         score: _score(brief, AdKind.image, seed),
         cta: cta,
@@ -103,7 +108,7 @@ class AdGenerator {
         kind: AdKind.copy,
         headline: headline,
         body:
-            '$product الآن بين يديك — $benefit.$aboutClause '
+            '$product الآن بين يديك — $benefit.$aboutClause$seasonClause '
             '$cta عبر ${brief.platform}.',
         hashtags: _dedupe([...tags, '#عرض_خاص']),
         score: _score(brief, AdKind.copy, seed),

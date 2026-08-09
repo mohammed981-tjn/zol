@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'business_category.dart';
+import 'seasonal_theme.dart';
 
 class AdBrief {
   AdBrief({
@@ -13,6 +14,7 @@ class AdBrief {
     this.category = BusinessCategory.retail,
     this.imageBytes,
     this.paletteColor,
+    this.season,
   });
 
   final String productName;
@@ -31,6 +33,10 @@ class AdBrief {
   /// لوحته حين لا يكون للتاجر لون علامة محدّد.
   final int? paletteColor;
 
+  /// موسم محلي اختياري (اليوم الوطني، رمضان، ...) يضيف طابعًا احتفاليًا
+  /// للنص واللوحة والشارة دون تغيير مفردات النشاط نفسها.
+  final SeasonalTheme? season;
+
   bool get hasProductImage => imageBytes != null;
 
   Map<String, dynamic> toJson() => {
@@ -41,6 +47,7 @@ class AdBrief {
     'format': format,
     'category': category.name,
     'paletteColor': paletteColor,
+    if (season != null) 'season': season!.name,
     // تُحفظ الصورة (مضغوطة مسبقًا عبر ImageStore) حتى يمكن فتح الإعلان
     // من المكتبة وإعادة تصديره أو طباعته بعد إغلاق التطبيق.
     if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
@@ -55,6 +62,7 @@ class AdBrief {
     category: category,
     imageBytes: imageBytes ?? this.imageBytes,
     paletteColor: paletteColor,
+    season: season,
   );
 
   factory AdBrief.fromJson(Map<String, dynamic> json) => AdBrief(
@@ -68,6 +76,9 @@ class AdBrief {
       orElse: () => BusinessCategory.retail,
     ),
     paletteColor: json['paletteColor'] as int?,
+    season: SeasonalTheme.values
+        .cast<SeasonalTheme?>()
+        .firstWhere((s) => s?.name == json['season'], orElse: () => null),
     imageBytes: switch (json['imageBytes']) {
       final String encoded when encoded.isNotEmpty => _tryDecode(encoded),
       _ => null,

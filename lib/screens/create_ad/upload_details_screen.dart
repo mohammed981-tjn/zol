@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/ad_brief.dart';
 import '../../models/ad_template.dart';
+import '../../models/seasonal_theme.dart';
 import '../../services/background_remover.dart';
 import '../../services/palette_extractor.dart';
 import '../../state/app_state.dart';
@@ -52,6 +53,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   bool _useCutout = false;
   bool _isolating = false;
   bool _picking = false;
+  SeasonalTheme? _season;
 
   bool get _canContinue =>
       _imageBytes != null && _nameController.text.trim().isNotEmpty;
@@ -174,6 +176,8 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
               selected: _selectedFormat,
               onSelected: (v) => setState(() => _selectedFormat = v),
             ),
+            const SizedBox(height: 24),
+            _buildSeasonPicker(),
             const SizedBox(height: 36),
             ElevatedButton(
               onPressed: _canContinue
@@ -194,6 +198,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                                   ? _cutoutBytes
                                   : _imageBytes,
                               paletteColor: _paletteColor,
+                              season: _season,
                             ),
                           ),
                         ),
@@ -226,6 +231,53 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
+    );
+  }
+
+  /// موسم محلي اختياري (اليوم الوطني، رمضان، ...) — يضيف شارة وهاشتاقًا
+  /// وجملة حملة احتفالية للتصميم دون تغيير مفردات النشاط. كله محلي بلا
+  /// خادم، ومناسب لمواسم ذروة الطلب التي لا تغطيها قوالب Canva العربية
+  /// (مجرد ترجمة لتصاميم غربية).
+  Widget _buildSeasonPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'موسم محلي (اختياري)',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: context.scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _seasonChip(null, 'بلا'),
+            for (final season in SeasonalTheme.values)
+              _seasonChip(season, '${season.emoji} ${season.label}'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _seasonChip(SeasonalTheme? season, String label) {
+    final isSelected = _season == season;
+    return ChoiceChip(
+      key: ValueKey('season-${season?.name ?? 'none'}'),
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _season = season),
+      selectedColor: season?.color ?? context.scheme.primary,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : context.scheme.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: context.cardBg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      side: BorderSide.none,
     );
   }
 

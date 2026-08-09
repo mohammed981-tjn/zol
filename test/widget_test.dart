@@ -27,6 +27,7 @@ import 'package:zol/state/app_state.dart';
 import 'package:zol/models/trashed_ad.dart';
 import 'package:zol/models/brand_font.dart';
 import 'package:zol/models/generated_ad.dart';
+import 'package:zol/models/seasonal_theme.dart';
 import 'package:zol/theme/app_theme.dart';
 import 'package:zol/widgets/print_cost_calculator.dart';
 
@@ -120,12 +121,15 @@ void main() {
     );
     expect(tester.widget<ElevatedButton>(button).enabled, isFalse);
 
-    await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
+    // نصعد أولًا لأعلى القائمة قبل الكتابة — بعد إضافة قسم الموسم صار
+    // المحتوى أطول، فالبقاء في أسفل القائمة (بعد التمرير للزر) يُخرج
+    // حقل الاسم من نطاق التخزين المؤقت لـ ListView فيُفكَّك من الشجرة.
     await tester.scrollUntilVisible(
       find.text('اضغط لرفع صورة المنتج'),
       -200,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
     await tester.tap(find.text('اضغط لرفع صورة المنتج'));
     await tester.pump();
 
@@ -485,6 +489,26 @@ void main() {
     expect(formal.primary, const Color(0xFF1F2A5E));
   });
 
+  test('Season color slots between brand and product in palette priority',
+      () {
+    // العلامة تتقدّم حتى على الموسم — الهوية الدائمة تسبق الاختيار الموسمي.
+    final branded = AdPalette.resolve(
+      brandColor: 0xFF00695C,
+      seasonColor: SeasonalTheme.eid.colorValue,
+      productColor: 0xFFB91D3A,
+      tone: 'حماسي',
+    );
+    expect(branded.primary, const Color(0xFF00695C));
+
+    // بلا لون علامة، الموسم يتقدّم على لون المنتج المستخرَج تلقائيًا.
+    final seasonal = AdPalette.resolve(
+      seasonColor: SeasonalTheme.eid.colorValue,
+      productColor: 0xFFB91D3A,
+      tone: 'حماسي',
+    );
+    expect(seasonal.primary, SeasonalTheme.eid.color);
+  });
+
   testWidgets('Template picker switches the exported design', (tester) async {
     await _pumpApp(tester);
     await _reachMagicResults(tester);
@@ -746,6 +770,79 @@ void main() {
       ),
     );
     expect(formalCafe.first.headline, isNot(cafe.first.headline));
+  });
+
+  test('Seasonal theme adds a campaign phrase and hashtag without replacing '
+      'the business vocabulary', () {
+    final withSeason = AdGenerator.preview(
+      AdBrief(
+        productName: 'قهوة مختصة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'إنستغرام',
+        format: 'منشور مربع',
+        category: BusinessCategory.cafe,
+        season: SeasonalTheme.nationalDay,
+      ),
+    );
+    final withoutSeason = AdGenerator.preview(
+      AdBrief(
+        productName: 'قهوة مختصة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'إنستغرام',
+        format: 'منشور مربع',
+        category: BusinessCategory.cafe,
+      ),
+    );
+
+    final seasonalText =
+        withSeason.map((a) => '${a.headline} ${a.body}').join(' ');
+    expect(seasonalText, contains(SeasonalTheme.nationalDay.campaignPhrase));
+    expect(withSeason.first.hashtags, contains('#اليوم_الوطني'));
+    // مفردات النشاط تبقى كما هي، الموسم يضيف فوقها لا يستبدلها.
+    expect(seasonalText, contains('تحميص'));
+    expect(withSeason.first.cta, withoutSeason.first.cta);
+  });
+
+  testWidgets(
+      'Season picker threads through to the design badge and gallery flow',
+      (tester) async {
+    await _pumpApp(tester);
+    await tester.tap(find.text('أنشئ إعلانك الآن'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('اضغط لرفع صورة المنتج'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
+    await tester.tap(find.text('اضغط لرفع صورة المنتج'));
+    await tester.pump();
+
+    final ramadanChip = find.byKey(const ValueKey('season-ramadan'));
+    await tester.scrollUntilVisible(
+      ramadanChip,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(ramadanChip);
+    await tester.pump();
+
+    await tester.scrollUntilVisible(
+      find.text('اعرض شاشة السحر'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('اعرض شاشة السحر'));
+    await tester.pump();
+    final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
+    await tester.pump(total + const Duration(milliseconds: 100));
+    await tester.pump();
+
+    // شارة الموسم تظهر على التصميم المولَّد.
+    expect(find.textContaining(SeasonalTheme.ramadan.label), findsWidgets);
   });
 
   testWidgets('Onboarding asks for the business and stores it', (tester) async {

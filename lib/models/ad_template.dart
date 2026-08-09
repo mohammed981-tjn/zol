@@ -115,13 +115,16 @@ class AdPalette {
     'عاطفي': (Color(0xFF7B4397), Color(0xFFC2185B)),
   };
 
-  /// [brandColor] من Brand Kit، و[productColor] المستخرج من صورة المنتج.
+  /// [brandColor] من Brand Kit (هوية دائمة تسبق كل شيء)، فـ[seasonColor]
+  /// (اختيار احتفالي صريح لهذا الإعلان)، فـ[productColor] المستخرج
+  /// تلقائيًا من صورة المنتج، وأخيرًا تدرّج النبرة كافتراضي.
   factory AdPalette.resolve({
     int? brandColor,
+    int? seasonColor,
     int? productColor,
     required String tone,
   }) {
-    final source = brandColor ?? productColor;
+    final source = brandColor ?? seasonColor ?? productColor;
     if (source != null) {
       final base = Color(source);
       return AdPalette(

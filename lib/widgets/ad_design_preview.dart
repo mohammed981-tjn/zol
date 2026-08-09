@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/ad_template.dart';
 import '../models/brand_font.dart';
 import '../models/generated_ad.dart';
+import '../models/seasonal_theme.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
@@ -38,6 +39,7 @@ class AdDesignPreview extends StatelessWidget {
     final state = AppStateScope.of(context);
     final palette = AdPalette.resolve(
       brandColor: state.brandColorValue,
+      seasonColor: ad.brief.season?.colorValue,
       productColor: ad.brief.paletteColor,
       tone: ad.brief.tone,
     );
@@ -75,6 +77,12 @@ class AdDesignPreview extends StatelessWidget {
                     top: 12 * spec.s,
                     left: 12 * spec.s,
                     child: _BrandLogo(spec: spec),
+                  ),
+                if (ad.brief.season != null)
+                  Positioned(
+                    top: 12 * spec.s,
+                    right: 12 * spec.s,
+                    child: _SeasonBadge(spec: spec, season: ad.brief.season!),
                   ),
                 if (showWatermark)
                   Positioned(
@@ -167,6 +175,36 @@ class _BrandLogo extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.memory(spec.logo!, fit: BoxFit.contain),
+    );
+  }
+}
+
+/// شارة الموسم المحلي (اليوم الوطني، رمضان، ...) — طابع احتفالي فوري
+/// بلا حاجة لقالب رسومي منفصل لكل موسم.
+class _SeasonBadge extends StatelessWidget {
+  const _SeasonBadge({required this.spec, required this.season});
+  final _Spec spec;
+  final SeasonalTheme season;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: 10 * spec.s,
+        vertical: 5 * spec.s,
+      ),
+      decoration: BoxDecoration(
+        color: season.color,
+        borderRadius: BorderRadius.circular(20 * spec.s),
+      ),
+      child: Text(
+        '${season.emoji} ${season.label}',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 10.5 * spec.s,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
