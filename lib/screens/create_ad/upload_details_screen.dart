@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/ad_brief.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/choice_chip_group.dart';
@@ -7,6 +9,9 @@ import 'magic_screen.dart';
 
 class UploadDetailsScreen extends StatefulWidget {
   const UploadDetailsScreen({super.key});
+
+  /// يُستخدم في الاختبارات لتجاوز منتقي الصور الأصلي للجهاز.
+  static Future<Uint8List?> Function()? debugPickImageOverride;
 
   @override
   State<UploadDetailsScreen> createState() => _UploadDetailsScreenState();
@@ -22,16 +27,47 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   String _selectedTone = _tones.first;
   String _selectedPlatform = _platforms.first;
   String _selectedFormat = _formats.first;
-  bool _hasProductImage = false;
+  Uint8List? _imageBytes;
+  bool _picking = false;
 
   bool get _canContinue =>
-      _hasProductImage && _nameController.text.trim().isNotEmpty;
+      _imageBytes != null && _nameController.text.trim().isNotEmpty;
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<Uint8List?> _pickFromGallery() async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 90,
+    );
+    return file?.readAsBytes();
+  }
+
+  Future<void> _pickImage() async {
+    if (_picking) return;
+    setState(() => _picking = true);
+    try {
+      final bytes =
+          await (UploadDetailsScreen.debugPickImageOverride ??
+              _pickFromGallery)();
+      if (!mounted) return;
+      if (bytes != null) {
+        setState(() => _imageBytes = bytes);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذّر اختيار الصورة — حاول مجددًا')),
+      );
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
   }
 
   @override
@@ -97,7 +133,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                               tone: _selectedTone,
                               platform: _selectedPlatform,
                               format: _selectedFormat,
-                              hasProductImage: _hasProductImage,
+                              imageBytes: _imageBytes,
                             ),
                           ),
                         ),
@@ -134,38 +170,67 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   }
 
   Widget _buildImagePicker() {
+    final image = _imageBytes;
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () => setState(() => _hasProductImage = !_hasProductImage),
+      onTap: _pickImage,
       child: Container(
-        height: 150,
+        height: 170,
         decoration: BoxDecoration(
           color: context.cardBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _hasProductImage ? AppColors.coral : Colors.transparent,
+            color: image != null ? AppColors.coral : Colors.transparent,
             width: 2,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _hasProductImage
-                  ? Icons.check_circle
-                  : Icons.add_photo_alternate_outlined,
-              size: 40,
-              color: _hasProductImage ? AppColors.coral : context.textMuted,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _hasProductImage
-                  ? 'تم اختيار صورة المنتج'
-                  : 'اضغط لرفع صورة المنتج',
-              style: TextStyle(color: context.textMuted),
-            ),
-          ],
-        ),
+        clipBehavior: Clip.antiAlias,
+        child: image != null
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.memory(image, fit: BoxFit.cover),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: const Text(
+                        'تم اختيار صورة المنتج — اضغط للتغيير',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_picking)
+                    const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.coral,
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.add_photo_alternate_outlined,
+                      size: 40,
+                      color: context.textMuted,
+                    ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'اضغط لرفع صورة المنتج',
+                    style: TextStyle(color: context.textMuted),
+                  ),
+                ],
+              ),
       ),
     );
   }

@@ -1,10 +1,17 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/generated_ad.dart';
 import '../../models/print_catalog.dart';
 import '../../models/print_order.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/ad_design_preview.dart';
 import '../../widgets/icon_circle.dart';
+import '../order_map_screen.dart';
+import '../pick_location_screen.dart';
 
 class ExecuteScreen extends StatefulWidget {
   const ExecuteScreen({super.key, required this.ad, required this.isDigital});
@@ -17,11 +24,15 @@ class ExecuteScreen extends StatefulWidget {
 }
 
 class _ExecuteScreenState extends State<ExecuteScreen> {
+  final GlobalKey _designKey = GlobalKey();
+
   PrintProduct _product = printCatalog.first;
   int _sizeIndex = 0;
   int _quantity = 1;
   final _addressController = TextEditingController();
+  LatLng? _deliveryPoint;
   PrintOrder? _confirmedOrder;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -48,56 +59,93 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
     );
   }
 
+  // ── المسار الرقمي: معاينة التصميم النهائي وتصديره كصورة PNG ──
+
   Widget _buildDigitalPath() {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const IconCircle(
-            icon: Icons.cloud_done_outlined,
-            background: AppColors.navy,
-            diameter: 90,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'المواد الرقمية جاهزة',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: context.scheme.onSurface,
+      children: [
+        Center(
+          child: SizedBox(
+            height: 420,
+            child: RepaintBoundary(
+              key: _designKey,
+              child: AdDesignPreview(ad: widget.ad),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '${widget.ad.kind.label} بنبرة ${widget.ad.brief.tone} — '
-            'مهيأة لمنصة ${widget.ad.brief.platform}',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: context.textMuted),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '${widget.ad.kind.label} بنبرة ${widget.ad.brief.tone} — '
+          'مهيأة لمنصة ${widget.ad.brief.platform}',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: context.textMuted),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          onPressed: _exporting ? null : _exportDesign,
+          icon: _exporting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.download_outlined),
+          label: Text(_exporting ? 'جارٍ التصدير…' : 'تحميل/مشاركة التصميم (PNG)'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () {
+            AppStateScope.of(context).saveAd(widget.ad);
+            _showConfirmation('تم الحفظ في «إعلاناتي»');
+          },
+          icon: const Icon(Icons.bookmark_add_outlined),
+          label: const Text('حفظ في إعلاناتي'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => _showConfirmation(
+            'النشر المباشر سيتوفر مع ربط واجهات المنصات',
           ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              AppStateScope.of(context).saveAd(widget.ad);
-              _showConfirmation('تم الحفظ في «إعلاناتي» وتحميل المواد');
-            },
-            icon: const Icon(Icons.download_outlined),
-            label: const Text('حفظ وتحميل الآن'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => _showConfirmation(
-              'تم النشر على ${widget.ad.brief.platform}',
-            ),
-            icon: const Icon(Icons.ios_share),
-            label: const Text('نشر مباشر'),
-          ),
-        ],
-      ),
+          icon: const Icon(Icons.ios_share),
+          label: Text('نشر مباشر على ${widget.ad.brief.platform}'),
+        ),
+      ],
     );
   }
+
+  /// يلتقط التصميم المُركّب من محرك القوالب كصورة PNG عالية الدقة
+  /// ويعرض ورقة المشاركة/الحفظ الخاصة بالنظام.
+  Future<void> _exportDesign() async {
+    setState(() => _exporting = true);
+    try {
+      final boundary = _designKey.currentContext!.findRenderObject()!
+          as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            data!.buffer.asUint8List(),
+            mimeType: 'image/png',
+            name: 'adcraft_${widget.ad.brief.productName}.png',
+          ),
+        ],
+        text: widget.ad.shareText,
+      );
+    } catch (_) {
+      if (mounted) {
+        _showConfirmation('تعذّر تصدير التصميم على هذا الجهاز');
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  // ── مسار الطباعة: كتالوج + موقع توصيل على الخريطة + تسعير فوري ──
 
   Widget _buildPrintPath() {
     final order = _confirmedOrder;
@@ -138,8 +186,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                 fontWeight: FontWeight.w600,
               ),
               backgroundColor: context.cardBg,
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               side: BorderSide.none,
             );
           }).toList(),
@@ -164,8 +213,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                     : context.scheme.onSurface,
               ),
               backgroundColor: context.cardBg,
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               side: BorderSide.none,
             );
           }),
@@ -188,8 +238,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                     : context.scheme.onSurface,
               ),
               backgroundColor: context.cardBg,
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               side: BorderSide.none,
             );
           }).toList(),
@@ -210,16 +261,44 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _pickDeliveryLocation,
+          icon: Icon(
+            _deliveryPoint == null
+                ? Icons.map_outlined
+                : Icons.where_to_vote_outlined,
+            color: _deliveryPoint == null ? null : AppColors.coral,
+          ),
+          label: Text(
+            _deliveryPoint == null
+                ? 'تحديد الموقع على الخريطة (اختياري)'
+                : 'تم تحديد الموقع على الخريطة ✓ — اضغط للتعديل',
+          ),
+        ),
         const SizedBox(height: 24),
         _buildPriceSummary(),
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed:
               _addressController.text.trim().isEmpty ? null : _confirmOrder,
-          child: Text('تأكيد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}'),
+          child: Text(
+            'تأكيد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}',
+          ),
         ),
       ],
     );
+  }
+
+  Future<void> _pickDeliveryLocation() async {
+    final result = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => PickLocationScreen(initialLocation: _deliveryPoint),
+      ),
+    );
+    if (result != null) {
+      setState(() => _deliveryPoint = result);
+    }
   }
 
   Widget _buildPriceSummary() {
@@ -231,7 +310,10 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
       ),
       child: Column(
         children: [
-          _priceRow('المطبوعات ($_quantity × ${formatPrice(_product.sizes[_sizeIndex].unitPrice)})', _subtotal),
+          _priceRow(
+            'المطبوعات ($_quantity × ${formatPrice(_product.sizes[_sizeIndex].unitPrice)})',
+            _subtotal,
+          ),
           const SizedBox(height: 8),
           _priceRow('التوصيل', deliveryFee),
           const SizedBox(height: 8),
@@ -251,7 +333,10 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
     );
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [Text(label, style: style), Text(formatPrice(value), style: style)],
+      children: [
+        Text(label, style: style),
+        Text(formatPrice(value), style: style),
+      ],
     );
   }
 
@@ -278,55 +363,69 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
       address: _addressController.text.trim(),
       status: OrderStatus.received,
       createdAt: DateTime.now(),
+      deliveryLat: _deliveryPoint?.latitude,
+      deliveryLng: _deliveryPoint?.longitude,
     );
     state.addOrder(order);
     setState(() => _confirmedOrder = order);
   }
 
   Widget _buildOrderConfirmed(PrintOrder order) {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const IconCircle(
+      children: [
+        const SizedBox(height: 40),
+        const Center(
+          child: IconCircle(
             icon: Icons.local_shipping_outlined,
             background: AppColors.coral,
             diameter: 90,
           ),
-          const SizedBox(height: 24),
-          Text(
-            'تم استلام طلب الطباعة',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: context.scheme.onSurface,
-            ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'تم استلام طلب الطباعة',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: context.scheme.onSurface,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'رقم الطلب ${order.id}\n'
-            '${order.productLabel} (${order.sizeLabel}) × ${order.quantity} — '
-            '${formatPrice(order.total)}\n'
-            'تابع حالته من تبويب «طلباتي»',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: context.textMuted),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'رقم الطلب ${order.id}\n'
+          '${order.productLabel} (${order.sizeLabel}) × ${order.quantity} — '
+          '${formatPrice(order.total)}\n'
+          'تابع حالته من تبويب «طلباتي»',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: context.textMuted),
+        ),
+        const SizedBox(height: 32),
+        if (order.hasDeliveryPoint) ...[
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => OrderMapScreen(order: order),
+                ),
+              );
+            },
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('متابعة الطلب على الخريطة'),
           ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.of(context).popUntil((route) => route.isFirst),
-            child: const Text('العودة للرئيسية'),
-          ),
+          const SizedBox(height: 12),
         ],
-      ),
+        ElevatedButton(
+          onPressed: () =>
+              Navigator.of(context).popUntil((route) => route.isFirst),
+          child: const Text('العودة للرئيسية'),
+        ),
+      ],
     );
   }
 
   void _showConfirmation(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 }

@@ -5,6 +5,7 @@ import '../../models/generated_ad.dart';
 import '../../services/ad_generator.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/ad_design_preview.dart';
 import '../../widgets/icon_circle.dart';
 import '../../widgets/section_header.dart';
 import 'execute_screen.dart';
@@ -281,6 +282,17 @@ class _AdPreviewCard extends StatelessWidget {
                 _ScoreBadge(score: ad.score),
               ],
             ),
+            if (ad.kind == AdKind.image) ...[
+              const SizedBox(height: 14),
+              // معاينة التصميم الحقيقي من محرك القوالب (صورة المنتج مركّبة
+              // على القالب) — وليست أيقونة رمزية.
+              Center(
+                child: SizedBox(
+                  height: 250,
+                  child: AdDesignPreview(ad: ad),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Text(
               ad.headline,

@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
+import 'order_map_screen.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
@@ -83,17 +84,30 @@ class _OrderCard extends StatelessWidget {
                 style: TextStyle(color: context.textMuted, fontSize: 12.5),
               ),
             ),
-            if (order.status != OrderStatus.delivered) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: TextButton.icon(
-                  onPressed: () => state.advanceOrder(order),
-                  icon: const Icon(Icons.fast_forward_outlined, size: 18),
-                  label: const Text('محاكاة التقدم (تجريبي)'),
-                ),
-              ),
-            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (order.hasDeliveryPoint)
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => OrderMapScreen(order: order),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: const Text('عرض على الخريطة'),
+                  ),
+                const Spacer(),
+                if (order.status != OrderStatus.delivered)
+                  TextButton.icon(
+                    onPressed: () => state.advanceOrder(order),
+                    icon: const Icon(Icons.fast_forward_outlined, size: 18),
+                    label: const Text('محاكاة التقدم (تجريبي)'),
+                  ),
+              ],
+            ),
           ],
         ),
       ),

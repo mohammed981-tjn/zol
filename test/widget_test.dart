@@ -1,9 +1,20 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:adcraft_marketplace/main.dart';
+import 'package:adcraft_marketplace/models/ad_brief.dart';
+import 'package:adcraft_marketplace/models/print_order.dart';
+import 'package:adcraft_marketplace/screens/create_ad/upload_details_screen.dart';
 import 'package:adcraft_marketplace/services/ad_generator.dart';
 import 'package:adcraft_marketplace/state/app_state.dart';
+
+/// صورة PNG صالحة 1×1 بكسل تُستخدم بدل منتقي الصور الأصلي في الاختبارات.
+final _fakeImage = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'
+  'AAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+);
 
 Future<void> _pumpApp(WidgetTester tester, [AppState? state]) async {
   await tester.pumpWidget(AdCraftApp(state: state ?? AppState()));
@@ -33,6 +44,10 @@ Future<void> _reachMagicResults(WidgetTester tester) async {
 }
 
 void main() {
+  setUpAll(() {
+    UploadDetailsScreen.debugPickImageOverride = () async => _fakeImage;
+  });
+
   testWidgets('Home screen shows the main call-to-action and stats',
       (tester) async {
     await _pumpApp(tester);
@@ -132,6 +147,45 @@ void main() {
     await tester.tap(find.text('طلباتي'));
     await tester.pumpAndSettle();
     expect(find.textContaining('AD-1001'), findsOneWidget);
+  });
+
+  test('State persists across app restarts', () async {
+    SharedPreferences.setMockInitialValues({});
+
+    final first = await AppState.load();
+    final brief = AdBrief(
+      productName: 'قهوة مختصة',
+      description: '',
+      tone: 'حماسي',
+      platform: 'إنستغرام',
+      format: 'منشور مربع',
+    );
+    first.saveAd(AdGenerator.preview(brief).first);
+    first.addOrder(
+      PrintOrder(
+        id: first.nextOrderId(),
+        productLabel: 'بنر',
+        sizeLabel: '1×2 متر',
+        quantity: 1,
+        subtotal: 90,
+        deliveryFee: 25,
+        vat: 17.25,
+        address: 'الرياض',
+        status: OrderStatus.received,
+        createdAt: DateTime.now(),
+        deliveryLat: 24.7,
+        deliveryLng: 46.6,
+      ),
+    );
+
+    // «إعادة تشغيل»: تحميل حالة جديدة من نفس التخزين.
+    final second = await AppState.load();
+    expect(second.savedAds, hasLength(1));
+    expect(second.savedAds.first.brief.productName, 'قهوة مختصة');
+    expect(second.orders, hasLength(1));
+    expect(second.orders.first.hasDeliveryPoint, isTrue);
+    // تسلسل أرقام الطلبات يستمر بعد إعادة التشغيل.
+    expect(second.nextOrderId(), 'AD-1002');
   });
 
   testWidgets('Settings screen toggles dark mode', (tester) async {

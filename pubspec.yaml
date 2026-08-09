@@ -37,6 +37,22 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # اختيار صورة المنتج الحقيقية من معرض الجهاز (يعمل على الجوال والويب).
+  image_picker: ^1.1.2
+
+  # مشاركة/تحميل التصميم النهائي كصورة PNG.
+  share_plus: ^10.1.2
+
+  # حفظ دائم للإعلانات والطلبات والتفضيلات على الجهاز.
+  shared_preferences: ^2.3.3
+
+  # خرائط تحديد موقع التوصيل وتتبع السائق (OpenStreetMap بلا مفاتيح API).
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # التقاط موقع العميل الحالي عبر GPS.
+  geolocator: ^13.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج الوصول لصورك لاختيار صورة المنتج المراد الإعلان عنه.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>نحتاج موقعك لتحديد عنوان توصيل المطبوعات على الخريطة.</string>
 </dict>
 </plist>

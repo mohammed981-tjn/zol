@@ -4,8 +4,11 @@ import 'screens/shell_screen.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  runApp(AdCraftApp(state: AppState()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // استرجاع الإعلانات والطلبات والتفضيلات المحفوظة على الجهاز.
+  final state = await AppState.load();
+  runApp(AdCraftApp(state: state));
 }
 
 class AdCraftApp extends StatelessWidget {

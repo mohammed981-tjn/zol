@@ -39,4 +39,26 @@ class GeneratedAd {
   final DateTime createdAt;
 
   String get shareText => '$headline\n$body\n${hashtags.join(' ')}';
+
+  /// ملاحظة: صورة المنتج لا تُخزَّن ضمن JSON (ثقيلة) — تُحفظ النصوص فقط.
+  Map<String, dynamic> toJson() => {
+    'brief': brief.toJson(),
+    'kind': kind.index,
+    'headline': headline,
+    'body': body,
+    'hashtags': hashtags,
+    'score': score,
+    'createdAt': createdAt.toIso8601String(),
+  };
+
+  factory GeneratedAd.fromJson(Map<String, dynamic> json) => GeneratedAd(
+    brief: AdBrief.fromJson(json['brief'] as Map<String, dynamic>),
+    kind: AdKind.values[json['kind'] as int? ?? 0],
+    headline: json['headline'] as String? ?? '',
+    body: json['body'] as String? ?? '',
+    hashtags: (json['hashtags'] as List?)?.cast<String>() ?? const [],
+    score: json['score'] as int? ?? 0,
+    createdAt:
+        DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+  );
 }

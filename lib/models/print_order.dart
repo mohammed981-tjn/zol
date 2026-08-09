@@ -30,6 +30,8 @@ class PrintOrder {
     required this.address,
     required this.status,
     required this.createdAt,
+    this.deliveryLat,
+    this.deliveryLng,
   });
 
   final String id;
@@ -42,6 +44,13 @@ class PrintOrder {
   final String address;
   final OrderStatus status;
   final DateTime createdAt;
+
+  /// إحداثيات موقع التوصيل المختار على الخريطة (null إن اكتفى العميل
+  /// بالعنوان النصي).
+  final double? deliveryLat;
+  final double? deliveryLng;
+
+  bool get hasDeliveryPoint => deliveryLat != null && deliveryLng != null;
 
   double get total => subtotal + deliveryFee + vat;
 
@@ -56,5 +65,38 @@ class PrintOrder {
     address: address,
     status: status ?? this.status,
     createdAt: createdAt,
+    deliveryLat: deliveryLat,
+    deliveryLng: deliveryLng,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'productLabel': productLabel,
+    'sizeLabel': sizeLabel,
+    'quantity': quantity,
+    'subtotal': subtotal,
+    'deliveryFee': deliveryFee,
+    'vat': vat,
+    'address': address,
+    'status': status.index,
+    'createdAt': createdAt.toIso8601String(),
+    'deliveryLat': deliveryLat,
+    'deliveryLng': deliveryLng,
+  };
+
+  factory PrintOrder.fromJson(Map<String, dynamic> json) => PrintOrder(
+    id: json['id'] as String? ?? '',
+    productLabel: json['productLabel'] as String? ?? '',
+    sizeLabel: json['sizeLabel'] as String? ?? '',
+    quantity: json['quantity'] as int? ?? 1,
+    subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+    deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0,
+    vat: (json['vat'] as num?)?.toDouble() ?? 0,
+    address: json['address'] as String? ?? '',
+    status: OrderStatus.values[json['status'] as int? ?? 0],
+    createdAt:
+        DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+    deliveryLat: (json['deliveryLat'] as num?)?.toDouble(),
+    deliveryLng: (json['deliveryLng'] as num?)?.toDouble(),
   );
 }

@@ -1,11 +1,13 @@
+import 'dart:typed_data';
+
 class AdBrief {
-  const AdBrief({
+  AdBrief({
     required this.productName,
     required this.description,
     required this.tone,
     required this.platform,
     required this.format,
-    required this.hasProductImage,
+    this.imageBytes,
   });
 
   final String productName;
@@ -13,5 +15,25 @@ class AdBrief {
   final String tone;
   final String platform;
   final String format;
-  final bool hasProductImage;
+
+  /// صورة المنتج الحقيقية المختارة من الجهاز (null إن لم تُختر بعد).
+  final Uint8List? imageBytes;
+
+  bool get hasProductImage => imageBytes != null;
+
+  Map<String, dynamic> toJson() => {
+    'productName': productName,
+    'description': description,
+    'tone': tone,
+    'platform': platform,
+    'format': format,
+  };
+
+  factory AdBrief.fromJson(Map<String, dynamic> json) => AdBrief(
+    productName: json['productName'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    tone: json['tone'] as String? ?? '',
+    platform: json['platform'] as String? ?? '',
+    format: json['format'] as String? ?? '',
+  );
 }
