@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'my_ads_screen.dart';
+import 'templates_screen.dart';
 import 'orders_screen.dart';
 import 'settings_screen.dart';
 
 /// الهيكل الرئيسي بتنقل سفلي على نمط التطبيقات العالمية:
-/// الرئيسية، إعلاناتي (المكتبة)، طلباتي (التتبع)، الإعدادات.
+/// الرئيسية، القوالب (المعرض)، إعلاناتي (المكتبة)، طلباتي (التتبع)،
+/// الإعدادات.
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
 
@@ -23,6 +25,7 @@ class _ShellScreenState extends State<ShellScreen> {
         index: _index,
         children: const [
           HomeScreen(),
+          TemplatesScreen(),
           MyAdsScreen(),
           OrdersScreen(),
           SettingsScreen(),
@@ -36,6 +39,11 @@ class _ShellScreenState extends State<ShellScreen> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'الرئيسية',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_customize_outlined),
+            selectedIcon: Icon(Icons.dashboard_customize),
+            label: 'القوالب',
           ),
           NavigationDestination(
             icon: Icon(Icons.collections_outlined),

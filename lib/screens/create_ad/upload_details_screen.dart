@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/ad_brief.dart';
+import '../../models/ad_template.dart';
 import '../../services/background_remover.dart';
 import '../../services/palette_extractor.dart';
 import '../../theme/app_theme.dart';
@@ -10,7 +11,17 @@ import '../../widgets/section_header.dart';
 import 'magic_screen.dart';
 
 class UploadDetailsScreen extends StatefulWidget {
-  const UploadDetailsScreen({super.key});
+  const UploadDetailsScreen({
+    super.key,
+    this.initialFormat,
+    this.initialPlatform,
+    this.initialTemplate,
+  });
+
+  /// قيم مُعبّأة مسبقًا حين يصل التاجر من معرض القوالب.
+  final String? initialFormat;
+  final String? initialPlatform;
+  final AdTemplate? initialTemplate;
 
   /// يُستخدم في الاختبارات لتجاوز منتقي الصور الأصلي للجهاز.
   static Future<Uint8List?> Function()? debugPickImageOverride;
@@ -27,8 +38,13 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _selectedTone = _tones.first;
-  String _selectedPlatform = _platforms.first;
-  String _selectedFormat = _formats.first;
+  late String _selectedPlatform =
+      _platforms.contains(widget.initialPlatform)
+          ? widget.initialPlatform!
+          : _platforms.first;
+  late String _selectedFormat = _formats.contains(widget.initialFormat)
+      ? widget.initialFormat!
+      : _formats.first;
   Uint8List? _imageBytes;
   Uint8List? _cutoutBytes;
   int? _paletteColor;
@@ -164,6 +180,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => MagicScreen(
+                            initialTemplate: widget.initialTemplate,
                             brief: AdBrief(
                               productName: _nameController.text,
                               description: _descriptionController.text,

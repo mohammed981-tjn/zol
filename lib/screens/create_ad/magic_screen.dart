@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/ad_brief.dart';
+import '../../models/ad_template.dart';
 import '../../models/generated_ad.dart';
 import '../../services/ad_generator.dart';
 import '../../state/app_state.dart';
@@ -11,9 +12,12 @@ import '../../widgets/section_header.dart';
 import 'execute_screen.dart';
 
 class MagicScreen extends StatefulWidget {
-  const MagicScreen({super.key, required this.brief});
+  const MagicScreen({super.key, required this.brief, this.initialTemplate});
 
   final AdBrief brief;
+
+  /// القالب القادم من معرض القوالب (إن وُجد).
+  final AdTemplate? initialTemplate;
 
   @override
   State<MagicScreen> createState() => _MagicScreenState();
@@ -225,6 +229,7 @@ class _MagicScreenState extends State<MagicScreen> {
         builder: (_) => ExecuteScreen(
           ad: ads[_selectedCard],
           isDigital: isDigital,
+          initialTemplate: widget.initialTemplate,
         ),
       ),
     );

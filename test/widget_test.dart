@@ -16,6 +16,8 @@ import 'package:zol/screens/settings_screen.dart';
 import 'package:zol/screens/create_ad/upload_details_screen.dart';
 import 'package:zol/services/ad_generator.dart';
 import 'package:zol/models/ad_template.dart';
+import 'package:zol/models/template_category.dart';
+import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/services/background_remover.dart';
 import 'package:zol/services/image_store.dart';
 import 'package:zol/services/palette_extractor.dart';
@@ -603,6 +605,53 @@ void main() {
     // الصورة تُسترجع فيبقى التصميم قابلًا لإعادة التصدير.
     expect(second.savedAds.single.brief.imageBytes, isNotNull);
     expect(second.savedAds.single.brief.imageBytes, isNotEmpty);
+  });
+
+  testWidgets('Template gallery browses by category and searches',
+      (tester) async {
+    await _pumpApp(tester);
+
+    await tester.tap(find.text('القوالب'));
+    await tester.pumpAndSettle();
+
+    // الفئات معروضة مع معاينات حيّة للقوالب.
+    expect(find.text('اختر الشكل الذي تريده'), findsOneWidget);
+    expect(find.text(TemplateCategory.post.label), findsOneWidget);
+    expect(find.text(TemplateCategory.story.label), findsOneWidget);
+    expect(find.byType(AdDesignPreview), findsWidgets);
+
+    // البحث يصفّي الفئات.
+    await tester.enterText(find.byType(TextField).first, 'كرت');
+    await tester.pumpAndSettle();
+    expect(find.text(TemplateCategory.card.label), findsOneWidget);
+    expect(find.text(TemplateCategory.post.label), findsNothing);
+
+    // بحث بلا نتائج يعطي رسالة واضحة لا شاشة فارغة.
+    await tester.enterText(find.byType(TextField).first, 'زززز');
+    await tester.pumpAndSettle();
+    expect(find.text('لا توجد قوالب مطابقة لبحثك'), findsOneWidget);
+  });
+
+  testWidgets('Picking a gallery template preselects format and template',
+      (tester) async {
+    await _pumpApp(tester);
+    await tester.tap(find.text('القوالب'));
+    await tester.pumpAndSettle();
+
+    // اختيار قالب «بقعة ضوء» من فئة الستوري (صف ثانٍ يحتاج تمريرًا).
+    const card = ValueKey('gallery-story-spotlight');
+    await tester.ensureVisible(find.byKey(card));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(card));
+    await tester.pumpAndSettle();
+
+    // شاشة التفاصيل فُتحت بالصيغة والمنصة معبّأتين مسبقًا.
+    final details = tester.widget<UploadDetailsScreen>(
+      find.byType(UploadDetailsScreen),
+    );
+    expect(details.initialFormat, TemplateCategory.story.adFormat);
+    expect(details.initialPlatform, TemplateCategory.story.suggestedPlatform);
+    expect(details.initialTemplate, AdTemplate.spotlight);
   });
 
   test('Orders route to the nearest partner print shop', () {

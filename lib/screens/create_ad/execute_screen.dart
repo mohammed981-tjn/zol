@@ -20,7 +20,15 @@ import '../payment/payment_flow.dart';
 import '../pick_location_screen.dart';
 
 class ExecuteScreen extends StatefulWidget {
-  const ExecuteScreen({super.key, required this.ad, required this.isDigital});
+  const ExecuteScreen({
+    super.key,
+    required this.ad,
+    required this.isDigital,
+    this.initialTemplate,
+  });
+
+  /// القالب القادم من معرض القوالب (إن وُجد).
+  final AdTemplate? initialTemplate;
 
   final GeneratedAd ad;
   final bool isDigital;
@@ -40,7 +48,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   PayMethod _payMethod = PayMethod.cash;
   PrintOrder? _confirmedOrder;
   bool _exporting = false;
-  AdTemplate _template = AdTemplate.bold;
+  late AdTemplate _template = widget.initialTemplate ?? AdTemplate.bold;
 
   @override
   void initState() {
@@ -134,7 +142,11 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => ExecuteScreen(ad: widget.ad, isDigital: false),
+                builder: (_) => ExecuteScreen(
+                  ad: widget.ad,
+                  isDigital: false,
+                  initialTemplate: _template,
+                ),
               ),
             );
           },
