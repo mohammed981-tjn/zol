@@ -96,7 +96,9 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
-  # خط عربي مضمّن مع التطبيق (بدل الاعتماد على تنزيل الخطوط من CDN):
+  # خطوط عربية مضمّنة مع التطبيق (بدل الاعتماد على تنزيل الخطوط من CDN).
+  # Tajawal هو خط الواجهة الافتراضي؛ Cairo وAlmarai متاحان كخط العلامة
+  # التجارية (Brand Kit) ليطبَّقا على تصاميم الإعلانات فقط.
   fonts:
     - family: Tajawal
       fonts:
@@ -104,4 +106,14 @@ flutter:
         - asset: assets/fonts/Tajawal-Medium.ttf
           weight: 500
         - asset: assets/fonts/Tajawal-Bold.ttf
+          weight: 700
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
+    - family: Almarai
+      fonts:
+        - asset: assets/fonts/Almarai-Regular.ttf
+        - asset: assets/fonts/Almarai-Bold.ttf
           weight: 700

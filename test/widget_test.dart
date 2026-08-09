@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,6 +25,8 @@ import 'package:zol/services/image_store.dart';
 import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
 import 'package:zol/models/trashed_ad.dart';
+import 'package:zol/models/brand_font.dart';
+import 'package:zol/models/generated_ad.dart';
 import 'package:zol/theme/app_theme.dart';
 import 'package:zol/widgets/print_cost_calculator.dart';
 
@@ -663,6 +666,45 @@ void main() {
     expect(details.initialTemplate, AdTemplate.spotlight);
   });
 
+  test(
+      'Template ordering puts the merchant business match first, trending as tiebreaker',
+      () {
+    // فئة الجمال تفضّل «منقسم» و«أنيق» — يجب أن يتقدّما على «جريء» رغم أن
+    // «جريء» الأكثر رواجًا عمومًا، وعلى «عرض خاص» غير المناسب لها إطلاقًا.
+    final order = orderTemplatesForBusiness(
+      TemplateCategory.post.templates,
+      BusinessCategory.beauty,
+    );
+    expect(order, [
+      AdTemplate.split,
+      AdTemplate.minimal,
+      AdTemplate.bold,
+      AdTemplate.offer,
+    ]);
+
+    // بلا نشاط مطابق (لا قالب من هذه الفئة موجّه للكافيهات)، يتصدّر
+    // الأكثر رواجًا فقط.
+    final noMatch = orderTemplatesForBusiness(
+      TemplateCategory.post.templates,
+      BusinessCategory.cafe,
+    );
+    expect(noMatch.first, AdTemplate.bold);
+
+    // القالبان الأكثر رواجًا فقط يحملان شارة «رائج».
+    expect(AdTemplate.bold.isTrending, isTrue);
+    expect(AdTemplate.offer.isTrending, isTrue);
+    expect(AdTemplate.minimal.isTrending, isFalse);
+  });
+
+  testWidgets('Gallery shows a trending badge on the top templates',
+      (tester) async {
+    await _pumpApp(tester);
+    await tester.tap(find.text('القوالب'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('🔥 رائج'), findsWidgets);
+  });
+
   test('Generated copy uses the merchant business vocabulary', () {
     AdBrief briefFor(BusinessCategory category) => AdBrief(
       productName: 'منتجي',
@@ -969,6 +1011,56 @@ void main() {
     // اللون محفوظ ويُسترجع بعد «إعادة التشغيل».
     final reloaded = await AppState.load();
     expect(reloaded.brandColorValue, SettingsScreen.brandSwatches.first);
+  });
+
+  testWidgets('Brand font selection persists and applies to the design',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+    await _pumpApp(tester, state);
+
+    await tester.tap(find.text('الإعدادات'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('خط العلامة'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final cairoChip = find.byKey(const ValueKey('brand-font-cairo'));
+    await tester.ensureVisible(cairoChip);
+    await tester.pumpAndSettle();
+    await tester.tap(cairoChip);
+    await tester.pump();
+
+    expect(state.brandFont, BrandFont.cairo);
+    // الخط محفوظ ويُسترجع بعد «إعادة التشغيل».
+    final reloaded = await AppState.load();
+    expect(reloaded.brandFont, BrandFont.cairo);
+
+    // يُطبَّق فعليًا على نصوص التصميم المولَّد، لا واجهة التطبيق فقط.
+    final brief = AdBrief(
+      productName: 'قهوة مختصة',
+      description: '',
+      tone: 'حماسي',
+      platform: 'إنستغرام',
+      format: 'منشور مربع',
+      category: BusinessCategory.cafe,
+    );
+    final ad = AdGenerator.preview(brief).firstWhere((a) => a.kind == AdKind.image);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: Scaffold(body: AdDesignPreview(ad: ad)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.text(ad.headline),
+    );
+    expect(paragraph.text.style?.fontFamily, 'Cairo');
   });
 
   testWidgets('Settings screen toggles dark mode', (tester) async {

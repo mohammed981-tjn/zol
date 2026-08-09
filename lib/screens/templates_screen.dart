@@ -126,8 +126,9 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sample = _sampleAd(AppStateScope.of(context).businessCategory);
-    final templates = category.templates;
+    final business = AppStateScope.of(context).businessCategory;
+    final sample = _sampleAd(business);
+    final templates = orderTemplatesForBusiness(category.templates, business);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 22),
@@ -224,13 +225,40 @@ class _TemplateCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: AdDesignPreview(
-                ad: sample,
-                template: template,
-                showWatermark: false,
-              ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: AdDesignPreview(
+                    ad: sample,
+                    template: template,
+                    showWatermark: false,
+                  ),
+                ),
+                if (template.isTrending)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.coral,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        '🔥 رائج',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 6),

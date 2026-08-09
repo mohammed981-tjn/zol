@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/generated_ad.dart';
 import '../models/business_category.dart';
+import '../models/brand_font.dart';
 import '../models/merchant_account.dart';
 import '../models/print_order.dart';
 import '../models/trashed_ad.dart';
@@ -28,6 +29,7 @@ class AppState extends ChangeNotifier {
   static const _proKey = 'pro_active';
   static const _brandColorKey = 'brand_color';
   static const _brandLogoKey = 'brand_logo';
+  static const _brandFontKey = 'brand_font';
   static const _onboardedKey = 'onboarded';
   static const _categoryKey = 'business_category';
   static const _trashKey = 'trashed_ads';
@@ -57,6 +59,7 @@ class AppState extends ChangeNotifier {
   /// يُطبَّقان تلقائيًا على كل التصاميم المولَّدة.
   int? brandColorValue;
   Uint8List? brandLogoBytes;
+  BrandFont? brandFont;
   Color? get brandColor =>
       brandColorValue == null ? null : Color(brandColorValue!);
 
@@ -112,6 +115,11 @@ class AppState extends ChangeNotifier {
       orElse: () => BusinessCategory.retail,
     );
     brandColorValue = prefs.getInt(_brandColorKey);
+    final fontName = prefs.getString(_brandFontKey);
+    brandFont = BrandFont.values.cast<BrandFont?>().firstWhere(
+          (f) => f?.name == fontName,
+          orElse: () => null,
+        );
     final logo = prefs.getString(_brandLogoKey);
     if (logo != null && logo.isNotEmpty) {
       try {
@@ -253,6 +261,16 @@ class AppState extends ChangeNotifier {
       _prefs?.remove(_brandColorKey);
     } else {
       _prefs?.setInt(_brandColorKey, value);
+    }
+    notifyListeners();
+  }
+
+  void setBrandFont(BrandFont? font) {
+    brandFont = font;
+    if (font == null) {
+      _prefs?.remove(_brandFontKey);
+    } else {
+      _prefs?.setString(_brandFontKey, font.name);
     }
     notifyListeners();
   }

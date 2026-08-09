@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../models/ad_template.dart';
+import '../models/brand_font.dart';
 import '../models/generated_ad.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -51,20 +52,24 @@ class AdDesignPreview extends StatelessWidget {
             palette: palette,
             ad: ad,
             logo: state.brandLogoBytes,
+            fontFamily: state.brandFont?.family,
           );
           return ClipRRect(
             borderRadius: BorderRadius.circular(18 * spec.s),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                switch (template) {
-                  AdTemplate.bold => _BoldLayout(spec: spec),
-                  AdTemplate.split => _SplitLayout(spec: spec),
-                  AdTemplate.poster => _PosterLayout(spec: spec),
-                  AdTemplate.spotlight => _SpotlightLayout(spec: spec),
-                  AdTemplate.minimal => _MinimalLayout(spec: spec),
-                  AdTemplate.offer => _OfferLayout(spec: spec),
-                },
+                DefaultTextStyle.merge(
+                  style: TextStyle(fontFamily: spec.fontFamily),
+                  child: switch (template) {
+                    AdTemplate.bold => _BoldLayout(spec: spec),
+                    AdTemplate.split => _SplitLayout(spec: spec),
+                    AdTemplate.poster => _PosterLayout(spec: spec),
+                    AdTemplate.spotlight => _SpotlightLayout(spec: spec),
+                    AdTemplate.minimal => _MinimalLayout(spec: spec),
+                    AdTemplate.offer => _OfferLayout(spec: spec),
+                  },
+                ),
                 if (spec.logo != null)
                   Positioned(
                     top: 12 * spec.s,
@@ -104,6 +109,7 @@ class _Spec {
     required this.palette,
     required this.ad,
     required this.logo,
+    this.fontFamily,
   });
 
   final double width;
@@ -111,6 +117,9 @@ class _Spec {
   final AdPalette palette;
   final GeneratedAd ad;
   final Uint8List? logo;
+
+  /// خط العلامة (Brand Kit) — null يعني اعتماد خط الواجهة الافتراضي.
+  final String? fontFamily;
 
   /// عامل القياس: التصميم مرسوم لعرض 400 نقطة.
   double get s => width / 400;

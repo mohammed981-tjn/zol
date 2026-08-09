@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/business_category.dart';
+import '../models/brand_font.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/payment_config.dart';
@@ -179,7 +180,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'لونك وشعارك يُطبَّقان تلقائيًا على كل تصاميمك المولَّدة.',
+            'لونك وشعارك وخطك يُطبَّقان تلقائيًا على كل تصاميمك المولَّدة.',
             style: TextStyle(color: context.textMuted, fontSize: 12.5),
           ),
           const SizedBox(height: 14),
@@ -204,6 +205,24 @@ class SettingsScreen extends StatelessWidget {
                       ? const Icon(Icons.check, size: 18, color: Colors.white)
                       : const SizedBox.shrink(),
                 ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'خط العلامة',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+              color: context.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final font in BrandFont.values)
+                _fontChip(context, state, font),
             ],
           ),
           const SizedBox(height: 14),
@@ -266,6 +285,36 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         child: Center(child: child),
+      ),
+    );
+  }
+
+  Widget _fontChip(BuildContext context, AppState state, BrandFont font) {
+    final isSelected =
+        state.brandFont == font ||
+        (state.brandFont == null && font == BrandFont.tajawal);
+    return InkWell(
+      key: ValueKey('brand-font-${font.name}'),
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => state.setBrandFont(font),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.coral : context.scheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.coral : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          font.label,
+          style: TextStyle(
+            fontFamily: font.family,
+            fontWeight: FontWeight.w600,
+            fontSize: 13.5,
+            color: isSelected ? Colors.white : context.scheme.onSurface,
+          ),
+        ),
       ),
     );
   }
