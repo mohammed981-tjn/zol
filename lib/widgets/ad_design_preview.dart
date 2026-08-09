@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/generated_ad.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
 /// محرك قوالب التصميم — الطبقة الأولى من استراتيجية الذكاء (داخل الجهاز
@@ -26,9 +27,14 @@ class AdDesignPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors =
-        _gradientsByTone[ad.brief.tone] ?? _gradientsByTone.values.first;
+    final state = AppStateScope.of(context);
+    // لون العلامة (Brand Kit) يتقدم على تدرج النبرة الافتراضي.
+    final brand = state.brandColor;
+    final colors = brand != null
+        ? [brand, Color.lerp(brand, Colors.black, 0.35)!]
+        : _gradientsByTone[ad.brief.tone] ?? _gradientsByTone.values.first;
     final image = ad.brief.imageBytes;
+    final logo = state.brandLogoBytes;
 
     return AspectRatio(
       aspectRatio: aspectRatio,
@@ -145,6 +151,22 @@ class AdDesignPreview extends StatelessWidget {
                 ],
               ),
             ),
+            if (logo != null)
+              Positioned(
+                top: 10,
+                left: 10,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.memory(logo, fit: BoxFit.contain),
+                ),
+              ),
             if (showWatermark)
               Positioned(
                 bottom: 8,

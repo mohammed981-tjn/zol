@@ -9,6 +9,8 @@ import 'package:image/image.dart' as img;
 import 'package:adcraft_marketplace/main.dart';
 import 'package:adcraft_marketplace/models/ad_brief.dart';
 import 'package:adcraft_marketplace/models/print_order.dart';
+import 'package:adcraft_marketplace/models/print_shop.dart';
+import 'package:adcraft_marketplace/screens/settings_screen.dart';
 import 'package:adcraft_marketplace/screens/create_ad/upload_details_screen.dart';
 import 'package:adcraft_marketplace/services/ad_generator.dart';
 import 'package:adcraft_marketplace/services/background_remover.dart';
@@ -389,12 +391,49 @@ void main() {
     expect(find.textContaining('محمصة الفجر'), findsOneWidget);
   });
 
+  test('Orders route to the nearest partner print shop', () {
+    // موقع في شمال الرياض → مطبعة العليا لا الشفا.
+    expect(nearestShop(24.80, 46.65).name, 'مطبعة العليا');
+    // موقع في جدة → مطبعة الروضة.
+    expect(nearestShop(21.50, 39.20).name, 'مطبعة الروضة');
+    // موقع في الدمام → مطبعة الشاطئ.
+    expect(nearestShop(26.40, 50.10).name, 'مطبعة الشاطئ');
+  });
+
+  testWidgets('Brand Kit color selection persists into state', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+    await _pumpApp(tester, state);
+
+    await tester.tap(find.text('الإعدادات'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('هوية العلامة (Brand Kit)'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(
+      find.byKey(ValueKey('brand-swatch-${SettingsScreen.brandSwatches.first}')),
+    );
+    await tester.pump();
+
+    expect(state.brandColorValue, SettingsScreen.brandSwatches.first);
+    // اللون محفوظ ويُسترجع بعد «إعادة التشغيل».
+    final reloaded = await AppState.load();
+    expect(reloaded.brandColorValue, SettingsScreen.brandSwatches.first);
+  });
+
   testWidgets('Settings screen toggles dark mode', (tester) async {
     final state = AppState();
     await _pumpApp(tester, state);
 
     await tester.tap(find.text('الإعدادات'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('داكن'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('داكن'));
     await tester.pumpAndSettle();
 

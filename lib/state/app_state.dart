@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,6 +23,8 @@ class AppState extends ChangeNotifier {
   static const _accountsKey = 'merchant_accounts';
   static const _sessionKey = 'session_email';
   static const _proKey = 'pro_active';
+  static const _brandColorKey = 'brand_color';
+  static const _brandLogoKey = 'brand_logo';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
@@ -33,6 +36,13 @@ class AppState extends ChangeNotifier {
 
   /// الخطة الاحترافية مفعّلة؟ (تزيل العلامة المائية من التصاميم.)
   bool isPro = false;
+
+  /// هوية العلامة (Brand Kit — نمط Canva): لون العلامة وشعار المتجر
+  /// يُطبَّقان تلقائيًا على كل التصاميم المولَّدة.
+  int? brandColorValue;
+  Uint8List? brandLogoBytes;
+  Color? get brandColor =>
+      brandColorValue == null ? null : Color(brandColorValue!);
 
   /// سجل الحسابات المحلية: بريد → {name, storeName, salt, hash}.
   /// يُستبدل بمزوّد مصادقة سحابي (Firebase Auth كما في zadgo2) عند
@@ -71,6 +81,15 @@ class AppState extends ChangeNotifier {
     themeMode = ThemeMode.values[prefs.getInt(_themeKey) ?? 1];
     _nextOrderNumber = prefs.getInt(_orderNumberKey) ?? 1001;
     isPro = prefs.getBool(_proKey) ?? false;
+    brandColorValue = prefs.getInt(_brandColorKey);
+    final logo = prefs.getString(_brandLogoKey);
+    if (logo != null && logo.isNotEmpty) {
+      try {
+        brandLogoBytes = base64Decode(logo);
+      } catch (_) {
+        brandLogoBytes = null;
+      }
+    }
 
     try {
       _accounts =
@@ -142,6 +161,26 @@ class AppState extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     themeMode = mode;
     _persist();
+    notifyListeners();
+  }
+
+  void setBrandColor(int? value) {
+    brandColorValue = value;
+    if (value == null) {
+      _prefs?.remove(_brandColorKey);
+    } else {
+      _prefs?.setInt(_brandColorKey, value);
+    }
+    notifyListeners();
+  }
+
+  void setBrandLogo(Uint8List? bytes) {
+    brandLogoBytes = bytes;
+    if (bytes == null) {
+      _prefs?.remove(_brandLogoKey);
+    } else {
+      _prefs?.setString(_brandLogoKey, base64Encode(bytes));
+    }
     notifyListeners();
   }
 

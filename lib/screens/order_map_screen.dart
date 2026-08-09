@@ -28,10 +28,11 @@ class _OrderMapScreenState extends State<OrderMapScreen> {
 
   LatLng get _delivery => LatLng(order.deliveryLat!, order.deliveryLng!);
 
-  /// موقع المطبعة (محاكاة): إزاحة ثابتة عن موقع العميل حتى يظهر مسار
-  /// واقعي — يُستبدل بموقع المطبعة الشريكة الفعلية لاحقًا.
-  LatLng get _printShop =>
-      LatLng(_delivery.latitude + 0.014, _delivery.longitude - 0.011);
+  /// موقع المطبعة المُسندة للطلب (الأقرب لموقع العميل)، مع إزاحة
+  /// افتراضية كاحتياط للطلبات القديمة التي بلا مطبعة مسندة.
+  LatLng get _printShop => order.shopLat != null && order.shopLng != null
+      ? LatLng(order.shopLat!, order.shopLng!)
+      : LatLng(_delivery.latitude + 0.014, _delivery.longitude - 0.011);
 
   bool get _driverMoving => order.status == OrderStatus.shipping;
 

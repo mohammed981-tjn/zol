@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/payment_config.dart';
@@ -9,6 +11,21 @@ import 'payment/payment_flow.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  /// يُستخدم في الاختبارات لتجاوز منتقي الشعار الأصلي للجهاز.
+  static Future<Uint8List?> Function()? debugPickLogoOverride;
+
+  /// ألوان علامة جاهزة للاختيار (نمط Canva Brand Kit).
+  static const brandSwatches = [
+    0xFF1F2A5E,
+    0xFFB91D3A,
+    0xFF00695C,
+    0xFF6A1B9A,
+    0xFFEF6C00,
+    0xFF2E7D32,
+    0xFF37474F,
+    0xFF8D6E63,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +40,8 @@ class SettingsScreen extends StatelessWidget {
             const SectionHeader(kicker: 'التفضيلات', title: 'إعدادات التطبيق'),
             const SizedBox(height: 20),
             _buildAccountSection(context, state),
+            const SizedBox(height: 28),
+            _buildBrandKitSection(context, state),
             const SizedBox(height: 28),
             Text(
               'المظهر',
@@ -73,6 +92,137 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildBrandKitSection(BuildContext context, AppState state) {
+    final logo = state.brandLogoBytes;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'هوية العلامة (Brand Kit)',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: context.scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'لونك وشعارك يُطبَّقان تلقائيًا على كل تصاميمك المولَّدة.',
+            style: TextStyle(color: context.textMuted, fontSize: 12.5),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              // «افتراضي» يعيد تدرجات النبرة.
+              _swatch(
+                context,
+                state,
+                value: null,
+                child: Icon(Icons.format_color_reset_outlined,
+                    size: 18, color: context.textMuted),
+              ),
+              for (final color in brandSwatches)
+                _swatch(
+                  context,
+                  state,
+                  value: color,
+                  child: state.brandColorValue == color
+                      ? const Icon(Icons.check, size: 18, color: Colors.white)
+                      : const SizedBox.shrink(),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              if (logo != null) ...[
+                Container(
+                  width: 40,
+                  height: 40,
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.memory(logo, fit: BoxFit.contain),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _pickLogo(context, state),
+                  icon: const Icon(Icons.image_outlined, size: 18),
+                  label: Text(logo == null ? 'رفع شعار المتجر' : 'تغيير الشعار'),
+                ),
+              ),
+              if (logo != null)
+                IconButton(
+                  tooltip: 'إزالة الشعار',
+                  onPressed: () => state.setBrandLogo(null),
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _swatch(
+    BuildContext context,
+    AppState state, {
+    required int? value,
+    required Widget child,
+  }) {
+    final isSelected = state.brandColorValue == value;
+    return InkWell(
+      key: ValueKey('brand-swatch-${value ?? 'none'}'),
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => state.setBrandColor(value),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: value == null ? context.cardBg : Color(value),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? AppColors.coral : Colors.transparent,
+            width: 2.5,
+          ),
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+
+  Future<void> _pickLogo(BuildContext context, AppState state) async {
+    try {
+      final bytes = await (debugPickLogoOverride ?? _pickLogoFromGallery)();
+      if (bytes != null) state.setBrandLogo(bytes);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذّر اختيار الشعار — حاول مجددًا')),
+      );
+    }
+  }
+
+  static Future<Uint8List?> _pickLogoFromGallery() async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+    );
+    return file?.readAsBytes();
   }
 
   Widget _buildPlanCard(BuildContext context, AppState state) {

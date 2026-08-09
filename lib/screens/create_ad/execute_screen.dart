@@ -7,6 +7,7 @@ import '../../models/generated_ad.dart';
 import '../../models/payment_result.dart';
 import '../../models/print_catalog.dart';
 import '../../models/print_order.dart';
+import '../../models/print_shop.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/payment_config.dart';
@@ -432,6 +433,12 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
     }
     if (!mounted) return;
 
+    // توجيه تلقائي لأقرب مطبعة شريكة عند توفر إحداثيات التوصيل.
+    final point = _deliveryPoint;
+    final shop = point == null
+        ? null
+        : nearestShop(point.latitude, point.longitude);
+
     final order = PrintOrder(
       id: state.nextOrderId(),
       productLabel: _product.label,
@@ -448,6 +455,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
       payMethod: _payMethod,
       isPaid: isPaid,
       paymentId: paymentId,
+      shopName: shop?.name,
+      shopLat: shop?.lat,
+      shopLng: shop?.lng,
     );
     state.addOrder(order);
     setState(() => _confirmedOrder = order);
@@ -481,6 +491,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           '${order.productLabel} (${order.sizeLabel}) × ${order.quantity} — '
           '${formatPrice(order.total)}\n'
           '${order.isPaid ? 'مدفوع بالبطاقة ✓' : 'الدفع عند الاستلام'}\n'
+          '${order.shopName != null ? 'أُسند تلقائيًا إلى ${order.shopName} (الأقرب لموقعك)\n' : ''}'
           'تابع حالته من تبويب «طلباتي»',
           textAlign: TextAlign.center,
           style: TextStyle(color: context.textMuted),

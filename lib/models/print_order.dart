@@ -36,6 +36,9 @@ class PrintOrder {
     this.payMethod = PayMethod.cash,
     this.isPaid = false,
     this.paymentId,
+    this.shopName,
+    this.shopLat,
+    this.shopLng,
   });
 
   final String id;
@@ -60,6 +63,11 @@ class PrintOrder {
   final bool isPaid;
   final String? paymentId;
 
+  /// المطبعة الشريكة المُسندة تلقائيًا (الأقرب لموقع التوصيل).
+  final String? shopName;
+  final double? shopLat;
+  final double? shopLng;
+
   bool get hasDeliveryPoint => deliveryLat != null && deliveryLng != null;
 
   double get total => subtotal + deliveryFee + vat;
@@ -80,6 +88,9 @@ class PrintOrder {
     payMethod: payMethod,
     isPaid: isPaid,
     paymentId: paymentId,
+    shopName: shopName,
+    shopLat: shopLat,
+    shopLng: shopLng,
   );
 
   Map<String, dynamic> toJson() => {
@@ -98,6 +109,9 @@ class PrintOrder {
     'payMethod': payMethod.index,
     'isPaid': isPaid,
     'paymentId': paymentId,
+    'shopName': shopName,
+    'shopLat': shopLat,
+    'shopLng': shopLng,
   };
 
   factory PrintOrder.fromJson(Map<String, dynamic> json) => PrintOrder(
@@ -117,5 +131,8 @@ class PrintOrder {
     payMethod: PayMethod.values[json['payMethod'] as int? ?? 0],
     isPaid: json['isPaid'] as bool? ?? false,
     paymentId: json['paymentId'] as String?,
+    shopName: json['shopName'] as String?,
+    shopLat: (json['shopLat'] as num?)?.toDouble(),
+    shopLng: (json['shopLng'] as num?)?.toDouble(),
   );
 }
