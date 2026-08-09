@@ -13,7 +13,9 @@ import 'package:zol/models/print_shop.dart';
 import 'package:zol/screens/settings_screen.dart';
 import 'package:zol/screens/create_ad/upload_details_screen.dart';
 import 'package:zol/services/ad_generator.dart';
+import 'package:zol/models/ad_template.dart';
 import 'package:zol/services/background_remover.dart';
+import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
 
 /// صورة PNG صالحة 1×1 بكسل تُستخدم بدل منتقي الصور الأصلي في الاختبارات.
@@ -56,6 +58,7 @@ void main() {
   setUpAll(() {
     UploadDetailsScreen.debugPickImageOverride = () async => _fakeImage;
     BackgroundRemover.debugRunSynchronously = true;
+    PaletteExtractor.debugRunSynchronously = true;
   });
 
   testWidgets('Onboarding shows on first run and only once', (tester) async {
@@ -415,6 +418,89 @@ void main() {
     expect(state.isLoggedIn, isTrue);
     expect(find.text('محمد'), findsOneWidget);
     expect(find.textContaining('محمصة الفجر'), findsOneWidget);
+  });
+
+  test('Palette extractor finds the product colour, not the background', () async {
+    // خلفية بيضاء واسعة + منتج أخضر — يجب أن يفوز الأخضر لا الأبيض.
+    final source = img.Image(width: 120, height: 120, numChannels: 4);
+    img.fill(source, color: img.ColorRgba8(252, 252, 252, 255));
+    img.fillRect(
+      source,
+      x1: 35,
+      y1: 35,
+      x2: 85,
+      y2: 85,
+      color: img.ColorRgba8(20, 160, 70, 255),
+    );
+
+    final value = await PaletteExtractor.dominantColor(
+      Uint8List.fromList(img.encodePng(source)),
+    );
+    expect(value, isNotNull);
+    final color = Color(value!);
+    expect(color.g, greaterThan(color.r));
+    expect(color.g, greaterThan(color.b));
+  });
+
+  test('Palette extractor returns null for a colourless image', () async {
+    final grey = img.Image(width: 60, height: 60, numChannels: 4);
+    img.fill(grey, color: img.ColorRgba8(128, 128, 128, 255));
+    final value = await PaletteExtractor.dominantColor(
+      Uint8List.fromList(img.encodePng(grey)),
+    );
+    expect(value, isNull);
+  });
+
+  test('Palette resolution follows brand → product → tone priority', () {
+    // لون العلامة يتقدّم على لون المنتج.
+    final branded = AdPalette.resolve(
+      brandColor: 0xFF00695C,
+      productColor: 0xFFB91D3A,
+      tone: 'حماسي',
+    );
+    expect(branded.primary, const Color(0xFF00695C));
+
+    // بلا لون علامة → لون المنتج.
+    final fromProduct = AdPalette.resolve(
+      productColor: 0xFFB91D3A,
+      tone: 'حماسي',
+    );
+    expect(fromProduct.primary, const Color(0xFFB91D3A));
+
+    // بلا هذا ولا ذاك → تدرّج النبرة.
+    final formal = AdPalette.resolve(tone: 'رسمي');
+    expect(formal.primary, const Color(0xFF1F2A5E));
+  });
+
+  testWidgets('Template picker switches the exported design', (tester) async {
+    await _pumpApp(tester);
+    await _reachMagicResults(tester);
+
+    await tester.tap(find.text('حفظ ونشر'));
+    await tester.pumpAndSettle();
+
+    // القوالب الستة كلها معروضة، والقالب الافتراضي «جريء».
+    expect(find.text('اختر قالب التصميم'), findsOneWidget);
+    for (final template in AdTemplate.values) {
+      expect(find.byKey(ValueKey('template-${template.name}')), findsOneWidget);
+    }
+    expect(find.text(AdTemplate.bold.description), findsOneWidget);
+
+    // شريط القوالب أسفل معاينة كبيرة، و«بقعة ضوء» رابع القوالب:
+    // تمرير رأسي ليظهر الشريط، ثم أفقي للوصول إلى القالب.
+    await tester.drag(find.byType(ListView).first, const Offset(0, -320));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('template-spotlight')),
+      120,
+      scrollable: find.byWidgetPredicate(
+        (w) => w is Scrollable && w.axis == Axis.horizontal,
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('template-spotlight')));
+    await tester.pumpAndSettle();
+    expect(find.text(AdTemplate.spotlight.description), findsOneWidget);
+    expect(find.text(AdTemplate.bold.description), findsNothing);
   });
 
   test('Orders route to the nearest partner print shop', () {

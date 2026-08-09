@@ -35,6 +35,7 @@
 - [`AdCraft_AI_Marketplace_Pitch_Deck.pptx`](./AdCraft_AI_Marketplace_Pitch_Deck.pptx) — مسودة العرض الاستثماري (Pitch Deck).
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — خارطة الطريق واستراتيجية الذكاء الاصطناعي.
 - [`docs/PRICING.md`](./docs/PRICING.md) — نموذج التسعير والأرباح.
+- [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) — حسابات المطورين وتكاليف النشر وخطواته.
 - `assets/brand/` — ملفات الشعار (SVG).
 - [`docs/COMPETITIVE_ANALYSIS.md`](./docs/COMPETITIVE_ANALYSIS.md) — التحليل التنافسي مقابل التطبيقات العالمية وما نُقل منها للتطبيق.
 - `lib/` — تطبيق Flutter (رحلة العميل كاملة بواجهات وهمية mock، بدون ربط خلفي حقيقي بعد).

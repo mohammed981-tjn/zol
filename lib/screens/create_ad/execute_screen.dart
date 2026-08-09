@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../models/ad_template.dart';
 import '../../models/generated_ad.dart';
 import '../../models/payment_result.dart';
 import '../../models/print_catalog.dart';
@@ -38,6 +39,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   PayMethod _payMethod = PayMethod.cash;
   PrintOrder? _confirmedOrder;
   bool _exporting = false;
+  AdTemplate _template = AdTemplate.bold;
 
   @override
   void initState() {
@@ -77,19 +79,22 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
               key: _designKey,
               child: AdDesignPreview(
                 ad: widget.ad,
+                template: _template,
                 showWatermark: !AppStateScope.of(context).isPro,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+        _buildTemplatePicker(),
+        const SizedBox(height: 8),
         Text(
           '${widget.ad.kind.label} بنبرة ${widget.ad.brief.tone} — '
           'مهيأة لمنصة ${widget.ad.brief.platform}',
           textAlign: TextAlign.center,
-          style: TextStyle(color: context.textMuted),
+          style: TextStyle(color: context.textMuted, fontSize: 12.5),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         ElevatedButton.icon(
           onPressed: _exporting ? null : _exportDesign,
           icon: _exporting
@@ -120,6 +125,82 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           ),
           icon: const Icon(Icons.ios_share),
           label: Text('نشر مباشر على ${widget.ad.brief.platform}'),
+        ),
+      ],
+    );
+  }
+
+  /// شريط اختيار القالب — معاينة مصغّرة حيّة لكل قالب على المنتج نفسه.
+  Widget _buildTemplatePicker() {
+    final isPro = AppStateScope.of(context).isPro;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'اختر قالب التصميم',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: context.scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 128,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: AdTemplate.values.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final template = AdTemplate.values[i];
+              final isSelected = template == _template;
+              return GestureDetector(
+                key: ValueKey('template-${template.name}'),
+                onTap: () => setState(() => _template = template),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.coral
+                              : Colors.transparent,
+                          width: 2.5,
+                        ),
+                      ),
+                      child: SizedBox(
+                        height: 96,
+                        // معاينة حيّة بالقالب الفعلي على منتج التاجر.
+                        child: AdDesignPreview(
+                          ad: widget.ad,
+                          template: template,
+                          showWatermark: !isPro,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      template.label,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? AppColors.coral
+                            : context.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _template.description,
+          style: TextStyle(color: context.textMuted, fontSize: 12),
         ),
       ],
     );

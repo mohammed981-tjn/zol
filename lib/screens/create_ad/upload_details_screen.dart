@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/ad_brief.dart';
 import '../../services/background_remover.dart';
+import '../../services/palette_extractor.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/choice_chip_group.dart';
 import '../../widgets/section_header.dart';
@@ -30,6 +31,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   String _selectedFormat = _formats.first;
   Uint8List? _imageBytes;
   Uint8List? _cutoutBytes;
+  int? _paletteColor;
   bool _useCutout = false;
   bool _isolating = false;
   bool _picking = false;
@@ -65,9 +67,11 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
         setState(() {
           _imageBytes = bytes;
           _cutoutBytes = null;
+          _paletteColor = null;
           _useCutout = false;
         });
         _isolateBackground(bytes);
+        _extractPalette(bytes);
       }
     } catch (_) {
       if (!mounted) return;
@@ -90,6 +94,13 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
       // عند نجاح العزل نعتمده افتراضيًا — التصميم يبدو أنظف.
       _useCutout = cutout != null;
     });
+  }
+
+  /// استخراج اللون المسيطر ليبني عليه محرك القوالب لوحته.
+  Future<void> _extractPalette(Uint8List bytes) async {
+    final color = await PaletteExtractor.dominantColor(bytes);
+    if (!mounted || !identical(bytes, _imageBytes)) return;
+    setState(() => _paletteColor = color);
   }
 
   @override
@@ -162,6 +173,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                               imageBytes: _useCutout && _cutoutBytes != null
                                   ? _cutoutBytes
                                   : _imageBytes,
+                              paletteColor: _paletteColor,
                             ),
                           ),
                         ),
