@@ -772,6 +772,47 @@ void main() {
     expect(formalCafe.first.headline, isNot(cafe.first.headline));
   });
 
+  test('Regenerating with a new seed varies the CTA and hook without losing '
+      'the business vocabulary', () {
+    final brief = AdBrief(
+      productName: 'قهوة مختصة',
+      description: '',
+      tone: 'حماسي',
+      platform: 'إنستغرام',
+      format: 'منشور مربع',
+      category: BusinessCategory.cafe,
+    );
+
+    // seed=0 يبقى مطابقًا للسلوك السابق — أول عنصر في كل قائمة.
+    expect(
+      AdGenerator.preview(brief, seed: 0).first.cta,
+      BusinessCategory.cafe.cta,
+    );
+
+    // بذور مختلفة تُنتج دعوات إجراء مختلفة (تنويعات وليست دعوة واحدة ثابتة).
+    final ctas = {
+      for (var seed = 0; seed < 8; seed++)
+        AdGenerator.preview(brief, seed: seed).first.cta,
+    };
+    expect(ctas.length, greaterThan(1));
+    // كل دعوة إجراء منتَجة يجب أن تكون من مجموعة خيارات الكافيه المعروفة.
+    final knownCtas = {
+      BusinessCategory.cafe.cta,
+      ...BusinessCategory.cafe.ctaVariants,
+    };
+    expect(ctas.every(knownCtas.contains), isTrue);
+
+    // كل عنوان مولَّد يحمل إحدى عبارات جذب الكافيه المعروفة — التنويع في
+    // الاختيار، لا في استبدال مفردات النشاط بشيء عام.
+    for (var seed = 0; seed < 8; seed++) {
+      final ad = AdGenerator.preview(brief, seed: seed).first;
+      expect(
+        BusinessCategory.cafe.hooks.any((hook) => ad.headline.contains(hook)),
+        isTrue,
+      );
+    }
+  });
+
   test('Seasonal theme adds a campaign phrase and hashtag without replacing '
       'the business vocabulary', () {
     final withSeason = AdGenerator.preview(

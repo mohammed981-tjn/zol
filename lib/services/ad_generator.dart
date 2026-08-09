@@ -68,7 +68,9 @@ class AdGenerator {
       if (brief.season != null) brief.season!.hashtag,
     ];
     final productTag = '#${product.replaceAll(' ', '_')}';
-    final cta = category.cta;
+    // [category.cta] يبقى أول خيار دائمًا فيتطابق سلوك seed=0 مع السابق،
+    // والمتغيّرات تُضاف لتنويع الصياغة عند إعادة التوليد.
+    final cta = _pick([category.cta, ...category.ctaVariants], seed);
     final now = DateTime.now();
 
     // الوصف الاختياري يُدمج جملةً كاملة بدل إقحامه كما هو.
