@@ -1,13 +1,17 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:image/image.dart' as img;
 
 import 'package:adcraft_marketplace/main.dart';
 import 'package:adcraft_marketplace/models/ad_brief.dart';
 import 'package:adcraft_marketplace/models/print_order.dart';
 import 'package:adcraft_marketplace/screens/create_ad/upload_details_screen.dart';
 import 'package:adcraft_marketplace/services/ad_generator.dart';
+import 'package:adcraft_marketplace/services/background_remover.dart';
 import 'package:adcraft_marketplace/state/app_state.dart';
 
 /// صورة PNG صالحة 1×1 بكسل تُستخدم بدل منتقي الصور الأصلي في الاختبارات.
@@ -46,6 +50,7 @@ Future<void> _reachMagicResults(WidgetTester tester) async {
 void main() {
   setUpAll(() {
     UploadDetailsScreen.debugPickImageOverride = () async => _fakeImage;
+    BackgroundRemover.debugRunSynchronously = true;
   });
 
   testWidgets('Home screen shows the main call-to-action and stats',
@@ -186,6 +191,118 @@ void main() {
     expect(second.orders.first.hasDeliveryPoint, isTrue);
     // تسلسل أرقام الطلبات يستمر بعد إعادة التشغيل.
     expect(second.nextOrderId(), 'AD-1002');
+  });
+
+  test('Background remover isolates product from a uniform background',
+      () async {
+    // صورة اصطناعية: خلفية بيضاء وموضوع أحمر في المنتصف.
+    final source = img.Image(width: 120, height: 120, numChannels: 4);
+    img.fill(source, color: img.ColorRgba8(250, 250, 250, 255));
+    img.fillRect(
+      source,
+      x1: 40,
+      y1: 40,
+      x2: 80,
+      y2: 80,
+      color: img.ColorRgba8(200, 30, 30, 255),
+    );
+    final bytes = img.encodePng(source);
+
+    final result =
+        await BackgroundRemover.removeBackground(Uint8List.fromList(bytes));
+    expect(result, isNotNull);
+
+    final cutout = img.decodePng(result!)!;
+    // الزاوية أصبحت شفافة (خلفية معزولة).
+    expect(cutout.getPixel(5, 5).a, 0);
+    // مركز المنتج بقي معتمًا وبلونه.
+    final center = cutout.getPixel(60, 60);
+    expect(center.a, 255);
+    expect(center.r, greaterThan(150));
+  });
+
+  test('Background remover refuses to butcher a busy background', () async {
+    // خلفية عشوائية الألوان (ضوضاء) — يجب أن يمتنع العزل بدل إتلاف الصورة.
+    final noisy = img.Image(width: 60, height: 60, numChannels: 4);
+    for (var y = 0; y < 60; y++) {
+      for (var x = 0; x < 60; x++) {
+        noisy.setPixelRgba(x, y, (x * 37) % 256, (y * 91) % 256, (x * y) % 256, 255);
+      }
+    }
+    final result = await BackgroundRemover.removeBackground(
+      Uint8List.fromList(img.encodePng(noisy)),
+    );
+    expect(result, isNull);
+  });
+
+  test('Merchant account: register, login, logout, and session restore',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+
+    final first = await AppState.load();
+    expect(
+      first.register(
+        name: 'محمد',
+        storeName: 'محمصة الفجر',
+        email: 'M@Example.com',
+        password: 'secret123',
+      ),
+      isNull,
+    );
+    expect(first.isLoggedIn, isTrue);
+
+    // بريد مكرر يرفض.
+    expect(
+      first.register(
+        name: 'آخر',
+        storeName: 'متجر',
+        email: 'm@example.com',
+        password: 'other123',
+      ),
+      isNotNull,
+    );
+
+    // الجلسة تُسترجع بعد «إعادة تشغيل».
+    final second = await AppState.load();
+    expect(second.account?.name, 'محمد');
+    expect(second.account?.email, 'm@example.com');
+
+    second.logout();
+    expect(second.isLoggedIn, isFalse);
+    expect(
+      second.login(email: 'm@example.com', password: 'wrong'),
+      isNotNull,
+    );
+    expect(
+      second.login(email: 'm@example.com', password: 'secret123'),
+      isNull,
+    );
+    expect(second.account?.storeName, 'محمصة الفجر');
+  });
+
+  testWidgets('Merchant can register from the settings tab', (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+
+    await tester.tap(find.text('الإعدادات'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('تسجيل الدخول / إنشاء حساب'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('ليس لديك حساب؟ أنشئ حسابًا جديدًا'));
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'محمد');
+    await tester.enterText(fields.at(1), 'محمصة الفجر');
+    await tester.enterText(fields.at(2), 'm@example.com');
+    await tester.enterText(fields.at(3), 'secret123');
+    await tester.tap(find.text('إنشاء الحساب'));
+    await tester.pumpAndSettle();
+
+    expect(state.isLoggedIn, isTrue);
+    expect(find.text('محمد'), findsOneWidget);
+    expect(find.textContaining('محمصة الفجر'), findsOneWidget);
   });
 
   testWidgets('Settings screen toggles dark mode', (tester) async {

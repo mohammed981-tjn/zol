@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/icon_circle.dart';
 import '../widgets/section_header.dart';
+import 'auth_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -18,6 +20,8 @@ class SettingsScreen extends StatelessWidget {
           children: [
             const SectionHeader(kicker: 'التفضيلات', title: 'إعدادات التطبيق'),
             const SizedBox(height: 20),
+            _buildAccountSection(context, state),
+            const SizedBox(height: 28),
             Text(
               'المظهر',
               style: TextStyle(
@@ -108,6 +112,102 @@ class SettingsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAccountSection(BuildContext context, AppState state) {
+    final account = state.account;
+    if (account == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.cardBg,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const IconCircle(
+                  icon: Icons.storefront_outlined,
+                  background: AppColors.navy,
+                  diameter: 42,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'حساب التاجر',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: context.scheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'أنشئ حسابًا لربط إعلاناتك وطلباتك بمتجرك، '
+              'وتجهيزًا للمزامنة السحابية بين أجهزتك.',
+              style: TextStyle(color: context.textMuted, fontSize: 12.5),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AuthScreen()),
+                  );
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('تسجيل الدخول / إنشاء حساب'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const IconCircle(
+            icon: Icons.storefront,
+            background: AppColors.coral,
+            diameter: 46,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  account.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: context.scheme.onSurface,
+                  ),
+                ),
+                Text(
+                  '${account.storeName} • ${account.email}',
+                  style: TextStyle(color: context.textMuted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: state.logout,
+            child: const Text('خروج'),
+          ),
+        ],
       ),
     );
   }

@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/generated_ad.dart';
+import '../models/merchant_account.dart';
 import '../models/print_order.dart';
 
 /// حالة التطبيق: إعلانات محفوظة، طلبات طباعة، سمة العرض.
@@ -16,10 +19,21 @@ class AppState extends ChangeNotifier {
   static const _ordersKey = 'orders';
   static const _themeKey = 'theme_mode';
   static const _orderNumberKey = 'next_order_number';
+  static const _accountsKey = 'merchant_accounts';
+  static const _sessionKey = 'session_email';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
   ThemeMode themeMode = ThemeMode.light;
+
+  /// حساب التاجر المسجَّل دخوله حاليًا (null = زائر).
+  MerchantAccount? account;
+  bool get isLoggedIn => account != null;
+
+  /// سجل الحسابات المحلية: بريد → {name, storeName, salt, hash}.
+  /// يُستبدل بمزوّد مصادقة سحابي (Firebase Auth كما في zadgo2) عند
+  /// بناء الخادم — واجهة register/login/logout تبقى كما هي.
+  Map<String, dynamic> _accounts = {};
 
   int _nextOrderNumber = 1001;
 
@@ -52,6 +66,23 @@ class AppState extends ChangeNotifier {
     }
     themeMode = ThemeMode.values[prefs.getInt(_themeKey) ?? 1];
     _nextOrderNumber = prefs.getInt(_orderNumberKey) ?? 1001;
+
+    try {
+      _accounts =
+          jsonDecode(prefs.getString(_accountsKey) ?? '{}')
+              as Map<String, dynamic>;
+    } catch (_) {
+      _accounts = {};
+    }
+    final sessionEmail = prefs.getString(_sessionKey);
+    final stored = sessionEmail == null ? null : _accounts[sessionEmail];
+    if (stored != null) {
+      account = MerchantAccount(
+        name: stored['name'] as String? ?? '',
+        storeName: stored['storeName'] as String? ?? '',
+        email: sessionEmail!,
+      );
+    }
   }
 
   void _persist() {
@@ -107,6 +138,71 @@ class AppState extends ChangeNotifier {
     themeMode = mode;
     _persist();
     notifyListeners();
+  }
+
+  // ── حساب التاجر ──
+
+  static String _hashPassword(String password, String salt) =>
+      sha256.convert(utf8.encode('$salt$password')).toString();
+
+  /// إنشاء حساب تاجر جديد. يعيد رسالة خطأ بالعربية أو null عند النجاح.
+  String? register({
+    required String name,
+    required String storeName,
+    required String email,
+    required String password,
+  }) {
+    final key = email.trim().toLowerCase();
+    if (_accounts.containsKey(key)) {
+      return 'هذا البريد مسجَّل مسبقًا — سجّل دخولك بدلًا من ذلك';
+    }
+    final salt = List.generate(
+      16,
+      (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    _accounts[key] = {
+      'name': name.trim(),
+      'storeName': storeName.trim(),
+      'salt': salt,
+      'hash': _hashPassword(password, salt),
+    };
+    account = MerchantAccount(
+      name: name.trim(),
+      storeName: storeName.trim(),
+      email: key,
+    );
+    _prefs?.setString(_sessionKey, key);
+    _persistAccounts();
+    notifyListeners();
+    return null;
+  }
+
+  /// تسجيل الدخول. يعيد رسالة خطأ بالعربية أو null عند النجاح.
+  String? login({required String email, required String password}) {
+    final key = email.trim().toLowerCase();
+    final stored = _accounts[key];
+    if (stored == null ||
+        stored['hash'] != _hashPassword(password, stored['salt'] as String)) {
+      return 'البريد أو كلمة المرور غير صحيحة';
+    }
+    account = MerchantAccount(
+      name: stored['name'] as String? ?? '',
+      storeName: stored['storeName'] as String? ?? '',
+      email: key,
+    );
+    _prefs?.setString(_sessionKey, key);
+    notifyListeners();
+    return null;
+  }
+
+  void logout() {
+    account = null;
+    _prefs?.remove(_sessionKey);
+    notifyListeners();
+  }
+
+  void _persistAccounts() {
+    _prefs?.setString(_accountsKey, jsonEncode(_accounts));
   }
 }
 

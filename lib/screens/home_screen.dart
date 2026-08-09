@@ -17,7 +17,15 @@ class HomeScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
           children: [
-            const SizedBox(height: 24),
+            if (state.isLoggedIn) ...[
+              Text(
+                'مرحبًا، ${state.account!.name} 👋',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.gold, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+            ] else
+              const SizedBox(height: 24),
             const IconCircle(
               icon: Icons.auto_fix_high,
               background: AppColors.coral,

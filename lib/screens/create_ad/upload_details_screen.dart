@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/ad_brief.dart';
+import '../../services/background_remover.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/choice_chip_group.dart';
 import '../../widgets/section_header.dart';
@@ -28,6 +29,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   String _selectedPlatform = _platforms.first;
   String _selectedFormat = _formats.first;
   Uint8List? _imageBytes;
+  Uint8List? _cutoutBytes;
+  bool _useCutout = false;
+  bool _isolating = false;
   bool _picking = false;
 
   bool get _canContinue =>
@@ -58,7 +62,12 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
               _pickFromGallery)();
       if (!mounted) return;
       if (bytes != null) {
-        setState(() => _imageBytes = bytes);
+        setState(() {
+          _imageBytes = bytes;
+          _cutoutBytes = null;
+          _useCutout = false;
+        });
+        _isolateBackground(bytes);
       }
     } catch (_) {
       if (!mounted) return;
@@ -68,6 +77,19 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
     } finally {
       if (mounted) setState(() => _picking = false);
     }
+  }
+
+  /// عزل خلفية الصورة على الجهاز (الطبقة 1 من استراتيجية الذكاء).
+  Future<void> _isolateBackground(Uint8List bytes) async {
+    setState(() => _isolating = true);
+    final cutout = await BackgroundRemover.removeBackground(bytes);
+    if (!mounted || !identical(bytes, _imageBytes)) return;
+    setState(() {
+      _isolating = false;
+      _cutoutBytes = cutout;
+      // عند نجاح العزل نعتمده افتراضيًا — التصميم يبدو أنظف.
+      _useCutout = cutout != null;
+    });
   }
 
   @override
@@ -84,6 +106,10 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             ),
             const SizedBox(height: 24),
             _buildImagePicker(),
+            if (_imageBytes != null) ...[
+              const SizedBox(height: 12),
+              _buildCutoutToggle(),
+            ],
             const SizedBox(height: 24),
             TextField(
               controller: _nameController,
@@ -133,7 +159,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                               tone: _selectedTone,
                               platform: _selectedPlatform,
                               format: _selectedFormat,
-                              imageBytes: _imageBytes,
+                              imageBytes: _useCutout && _cutoutBytes != null
+                                  ? _cutoutBytes
+                                  : _imageBytes,
                             ),
                           ),
                         ),
@@ -169,8 +197,72 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
     );
   }
 
+  Widget _buildCutoutToggle() {
+    if (_isolating) {
+      return Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.coral,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'جارٍ عزل خلفية الصورة على جهازك…',
+            style: TextStyle(color: context.textMuted, fontSize: 12.5),
+          ),
+        ],
+      );
+    }
+    if (_cutoutBytes == null) {
+      return Text(
+        'تعذّر عزل الخلفية تلقائيًا (خلفية غير موحدة) — ستُستخدم الصورة الأصلية',
+        style: TextStyle(color: context.textMuted, fontSize: 12),
+      );
+    }
+    return Wrap(
+      spacing: 10,
+      children: [
+        ChoiceChip(
+          label: const Text('معزولة الخلفية ✨'),
+          selected: _useCutout,
+          onSelected: (_) => setState(() => _useCutout = true),
+          selectedColor: context.scheme.primary,
+          labelStyle: TextStyle(
+            color: _useCutout
+                ? context.scheme.onPrimary
+                : context.scheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+          backgroundColor: context.cardBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          side: BorderSide.none,
+        ),
+        ChoiceChip(
+          label: const Text('الصورة الأصلية'),
+          selected: !_useCutout,
+          onSelected: (_) => setState(() => _useCutout = false),
+          selectedColor: context.scheme.primary,
+          labelStyle: TextStyle(
+            color: !_useCutout
+                ? context.scheme.onPrimary
+                : context.scheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+          backgroundColor: context.cardBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          side: BorderSide.none,
+        ),
+      ],
+    );
+  }
+
   Widget _buildImagePicker() {
-    final image = _imageBytes;
+    final image =
+        _useCutout && _cutoutBytes != null ? _cutoutBytes : _imageBytes;
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: _pickImage,
@@ -189,7 +281,14 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             ? Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.memory(image, fit: BoxFit.cover),
+                  // الصورة المعزولة تُعرض كاملة على أبيض لإظهار الشفافية.
+                  if (_useCutout && _cutoutBytes != null)
+                    Container(
+                      color: Colors.white,
+                      child: Image.memory(image, fit: BoxFit.contain),
+                    )
+                  else
+                    Image.memory(image, fit: BoxFit.cover),
                   Positioned(
                     bottom: 0,
                     left: 0,

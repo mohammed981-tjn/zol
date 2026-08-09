@@ -53,6 +53,12 @@ dependencies:
   # التقاط موقع العميل الحالي عبر GPS.
   geolocator: ^13.0.1
 
+  # معالجة الصور بلغة Dart النقية — عزل خلفية صورة المنتج على الجهاز.
+  image: ^4.3.0
+
+  # تجزئة كلمات المرور (SHA-256 مع ملح) لحسابات التجار المحلية.
+  crypto: ^3.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
