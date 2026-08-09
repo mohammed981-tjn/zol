@@ -239,6 +239,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   /// خادم، ومناسب لمواسم ذروة الطلب التي لا تغطيها قوالب Canva العربية
   /// (مجرد ترجمة لتصاميم غربية).
   Widget _buildSeasonPicker() {
+    final now = DateTime.now();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -256,18 +257,26 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
           children: [
             _seasonChip(null, 'بلا'),
             for (final season in SeasonalTheme.values)
-              _seasonChip(season, '${season.emoji} ${season.label}'),
+              _seasonChip(
+                season,
+                '${season.emoji} ${season.label}',
+                isUpcoming: isSeasonApproaching(season, now),
+              ),
           ],
         ),
       ],
     );
   }
 
-  Widget _seasonChip(SeasonalTheme? season, String label) {
+  Widget _seasonChip(
+    SeasonalTheme? season,
+    String label, {
+    bool isUpcoming = false,
+  }) {
     final isSelected = _season == season;
     return ChoiceChip(
       key: ValueKey('season-${season?.name ?? 'none'}'),
-      label: Text(label),
+      label: Text(isUpcoming ? '$label · قريبًا' : label),
       selected: isSelected,
       onSelected: (_) => setState(() => _season = season),
       selectedColor: season?.color ?? context.scheme.primary,
@@ -277,7 +286,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
       ),
       backgroundColor: context.cardBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      side: BorderSide.none,
+      side: isUpcoming && !isSelected
+          ? BorderSide(color: season!.color, width: 1.2)
+          : BorderSide.none,
     );
   }
 

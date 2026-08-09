@@ -846,6 +846,74 @@ void main() {
     expect(withSeason.first.cta, withoutSeason.first.cta);
   });
 
+  test('Season approach detection only trusts Gregorian-anchored occasions',
+      () {
+    // اليوم الوطني (23 سبتمبر): قريب خلال الثلاثين يومًا السابقة له.
+    expect(
+      isSeasonApproaching(
+        SeasonalTheme.nationalDay,
+        DateTime(2026, 9, 1),
+      ),
+      isTrue,
+    );
+    expect(
+      isSeasonApproaching(
+        SeasonalTheme.nationalDay,
+        DateTime(2026, 9, 23),
+      ),
+      isTrue,
+    );
+    expect(
+      isSeasonApproaching(
+        SeasonalTheme.nationalDay,
+        DateTime(2026, 8, 1),
+      ),
+      isFalse,
+    );
+    expect(
+      isSeasonApproaching(
+        SeasonalTheme.nationalDay,
+        DateTime(2026, 9, 24),
+      ),
+      isFalse,
+    );
+
+    // الجمعة البيضاء: النصف الثاني من نوفمبر تقريبًا.
+    expect(
+      isSeasonApproaching(SeasonalTheme.whiteFriday, DateTime(2026, 11, 20)),
+      isTrue,
+    );
+    expect(
+      isSeasonApproaching(SeasonalTheme.whiteFriday, DateTime(2026, 11, 5)),
+      isFalse,
+    );
+
+    // موسم الرياض: أكتوبر–مارس، يمتد عبر بداية السنة.
+    expect(
+      isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 12, 1)),
+      isTrue,
+    );
+    expect(
+      isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 2, 1)),
+      isTrue,
+    );
+    expect(
+      isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 6, 1)),
+      isFalse,
+    );
+
+    // رمضان والعيد بالتقويم الهجري المتغيّر — لا اقتراح تلقائي بلا تقويم
+    // هجري مضمَّن، تجنّبًا لادّعاء دقة غير موثوقة.
+    expect(
+      isSeasonApproaching(SeasonalTheme.ramadan, DateTime(2026, 3, 1)),
+      isFalse,
+    );
+    expect(
+      isSeasonApproaching(SeasonalTheme.eid, DateTime(2026, 3, 20)),
+      isFalse,
+    );
+  });
+
   testWidgets(
       'Season picker threads through to the design badge and gallery flow',
       (tester) async {

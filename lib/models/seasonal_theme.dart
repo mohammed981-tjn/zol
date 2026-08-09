@@ -53,3 +53,27 @@ extension SeasonalThemeInfo on SeasonalTheme {
 
   int get colorValue => color.toARGB32();
 }
+
+/// هل موسم [season] قريب من [now]؟ يُستخدم لوضع إشارة «قريبًا» على
+/// المواسم ذات التاريخ الميلادي الثابت أو التقريبي فقط (اليوم الوطني،
+/// الجمعة البيضاء، موسم الرياض). رمضان والعيد بالتقويم الهجري المتغيّر
+/// كل سنة بمقدار ~11 يومًا، فلا نقترحهما تلقائيًا بلا تقويم هجري
+/// مضمَّن — يبقى اختيارهما يدويًا الخيار الوحيد الموثوق.
+bool isSeasonApproaching(SeasonalTheme season, DateTime now) {
+  switch (season) {
+    case SeasonalTheme.nationalDay:
+      // 23 سبتمبر — نافذة الاقتراب: من 30 يومًا قبله وحتى يوم الاحتفال.
+      final target = DateTime(now.year, 9, 23);
+      final diff = target.difference(DateTime(now.year, now.month, now.day)).inDays;
+      return diff >= 0 && diff <= 30;
+    case SeasonalTheme.whiteFriday:
+      // النصف الثاني من نوفمبر تقريبًا (موعدها الفعلي يختلف قليلًا كل سنة).
+      return now.month == 11 && now.day >= 15;
+    case SeasonalTheme.riyadhSeason:
+      // أكتوبر–مارس تقريبًا — موسم طويل بخلاف باقي المواسم هنا.
+      return now.month >= 10 || now.month <= 3;
+    case SeasonalTheme.ramadan:
+    case SeasonalTheme.eid:
+      return false;
+  }
+}
