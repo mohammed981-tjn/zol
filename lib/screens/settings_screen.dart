@@ -83,7 +83,7 @@ class SettingsScreen extends StatelessWidget {
                 style: TextStyle(color: context.scheme.onSurface),
               ),
               subtitle: Text(
-                'AdCraft AI Marketplace — نسخة تجريبية 1.0.0\n'
+                'zol — نسخة تجريبية 1.0.0\n'
                 'توليد إعلانات بالذكاء الاصطناعي، طباعة ميدانية، وتوصيل حتى الباب.',
                 style: TextStyle(color: context.textMuted, fontSize: 12.5),
               ),

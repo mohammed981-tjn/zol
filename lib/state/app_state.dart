@@ -25,6 +25,7 @@ class AppState extends ChangeNotifier {
   static const _proKey = 'pro_active';
   static const _brandColorKey = 'brand_color';
   static const _brandLogoKey = 'brand_logo';
+  static const _onboardedKey = 'onboarded';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
@@ -36,6 +37,9 @@ class AppState extends ChangeNotifier {
 
   /// الخطة الاحترافية مفعّلة؟ (تزيل العلامة المائية من التصاميم.)
   bool isPro = false;
+
+  /// هل شاهد المستخدم شاشة الترحيب؟ تُعرض مرة واحدة عند أول تشغيل.
+  bool hasOnboarded = false;
 
   /// هوية العلامة (Brand Kit — نمط Canva): لون العلامة وشعار المتجر
   /// يُطبَّقان تلقائيًا على كل التصاميم المولَّدة.
@@ -81,6 +85,7 @@ class AppState extends ChangeNotifier {
     themeMode = ThemeMode.values[prefs.getInt(_themeKey) ?? 1];
     _nextOrderNumber = prefs.getInt(_orderNumberKey) ?? 1001;
     isPro = prefs.getBool(_proKey) ?? false;
+    hasOnboarded = prefs.getBool(_onboardedKey) ?? false;
     brandColorValue = prefs.getInt(_brandColorKey);
     final logo = prefs.getString(_brandLogoKey);
     if (logo != null && logo.isNotEmpty) {
@@ -161,6 +166,12 @@ class AppState extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     themeMode = mode;
     _persist();
+    notifyListeners();
+  }
+
+  void completeOnboarding() {
+    hasOnboarded = true;
+    _prefs?.setBool(_onboardedKey, true);
     notifyListeners();
   }
 

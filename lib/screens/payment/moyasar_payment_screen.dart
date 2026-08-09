@@ -46,7 +46,7 @@ class MoyasarPaymentScreen extends StatelessWidget {
       // البوابة تتعامل بالهللات لا الريالات.
       amount: (amountSar * 100).round(),
       description: orderDescription,
-      metadata: const {'source': 'adcraft_app'},
+      metadata: const {'source': 'zol_app'},
       creditCard: CreditCardConfig(saveCard: false, manual: false),
     );
 

@@ -108,7 +108,7 @@ class _OrderMapScreenState extends State<OrderMapScreen> {
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.adcraft.adcraft_marketplace',
+                      userAgentPackageName: 'com.zol.app',
                     ),
                     PolylineLayer(
                       polylines: [

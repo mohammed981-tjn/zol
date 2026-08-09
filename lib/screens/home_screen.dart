@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/icon_circle.dart';
+import '../widgets/zol_logo.dart';
 import 'create_ad/upload_details_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -26,29 +26,15 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 16),
             ] else
               const SizedBox(height: 24),
-            const IconCircle(
-              icon: Icons.auto_fix_high,
-              background: AppColors.coral,
-              diameter: 96,
-            ),
-            const SizedBox(height: 32),
+            const Center(child: ZolLogo(height: 92, color: Colors.white)),
+            const SizedBox(height: 28),
             const Text(
               'سوق الدعاية والإعلان الشامل',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 28,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'AdCraft AI Marketplace',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.gold,
-                fontSize: 16,
-                fontStyle: FontStyle.italic,
               ),
             ),
             const SizedBox(height: 16),

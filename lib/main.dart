@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/shell_screen.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
@@ -8,11 +9,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // استرجاع الإعلانات والطلبات والتفضيلات المحفوظة على الجهاز.
   final state = await AppState.load();
-  runApp(AdCraftApp(state: state));
+  runApp(ZolApp(state: state));
 }
 
-class AdCraftApp extends StatelessWidget {
-  const AdCraftApp({super.key, required this.state});
+class ZolApp extends StatelessWidget {
+  const ZolApp({super.key, required this.state});
 
   final AppState state;
 
@@ -23,7 +24,7 @@ class AdCraftApp extends StatelessWidget {
       child: ListenableBuilder(
         listenable: state,
         builder: (context, _) => MaterialApp(
-          title: 'AdCraft AI Marketplace',
+          title: 'zol',
           debugShowCheckedModeBanner: false,
           theme: buildAppTheme(Brightness.light),
           darkTheme: buildAppTheme(Brightness.dark),
@@ -35,7 +36,9 @@ class AdCraftApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: const ShellScreen(),
+          home: state.hasOnboarded
+              ? const ShellScreen()
+              : const OnboardingScreen(),
         ),
       ),
     );

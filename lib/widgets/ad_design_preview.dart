@@ -172,7 +172,7 @@ class AdDesignPreview extends StatelessWidget {
                 bottom: 8,
                 left: 12,
                 child: Text(
-                  'AdCraft ✦',
+                  'zol ✦',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.45),
                     fontSize: 10,

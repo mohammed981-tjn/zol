@@ -139,7 +139,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           XFile.fromData(
             data!.buffer.asUint8List(),
             mimeType: 'image/png',
-            name: 'adcraft_${widget.ad.brief.productName}.png',
+            name: 'zol_${widget.ad.brief.productName}.png',
           ),
         ],
         text: widget.ad.shareText,

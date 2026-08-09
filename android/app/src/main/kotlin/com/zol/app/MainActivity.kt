@@ -1,4 +1,4 @@
-package com.adcraft.adcraft_marketplace
+package com.zol.app
 
 import io.flutter.embedding.android.FlutterActivity
 

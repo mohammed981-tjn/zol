@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="zol">
+  <title>zol</title>
+  <!--
+    أيقونة تطبيق zol — حرف z جريء على خلفية كحلية، وشرارة مرجانية/ذهبية
+    عند طرفه العلوي ترمز للتوليد بالذكاء الاصطناعي.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#26326E"/>
+      <stop offset="100%" stop-color="#151C42"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F9E795"/>
+      <stop offset="100%" stop-color="#F96167"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+
+  <g fill="#FFFFFF">
+    <rect x="140" y="152" width="232" height="52" rx="10"/>
+    <polygon points="320,152 372,152 192,360 140,360"/>
+    <rect x="140" y="308" width="232" height="52" rx="10"/>
+  </g>
+
+  <!-- الشرارة عند الطرف العلوي للحرف -->
+  <path d="M374,96 Q383,131 418,140 Q383,149 374,184 Q365,149 330,140 Q365,131 374,96 Z"
+        fill="url(#spark)"/>
+</svg>

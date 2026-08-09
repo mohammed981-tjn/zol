@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../theme/app_theme.dart';
 
 /// شاشة اختيار موقع التوصيل على الخريطة — منقولة من تطبيق zadgo2
-/// (فرع split-customer) مع تكييفها لسمة AdCraft.
+/// (فرع split-customer) مع تكييفها لسمة zol.
 class PickLocationScreen extends StatefulWidget {
   const PickLocationScreen({super.key, this.initialLocation});
 
@@ -137,7 +137,7 @@ class _PickLocationScreenState extends State<PickLocationScreen> {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.adcraft.adcraft_marketplace',
+                userAgentPackageName: 'com.zol.app',
               ),
               if (_selected != null)
                 MarkerLayer(

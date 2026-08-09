@@ -6,15 +6,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:image/image.dart' as img;
 
-import 'package:adcraft_marketplace/main.dart';
-import 'package:adcraft_marketplace/models/ad_brief.dart';
-import 'package:adcraft_marketplace/models/print_order.dart';
-import 'package:adcraft_marketplace/models/print_shop.dart';
-import 'package:adcraft_marketplace/screens/settings_screen.dart';
-import 'package:adcraft_marketplace/screens/create_ad/upload_details_screen.dart';
-import 'package:adcraft_marketplace/services/ad_generator.dart';
-import 'package:adcraft_marketplace/services/background_remover.dart';
-import 'package:adcraft_marketplace/state/app_state.dart';
+import 'package:zol/main.dart';
+import 'package:zol/models/ad_brief.dart';
+import 'package:zol/models/print_order.dart';
+import 'package:zol/models/print_shop.dart';
+import 'package:zol/screens/settings_screen.dart';
+import 'package:zol/screens/create_ad/upload_details_screen.dart';
+import 'package:zol/services/ad_generator.dart';
+import 'package:zol/services/background_remover.dart';
+import 'package:zol/state/app_state.dart';
 
 /// صورة PNG صالحة 1×1 بكسل تُستخدم بدل منتقي الصور الأصلي في الاختبارات.
 final _fakeImage = base64Decode(
@@ -23,7 +23,10 @@ final _fakeImage = base64Decode(
 );
 
 Future<void> _pumpApp(WidgetTester tester, [AppState? state]) async {
-  await tester.pumpWidget(AdCraftApp(state: state ?? AppState()));
+  final appState = state ?? AppState();
+  // شاشة الترحيب تُعرض لأول تشغيل فقط؛ تخطّيها في اختبارات بقية الشاشات.
+  appState.completeOnboarding();
+  await tester.pumpWidget(ZolApp(state: appState));
 }
 
 /// يمرّ عبر: الرئيسية → التفاصيل → توليد شاشة السحر حتى ظهور النتائج.
@@ -53,6 +56,29 @@ void main() {
   setUpAll(() {
     UploadDetailsScreen.debugPickImageOverride = () async => _fakeImage;
     BackgroundRemover.debugRunSynchronously = true;
+  });
+
+  testWidgets('Onboarding shows on first run and only once', (tester) async {
+    final state = AppState();
+    await tester.pumpWidget(ZolApp(state: state));
+    await tester.pumpAndSettle();
+
+    // أول تشغيل → شاشة الترحيب لا الرئيسية.
+    expect(find.text('إعلانك يولد في ثوانٍ'), findsOneWidget);
+    expect(find.text('أنشئ إعلانك الآن'), findsNothing);
+
+    // التنقل بين الصفحات الثلاث ثم الدخول.
+    await tester.tap(find.text('التالي'));
+    await tester.pumpAndSettle();
+    expect(find.text('اطبعه عند أقرب مطبعة'), findsOneWidget);
+    await tester.tap(find.text('التالي'));
+    await tester.pumpAndSettle();
+    expect(find.text('ويصلك حتى الباب'), findsOneWidget);
+    await tester.tap(find.text('ابدأ الآن'));
+    await tester.pumpAndSettle();
+
+    expect(state.hasOnboarded, isTrue);
+    expect(find.text('أنشئ إعلانك الآن'), findsOneWidget);
   });
 
   testWidgets('Home screen shows the main call-to-action and stats',
