@@ -24,8 +24,8 @@ class SectionHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           title,
-          style: const TextStyle(
-            color: AppColors.textDark,
+          style: TextStyle(
+            color: context.scheme.onSurface,
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),

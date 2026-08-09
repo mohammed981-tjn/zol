@@ -7,30 +7,34 @@ class AppColors {
   static const navyDarker = Color(0xFF161E48);
   static const coral = Color(0xFFF96167);
   static const gold = Color(0xFFF9E795);
-  static const cardBg = Color(0xFFF5F6FA);
-  static const textDark = Color(0xFF1A1A2E);
-  static const textMuted = Color(0xFF6B7280);
 }
 
-ThemeData buildAppTheme() {
+ThemeData buildAppTheme(Brightness brightness) {
+  final isDark = brightness == Brightness.dark;
   final base = ThemeData(
     useMaterial3: true,
+    brightness: brightness,
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.navy,
-      primary: AppColors.navy,
+      brightness: brightness,
+      primary: isDark ? const Color(0xFF98A6E8) : AppColors.navy,
       secondary: AppColors.coral,
       tertiary: AppColors.gold,
     ),
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: isDark ? const Color(0xFF10142B) : Colors.white,
     fontFamily: 'Roboto',
   );
 
   return base.copyWith(
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.white,
-      foregroundColor: AppColors.textDark,
+    appBarTheme: AppBarTheme(
+      backgroundColor: base.scaffoldBackgroundColor,
+      foregroundColor: base.colorScheme.onSurface,
       elevation: 0,
       centerTitle: true,
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: base.scaffoldBackgroundColor,
+      indicatorColor: AppColors.coral.withValues(alpha: 0.16),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -43,12 +47,22 @@ ThemeData buildAppTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.navy,
-        side: const BorderSide(color: AppColors.navy),
+        foregroundColor: base.colorScheme.primary,
+        side: BorderSide(color: base.colorScheme.primary),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
     ),
   );
+}
+
+/// ألوان مساعدة مشتقة من السمة الحالية بدل الألوان الثابتة،
+/// حتى تعمل الشاشات في الوضعين الفاتح والداكن.
+extension AppSurfaces on BuildContext {
+  ColorScheme get scheme => Theme.of(this).colorScheme;
+  Color get cardBg => scheme.surfaceContainerHighest.withValues(
+    alpha: Theme.of(this).brightness == Brightness.dark ? 0.55 : 1,
+  );
+  Color get textMuted => scheme.onSurfaceVariant;
 }

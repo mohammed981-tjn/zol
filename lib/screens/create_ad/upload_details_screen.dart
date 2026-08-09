@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/ad_brief.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/choice_chip_group.dart';
 import '../../widgets/section_header.dart';
 import 'magic_screen.dart';
 
@@ -14,10 +15,24 @@ class UploadDetailsScreen extends StatefulWidget {
 class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   static const _tones = ['حماسي', 'كوميدي', 'رسمي', 'عاطفي'];
   static const _platforms = ['إنستغرام', 'تيك توك', 'فيسبوك', 'سناب شات'];
+  static const _formats = ['منشور مربع', 'ستوري', 'ريلز'];
 
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   String _selectedTone = _tones.first;
   String _selectedPlatform = _platforms.first;
+  String _selectedFormat = _formats.first;
   bool _hasProductImage = false;
+
+  bool get _canContinue =>
+      _hasProductImage && _nameController.text.trim().isNotEmpty;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,49 +43,92 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
             const SectionHeader(
-              kicker: 'تجربة المستخدم',
-              title: 'صورة المنتج، النبرة، والمنصة',
+              kicker: 'الخطوة 1 من 3',
+              title: 'عرّفنا على منتجك',
             ),
             const SizedBox(height: 24),
             _buildImagePicker(),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _nameController,
+              onChanged: (_) => setState(() {}),
+              decoration: _inputDecoration('اسم المنتج *', 'مثال: قهوة مختصة'),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 2,
+              decoration: _inputDecoration(
+                'وصف مختصر (اختياري)',
+                'ما الذي يميز منتجك؟',
+              ),
+            ),
             const SizedBox(height: 28),
-            _buildChipSection(
+            ChoiceChipGroup(
               title: 'نبرة الإعلان',
               options: _tones,
               selected: _selectedTone,
               onSelected: (v) => setState(() => _selectedTone = v),
             ),
             const SizedBox(height: 24),
-            _buildChipSection(
+            ChoiceChipGroup(
               title: 'المنصة المستهدفة',
               options: _platforms,
               selected: _selectedPlatform,
               onSelected: (v) => setState(() => _selectedPlatform = v),
             ),
+            const SizedBox(height: 24),
+            ChoiceChipGroup(
+              title: 'صيغة الإعلان',
+              options: _formats,
+              selected: _selectedFormat,
+              onSelected: (v) => setState(() => _selectedFormat = v),
+            ),
             const SizedBox(height: 36),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _hasProductImage
-                    ? () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => MagicScreen(
-                              brief: AdBrief(
-                                tone: _selectedTone,
-                                platform: _selectedPlatform,
-                                hasProductImage: _hasProductImage,
-                              ),
+            ElevatedButton(
+              onPressed: _canContinue
+                  ? () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MagicScreen(
+                            brief: AdBrief(
+                              productName: _nameController.text,
+                              description: _descriptionController.text,
+                              tone: _selectedTone,
+                              platform: _selectedPlatform,
+                              format: _selectedFormat,
+                              hasProductImage: _hasProductImage,
                             ),
                           ),
-                        );
-                      }
-                    : null,
-                child: const Text('اعرض شاشة السحر'),
-              ),
+                        ),
+                      );
+                    }
+                  : null,
+              child: const Text('اعرض شاشة السحر'),
             ),
+            if (!_canContinue) ...[
+              const SizedBox(height: 10),
+              Text(
+                'أضف صورة المنتج واسمه للمتابعة',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.textMuted, fontSize: 12),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, String hint) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: context.cardBg,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
       ),
     );
   }
@@ -80,9 +138,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
       borderRadius: BorderRadius.circular(16),
       onTap: () => setState(() => _hasProductImage = !_hasProductImage),
       child: Container(
-        height: 160,
+        height: 150,
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: context.cardBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _hasProductImage ? AppColors.coral : Colors.transparent,
@@ -93,56 +151,22 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _hasProductImage ? Icons.check_circle : Icons.add_photo_alternate_outlined,
+              _hasProductImage
+                  ? Icons.check_circle
+                  : Icons.add_photo_alternate_outlined,
               size: 40,
-              color: _hasProductImage ? AppColors.coral : AppColors.textMuted,
+              color: _hasProductImage ? AppColors.coral : context.textMuted,
             ),
             const SizedBox(height: 10),
             Text(
-              _hasProductImage ? 'تم اختيار صورة المنتج' : 'اضغط لرفع صورة المنتج',
-              style: const TextStyle(color: AppColors.textMuted),
+              _hasProductImage
+                  ? 'تم اختيار صورة المنتج'
+                  : 'اضغط لرفع صورة المنتج',
+              style: TextStyle(color: context.textMuted),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildChipSection({
-    required String title,
-    required List<String> options,
-    required String selected,
-    required ValueChanged<String> onSelected,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: options.map((option) {
-            final isSelected = option == selected;
-            return ChoiceChip(
-              label: Text(option),
-              selected: isSelected,
-              onSelected: (_) => onSelected(option),
-              selectedColor: AppColors.navy,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textDark,
-                fontWeight: FontWeight.w600,
-              ),
-              backgroundColor: AppColors.cardBg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              side: BorderSide.none,
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 }

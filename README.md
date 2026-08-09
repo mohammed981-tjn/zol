@@ -33,16 +33,23 @@
 ## الملفات
 
 - [`AdCraft_AI_Marketplace_Pitch_Deck.pptx`](./AdCraft_AI_Marketplace_Pitch_Deck.pptx) — مسودة العرض الاستثماري (Pitch Deck).
-- `lib/` — تطبيق Flutter الأولي (هيكل التنقل بين شاشات رحلة العميل الأربع، بدون ربط فعلي بالذكاء الاصطناعي أو الطباعة بعد).
+- [`docs/COMPETITIVE_ANALYSIS.md`](./docs/COMPETITIVE_ANALYSIS.md) — التحليل التنافسي مقابل التطبيقات العالمية وما نُقل منها للتطبيق.
+- `lib/` — تطبيق Flutter (رحلة العميل كاملة بواجهات وهمية mock، بدون ربط خلفي حقيقي بعد).
 
 ## تطبيق Flutter
 
-هيكل أولي قابل للتشغيل يغطي رحلة العميل كاملة بواجهات وهمية (mock) دون ربط خلفي حقيقي بعد:
+نموذج أولي متكامل مستوحى من أفضل الممارسات العالمية (AdCreative.ai، Canva، CapCut، Printify، VistaPrint):
 
-- **الشاشة الرئيسية** (`lib/screens/home_screen.dart`) — زر «أنشئ إعلانك الآن».
-- **أدخل التفاصيل** (`lib/screens/create_ad/upload_details_screen.dart`) — اختيار صورة المنتج، النبرة، والمنصة.
-- **شاشة السحر** (`lib/screens/create_ad/magic_screen.dart`) — بطاقات معاينة قابلة للتمرير.
-- **التنفيذ** (`lib/screens/create_ad/execute_screen.dart`) — مسار «حفظ ونشر» أو مسار «اطبعه وصلّه» (اختيار المطبوع + عنوان التوصيل).
+- **هيكل بتنقل سفلي** (`lib/screens/shell_screen.dart`) — الرئيسية، إعلاناتي، طلباتي، الإعدادات.
+- **الرئيسية** (`lib/screens/home_screen.dart`) — زر «أنشئ إعلانك الآن» + إحصاءات سريعة.
+- **أدخل التفاصيل** (`lib/screens/create_ad/upload_details_screen.dart`) — صورة المنتج واسمه ووصفه، النبرة، المنصة، وصيغة الإعلان (منشور/ستوري/ريلز).
+- **شاشة السحر** (`lib/screens/create_ad/magic_screen.dart`) — توليد بمراحل ظاهرة (تحليل الصورة → كتابة النص → إخراج التصميم)، 3 نسخ لكل منها **درجة توافق** على نمط Creative Score، مع إعادة توليد ونسخ النص وحفظ في المكتبة.
+- **التنفيذ** (`lib/screens/create_ad/execute_screen.dart`) — مسار «حفظ ونشر»، أو مسار «اطبعه وصلّه» بكتالوج مطبوعات (بنر/استيكرات/كروت/رول أب) بمقاسات وكميات و**تسعير فوري** (منتج + توصيل + ضريبة 15%).
+- **طلباتي** (`lib/screens/orders_screen.dart`) — تتبع الطلبات بخط زمني (استلام → طباعة → توصيل → تسليم).
+- **إعلاناتي** (`lib/screens/my_ads_screen.dart`) — مكتبة النسخ المحفوظة.
+- **الإعدادات** (`lib/screens/settings_screen.dart`) — وضع فاتح/داكن + بطاقة خطة الاشتراك.
+
+المحتوى المولَّد حاليًا من `lib/services/ad_generator.dart` (محاكاة حتمية لمزوّد ذكاء اصطناعي)، والحالة في الذاكرة عبر `lib/state/app_state.dart`.
 
 ### التشغيل
 
