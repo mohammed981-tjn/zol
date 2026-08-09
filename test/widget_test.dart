@@ -127,17 +127,18 @@ void main() {
 
     // بنر 1×2 متر: 90 + توصيل 25 + ضريبة 15% = 132.25
     final confirm = find.widgetWithText(ElevatedButton, 'تأكيد الطلب — 132.25 ر.س');
-    await tester.scrollUntilVisible(
-      confirm,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    // التمرير لأسفل القائمة (السحب المباشر يتفادى التباس تعدد الـ Scrollables).
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
     // ملخص السعر ظاهر وزر التأكيد معطل قبل إدخال العنوان.
     expect(find.text('الإجمالي'), findsOneWidget);
     expect(tester.widget<ElevatedButton>(confirm).enabled, isFalse);
 
     await tester.enterText(find.byType(TextField), 'الرياض، حي النرجس');
+    tester.binding.focusManager.primaryFocus?.unfocus();
     await tester.pump();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+    await tester.pumpAndSettle();
     await tester.tap(confirm);
     await tester.pump();
 
@@ -191,6 +192,89 @@ void main() {
     expect(second.orders.first.hasDeliveryPoint, isTrue);
     // تسلسل أرقام الطلبات يستمر بعد إعادة التشغيل.
     expect(second.nextOrderId(), 'AD-1002');
+  });
+
+  testWidgets('Card payment (simulated) marks the order as paid',
+      (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+
+    await tester.tap(find.text('اطبعه وصلّه'));
+    await tester.pumpAndSettle();
+
+    // اختيار الدفع بالبطاقة بعد التمرير لأسفل القائمة.
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('بطاقة (mada / Visa / Mastercard)'));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'الرياض، حي النرجس');
+    tester.binding.focusManager.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('ادفع وأكّد الطلب'));
+    await tester.pumpAndSettle();
+
+    // ورقة المحاكاة تظهر بوضوح أنها تجريبية.
+    expect(find.textContaining('محاكاة بوابة الدفع'), findsOneWidget);
+    await tester.tap(find.text('محاكاة نجاح الدفع'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('تم استلام طلب الطباعة'), findsOneWidget);
+    expect(find.textContaining('مدفوع بالبطاقة ✓'), findsOneWidget);
+    expect(state.orders.single.isPaid, isTrue);
+    expect(state.orders.single.paymentId, startsWith('SIM-'));
+  });
+
+  testWidgets('Cancelling card payment creates no order', (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+
+    await tester.tap(find.text('اطبعه وصلّه'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('بطاقة (mada / Visa / Mastercard)'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'الرياض');
+    tester.binding.focusManager.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('ادفع وأكّد الطلب'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إلغاء'));
+    await tester.pumpAndSettle();
+
+    // لا طلب بلا دفع ناجح (قاعدة zadgo2).
+    expect(state.orders, isEmpty);
+    expect(find.text('تم استلام طلب الطباعة'), findsNothing);
+  });
+
+  testWidgets('Pro upgrade removes the watermark plan card', (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+
+    await tester.tap(find.text('الإعدادات'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('الترقية للاحترافية'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.ensureVisible(find.text('الترقية للاحترافية'));
+    await tester.pump();
+    await tester.tap(find.text('الترقية للاحترافية'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('محاكاة نجاح الدفع'));
+    await tester.pumpAndSettle();
+
+    expect(state.isPro, isTrue);
+    expect(find.text('الخطة الاحترافية مفعّلة ✓'), findsOneWidget);
+    expect(find.text('الترقية للاحترافية'), findsNothing);
   });
 
   test('Background remover isolates product from a uniform background',

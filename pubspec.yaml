@@ -59,6 +59,10 @@ dependencies:
   # تجزئة كلمات المرور (SHA-256 مع ملح) لحسابات التجار المحلية.
   crypto: ^3.0.6
 
+  # بوابة الدفع «ميسر» — mada وVisa وMastercard (نمط zadgo2).
+  # المفتاح المنشور يُمرَّر عند البناء عبر --dart-define ولا يوضع بالمستودع.
+  moyasar: ^2.0.16
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

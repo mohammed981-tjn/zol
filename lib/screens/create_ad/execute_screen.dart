@@ -4,13 +4,16 @@ import 'package:flutter/rendering.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/generated_ad.dart';
+import '../../models/payment_result.dart';
 import '../../models/print_catalog.dart';
 import '../../models/print_order.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/payment_config.dart';
 import '../../widgets/ad_design_preview.dart';
 import '../../widgets/icon_circle.dart';
 import '../order_map_screen.dart';
+import '../payment/payment_flow.dart';
 import '../pick_location_screen.dart';
 
 class ExecuteScreen extends StatefulWidget {
@@ -31,6 +34,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   int _quantity = 1;
   final _addressController = TextEditingController();
   LatLng? _deliveryPoint;
+  PayMethod _payMethod = PayMethod.cash;
   PrintOrder? _confirmedOrder;
   bool _exporting = false;
 
@@ -70,7 +74,10 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
             height: 420,
             child: RepaintBoundary(
               key: _designKey,
-              child: AdDesignPreview(ad: widget.ad),
+              child: AdDesignPreview(
+                ad: widget.ad,
+                showWatermark: !AppStateScope.of(context).isPro,
+              ),
             ),
           ),
         ),
@@ -277,16 +284,67 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           ),
         ),
         const SizedBox(height: 24),
+        _sectionTitle('طريقة الدفع'),
+        const SizedBox(height: 10),
+        _buildPayMethodPicker(),
+        const SizedBox(height: 24),
         _buildPriceSummary(),
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed:
               _addressController.text.trim().isEmpty ? null : _confirmOrder,
           child: Text(
-            'تأكيد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}',
+            _payMethod == PayMethod.card
+                ? 'ادفع وأكّد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}'
+                : 'تأكيد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}',
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPayMethodPicker() {
+    return RadioGroup<PayMethod>(
+      groupValue: _payMethod,
+      onChanged: (v) => setState(() => _payMethod = v!),
+      child: Column(
+        children: PayMethod.values.map((method) {
+          final isSelected = method == _payMethod;
+          final isSimulated =
+              method == PayMethod.card && !AppPaymentConfig.isConfigured;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: context.cardBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isSelected ? AppColors.coral : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+            child: RadioListTile<PayMethod>(
+              value: method,
+              activeColor: AppColors.coral,
+              title: Text(
+                method.label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: context.scheme.onSurface,
+                ),
+              ),
+              subtitle: isSimulated
+                  ? Text(
+                      'محاكاة تجريبية — تصبح بوابة «ميسر» الحقيقية بعد ضبط المفتاح',
+                      style:
+                          TextStyle(fontSize: 11.5, color: context.textMuted),
+                    )
+                  : null,
+              dense: true,
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -350,8 +408,30 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
     );
   }
 
-  void _confirmOrder() {
+  Future<void> _confirmOrder() async {
     final state = AppStateScope.of(context);
+    final total = _subtotal + deliveryFee + _vat;
+
+    String? paymentId;
+    var isPaid = false;
+    if (_payMethod == PayMethod.card) {
+      final result = await startCardPayment(
+        context,
+        amountSar: total,
+        description: 'طلب طباعة ${_product.label} × $_quantity',
+      );
+      // قاعدة zadgo2: لا يُنشأ طلب مدفوع إلا بتأكيد البوابة.
+      if (result == null || !result.success) {
+        if (mounted && result?.errorMessage != null) {
+          _showConfirmation(result!.errorMessage!);
+        }
+        return;
+      }
+      paymentId = result.paymentId;
+      isPaid = true;
+    }
+    if (!mounted) return;
+
     final order = PrintOrder(
       id: state.nextOrderId(),
       productLabel: _product.label,
@@ -365,6 +445,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
       createdAt: DateTime.now(),
       deliveryLat: _deliveryPoint?.latitude,
       deliveryLng: _deliveryPoint?.longitude,
+      payMethod: _payMethod,
+      isPaid: isPaid,
+      paymentId: paymentId,
     );
     state.addOrder(order);
     setState(() => _confirmedOrder = order);
@@ -397,6 +480,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           'رقم الطلب ${order.id}\n'
           '${order.productLabel} (${order.sizeLabel}) × ${order.quantity} — '
           '${formatPrice(order.total)}\n'
+          '${order.isPaid ? 'مدفوع بالبطاقة ✓' : 'الدفع عند الاستلام'}\n'
           'تابع حالته من تبويب «طلباتي»',
           textAlign: TextAlign.center,
           style: TextStyle(color: context.textMuted),

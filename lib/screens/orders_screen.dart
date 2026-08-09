@@ -80,7 +80,8 @@ class _OrderCard extends StatelessWidget {
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: Text(
-                'التوصيل إلى: ${order.address}',
+                'التوصيل إلى: ${order.address}\n'
+                '${order.isPaid ? 'مدفوع بالبطاقة ✓' : 'الدفع عند الاستلام'}',
                 style: TextStyle(color: context.textMuted, fontSize: 12.5),
               ),
             ),

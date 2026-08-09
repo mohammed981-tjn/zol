@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'payment_result.dart';
 
 enum OrderStatus { received, printing, shipping, delivered }
 
@@ -32,6 +33,9 @@ class PrintOrder {
     required this.createdAt,
     this.deliveryLat,
     this.deliveryLng,
+    this.payMethod = PayMethod.cash,
+    this.isPaid = false,
+    this.paymentId,
   });
 
   final String id;
@@ -50,6 +54,12 @@ class PrintOrder {
   final double? deliveryLat;
   final double? deliveryLng;
 
+  final PayMethod payMethod;
+
+  /// true فقط بعد تأكيد البوابة بمعرّف عملية (قاعدة zadgo2).
+  final bool isPaid;
+  final String? paymentId;
+
   bool get hasDeliveryPoint => deliveryLat != null && deliveryLng != null;
 
   double get total => subtotal + deliveryFee + vat;
@@ -67,6 +77,9 @@ class PrintOrder {
     createdAt: createdAt,
     deliveryLat: deliveryLat,
     deliveryLng: deliveryLng,
+    payMethod: payMethod,
+    isPaid: isPaid,
+    paymentId: paymentId,
   );
 
   Map<String, dynamic> toJson() => {
@@ -82,6 +95,9 @@ class PrintOrder {
     'createdAt': createdAt.toIso8601String(),
     'deliveryLat': deliveryLat,
     'deliveryLng': deliveryLng,
+    'payMethod': payMethod.index,
+    'isPaid': isPaid,
+    'paymentId': paymentId,
   };
 
   factory PrintOrder.fromJson(Map<String, dynamic> json) => PrintOrder(
@@ -98,5 +114,8 @@ class PrintOrder {
         DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
     deliveryLat: (json['deliveryLat'] as num?)?.toDouble(),
     deliveryLng: (json['deliveryLng'] as num?)?.toDouble(),
+    payMethod: PayMethod.values[json['payMethod'] as int? ?? 0],
+    isPaid: json['isPaid'] as bool? ?? false,
+    paymentId: json['paymentId'] as String?,
   );
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/payment_config.dart';
 import '../widgets/icon_circle.dart';
 import '../widgets/section_header.dart';
 import 'auth_screen.dart';
+import 'payment/payment_flow.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -52,50 +54,7 @@ class SettingsScreen extends StatelessWidget {
               onSelectionChanged: (modes) => state.setThemeMode(modes.first),
             ),
             const SizedBox(height: 28),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.navy,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.workspace_premium_outlined,
-                          color: AppColors.gold),
-                      SizedBox(width: 8),
-                      Text(
-                        'الخطة المجانية',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'مخرجات بعلامة مائية. رقِّ إلى الخطة الاحترافية (29\$ شهريًا) '
-                    'لإزالة العلامة وفتح التوليد غير المحدود.',
-                    style: TextStyle(color: Color(0xFFCADCFC), fontSize: 13),
-                  ),
-                  const SizedBox(height: 14),
-                  ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('الاشتراكات ستتوفر مع ربط بوابة الدفع'),
-                        ),
-                      );
-                    },
-                    child: const Text('الترقية للاحترافية'),
-                  ),
-                ],
-              ),
-            ),
+            _buildPlanCard(context, state),
             const SizedBox(height: 28),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -114,6 +73,105 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildPlanCard(BuildContext context, AppState state) {
+    if (state.isPro) {
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.navy,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.gold, width: 1.5),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: AppColors.gold, size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'الخطة الاحترافية مفعّلة ✓',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'تصاميمك تُصدَّر بلا علامة مائية.',
+                    style: TextStyle(color: Color(0xFFCADCFC), fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.navy,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.workspace_premium_outlined, color: AppColors.gold),
+              SizedBox(width: 8),
+              Text(
+                'الخطة المجانية',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'مخرجات بعلامة مائية. رقِّ إلى الخطة الاحترافية '
+            '(${AppPaymentConfig.proMonthlyPriceSar.toStringAsFixed(0)} ر.س شهريًا) '
+            'لإزالة العلامة وفتح التوليد غير المحدود.',
+            style: const TextStyle(color: Color(0xFFCADCFC), fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton(
+            onPressed: () => _upgradeToPro(context, state),
+            child: const Text('الترقية للاحترافية'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _upgradeToPro(BuildContext context, AppState state) async {
+    final result = await startCardPayment(
+      context,
+      amountSar: AppPaymentConfig.proMonthlyPriceSar,
+      description: 'اشتراك الخطة الاحترافية (شهري)',
+    );
+    if (!context.mounted) return;
+    if (result != null && result.success) {
+      state.activatePro();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم تفعيل الخطة الاحترافية 🎉 — لا علامة مائية بعد الآن'),
+        ),
+      );
+    } else if (result?.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result!.errorMessage!)),
+      );
+    }
   }
 
   Widget _buildAccountSection(BuildContext context, AppState state) {

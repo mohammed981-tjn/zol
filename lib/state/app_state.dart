@@ -21,6 +21,7 @@ class AppState extends ChangeNotifier {
   static const _orderNumberKey = 'next_order_number';
   static const _accountsKey = 'merchant_accounts';
   static const _sessionKey = 'session_email';
+  static const _proKey = 'pro_active';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
@@ -29,6 +30,9 @@ class AppState extends ChangeNotifier {
   /// حساب التاجر المسجَّل دخوله حاليًا (null = زائر).
   MerchantAccount? account;
   bool get isLoggedIn => account != null;
+
+  /// الخطة الاحترافية مفعّلة؟ (تزيل العلامة المائية من التصاميم.)
+  bool isPro = false;
 
   /// سجل الحسابات المحلية: بريد → {name, storeName, salt, hash}.
   /// يُستبدل بمزوّد مصادقة سحابي (Firebase Auth كما في zadgo2) عند
@@ -66,6 +70,7 @@ class AppState extends ChangeNotifier {
     }
     themeMode = ThemeMode.values[prefs.getInt(_themeKey) ?? 1];
     _nextOrderNumber = prefs.getInt(_orderNumberKey) ?? 1001;
+    isPro = prefs.getBool(_proKey) ?? false;
 
     try {
       _accounts =
@@ -137,6 +142,13 @@ class AppState extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     themeMode = mode;
     _persist();
+    notifyListeners();
+  }
+
+  /// تفعيل الخطة الاحترافية بعد تأكيد الدفع من البوابة.
+  void activatePro() {
+    isPro = true;
+    _prefs?.setBool(_proKey, true);
     notifyListeners();
   }
 

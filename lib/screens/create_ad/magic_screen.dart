@@ -289,7 +289,10 @@ class _AdPreviewCard extends StatelessWidget {
               Center(
                 child: SizedBox(
                   height: 250,
-                  child: AdDesignPreview(ad: ad),
+                  child: AdDesignPreview(
+                    ad: ad,
+                    showWatermark: !AppStateScope.of(context).isPro,
+                  ),
                 ),
               ),
             ],
