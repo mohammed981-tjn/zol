@@ -8,6 +8,7 @@ import '../models/generated_ad.dart';
 import '../models/business_category.dart';
 import '../models/merchant_account.dart';
 import '../models/print_order.dart';
+import '../models/trashed_ad.dart';
 import '../services/image_store.dart';
 
 /// حالة التطبيق: إعلانات محفوظة، طلبات طباعة، سمة العرض.
@@ -29,9 +30,14 @@ class AppState extends ChangeNotifier {
   static const _brandLogoKey = 'brand_logo';
   static const _onboardedKey = 'onboarded';
   static const _categoryKey = 'business_category';
+  static const _trashKey = 'trashed_ads';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
+
+  /// إعلانات محذوفة من المكتبة بانتظار الاستعادة أو الحذف النهائي —
+  /// سلة مهملات تمنع فقدان عمل التاجر بضغطة خاطئة.
+  final List<TrashedAd> trashedAds = [];
   ThemeMode themeMode = ThemeMode.light;
 
   /// حساب التاجر المسجَّل دخوله حاليًا (null = زائر).
@@ -88,6 +94,15 @@ class AppState extends ChangeNotifier {
       savedAds.clear();
       orders.clear();
     }
+    try {
+      final trash = jsonDecode(prefs.getString(_trashKey) ?? '[]') as List;
+      trashedAds.addAll(
+        trash.map((e) => TrashedAd.fromJson(e as Map<String, dynamic>)),
+      );
+    } catch (_) {
+      trashedAds.clear();
+    }
+    _purgeExpiredTrash();
     themeMode = ThemeMode.values[prefs.getInt(_themeKey) ?? 1];
     _nextOrderNumber = prefs.getInt(_orderNumberKey) ?? 1001;
     isPro = prefs.getBool(_proKey) ?? false;
@@ -137,6 +152,10 @@ class AppState extends ChangeNotifier {
     );
     prefs.setInt(_themeKey, themeMode.index);
     prefs.setInt(_orderNumberKey, _nextOrderNumber);
+    prefs.setString(
+      _trashKey,
+      jsonEncode(trashedAds.map((t) => t.toJson()).toList()),
+    );
   }
 
   /// يحفظ الإعلان في المكتبة. تُضغط صورة المنتج أولًا حتى لا ينتفخ
@@ -154,10 +173,38 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// ينقل الإعلان إلى سلة المهملات بدل حذفه نهائيًا — يمكن استعادته خلال
+  /// [TrashedAd.retentionDays] يومًا قبل أن يُحذف تلقائيًا.
   void removeAd(GeneratedAd ad) {
     savedAds.remove(ad);
+    trashedAds.insert(0, TrashedAd(ad: ad, deletedAt: DateTime.now()));
     _persist();
     notifyListeners();
+  }
+
+  void restoreAd(TrashedAd item) {
+    if (!trashedAds.remove(item)) return;
+    savedAds.insert(0, item.ad);
+    _persist();
+    notifyListeners();
+  }
+
+  void permanentlyDeleteAd(TrashedAd item) {
+    trashedAds.remove(item);
+    _persist();
+    notifyListeners();
+  }
+
+  void emptyTrash() {
+    trashedAds.clear();
+    _persist();
+    notifyListeners();
+  }
+
+  /// يحذف نهائيًا كل عنصر تجاوز مدة الاحتفاظ — يُستدعى عند كل تحميل
+  /// للحالة فلا تتراكم عناصر سلة منسية إلى الأبد.
+  void _purgeExpiredTrash() {
+    trashedAds.removeWhere((t) => t.daysRemaining <= 0);
   }
 
   String nextOrderId() {

@@ -23,6 +23,9 @@ import 'package:zol/services/background_remover.dart';
 import 'package:zol/services/image_store.dart';
 import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
+import 'package:zol/models/trashed_ad.dart';
+import 'package:zol/theme/app_theme.dart';
+import 'package:zol/widgets/print_cost_calculator.dart';
 
 /// صورة PNG صالحة 1×1 بكسل تُستخدم بدل منتقي الصور الأصلي في الاختبارات.
 final _fakeImage = base64Decode(
@@ -577,11 +580,16 @@ void main() {
     // إعادة التصدير متاحة من الإعلان المحفوظ.
     expect(find.textContaining('تحميل/مشاركة التصميم'), findsOneWidget);
 
-    // والحلقة مكتملة: من المكتبة إلى طلب طباعة بمعاينة على المطبوع.
-    const printButton = ValueKey('print-from-design');
-    await tester.ensureVisible(find.byKey(printButton));
+    // والحلقة مكتملة: من المكتبة إلى طلب طباعة عبر حاسبة التكلفة.
+    final calcToggle = find.byKey(const ValueKey('print-cost-toggle'));
+    await tester.ensureVisible(calcToggle);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(printButton));
+    await tester.tap(calcToggle);
+    await tester.pumpAndSettle();
+    final proceed = find.byKey(const ValueKey('print-cost-proceed'));
+    await tester.ensureVisible(proceed);
+    await tester.pumpAndSettle();
+    await tester.tap(proceed);
     await tester.pumpAndSettle();
     expect(find.byType(PrintMockupPreview), findsOneWidget);
     expect(find.text('اختر نوع المطبوع'), findsOneWidget);
@@ -744,6 +752,189 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(state.businessCategory, BusinessCategory.beauty);
+  });
+
+  testWidgets(
+      'Print cost calculator computes total and proceeds with the chosen selection',
+      (tester) async {
+    PrintProduct? proceedProduct;
+    int? proceedSizeIndex;
+    int? proceedQuantity;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(Brightness.light),
+        home: Scaffold(
+          body: PrintCostCalculator(
+            onProceed: (product, sizeIndex, quantity) {
+              proceedProduct = product;
+              proceedSizeIndex = sizeIndex;
+              proceedQuantity = quantity;
+            },
+          ),
+        ),
+      ),
+    );
+
+    // مطويّة افتراضيًا وتُظهر تقدير «بنر» (المنتج الأول في الكتالوج).
+    expect(find.textContaining('بنر'), findsOneWidget);
+    expect(find.byKey(const ValueKey('print-cost-proceed')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('print-cost-toggle')));
+    await tester.pumpAndSettle();
+
+    // تغيير المنتج إلى كروت أعمال يحدّث التقدير والملخص فورًا.
+    await tester.tap(find.text('كروت أعمال'));
+    await tester.pumpAndSettle();
+    // 60 (سعر القياسي) + 25 توصيل، ‎×1.15 ضريبة = 97.75
+    expect(find.textContaining('97.75'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('print-cost-proceed')));
+    await tester.pumpAndSettle();
+
+    expect(proceedProduct?.label, 'كروت أعمال');
+    expect(proceedSizeIndex, 0);
+    expect(proceedQuantity, 1);
+  });
+
+  testWidgets('Deleting a saved ad moves it to trash with an instant undo',
+      (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+
+    await tester.tap(find.text('حفظ').first);
+    await tester.pumpAndSettle();
+    expect(state.savedAds, hasLength(1));
+    // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه قبل حذف
+    // الإعلان، وإلا يبقى شريط الحذف التالي في قائمة الانتظار خلفه.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    Navigator.of(tester.element(find.byType(Scaffold).last))
+        .popUntil((route) => route.isFirst);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إعلاناتي'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('حذف'));
+    await tester.pump();
+    // السماح للـ Snackbar بإنهاء حركة الظهور.
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(state.savedAds, isEmpty);
+    expect(state.trashedAds, hasLength(1));
+    expect(find.text('نُقل الإعلان إلى سلة المهملات'), findsOneWidget);
+
+    // التراجع من الـ Snackbar يعيده للمكتبة فورًا بلا حاجة لفتح السلة.
+    await tester.tap(find.text('تراجع'));
+    await tester.pumpAndSettle();
+    expect(state.savedAds, hasLength(1));
+    expect(state.trashedAds, isEmpty);
+  });
+
+  testWidgets('Trash screen restores an ad back to the library',
+      (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+    await tester.tap(find.text('حفظ').first);
+    await tester.pumpAndSettle();
+    // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه أولًا.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    Navigator.of(tester.element(find.byType(Scaffold).last))
+        .popUntil((route) => route.isFirst);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إعلاناتي'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('حذف'));
+    // شريط تنبيه الحذف يغطي أسفل الشاشة — ننتظر اختفاءه.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('سلة المهملات'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('يُحذف نهائيًا خلال'), findsOneWidget);
+
+    await tester.tap(find.text('استعادة'));
+    await tester.pumpAndSettle();
+
+    expect(state.savedAds, hasLength(1));
+    expect(state.trashedAds, isEmpty);
+    expect(find.text('سلة المهملات فارغة'), findsOneWidget);
+  });
+
+  testWidgets('Emptying the trash asks for confirmation before deleting forever',
+      (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+    await tester.tap(find.text('حفظ').first);
+    await tester.pumpAndSettle();
+    // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه أولًا.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    Navigator.of(tester.element(find.byType(Scaffold).last))
+        .popUntil((route) => route.isFirst);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إعلاناتي'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('حذف'));
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('سلة المهملات'));
+    await tester.pumpAndSettle();
+
+    // الإلغاء لا يحذف شيئًا.
+    await tester.tap(find.text('إفراغ السلة'));
+    await tester.pumpAndSettle();
+    expect(find.text('إفراغ السلة نهائيًا؟'), findsOneWidget);
+    await tester.tap(find.text('إلغاء'));
+    await tester.pumpAndSettle();
+    expect(state.trashedAds, hasLength(1));
+
+    // التأكيد يفرغ السلة نهائيًا.
+    await tester.tap(find.text('إفراغ السلة'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إفراغ نهائيًا'));
+    await tester.pumpAndSettle();
+    expect(state.trashedAds, isEmpty);
+    expect(find.text('سلة المهملات فارغة'), findsOneWidget);
+  });
+
+  test('Expired trash items are purged automatically on load', () async {
+    final oldAd = AdGenerator.preview(
+      AdBrief(
+        productName: 'قديم',
+        description: '',
+        tone: 'حماسي',
+        platform: 'إنستغرام',
+        format: 'منشور مربع',
+      ),
+    ).first;
+    final fresh = TrashedAd(ad: oldAd, deletedAt: DateTime.now());
+    final expired = TrashedAd(
+      ad: oldAd,
+      deletedAt: DateTime.now().subtract(const Duration(days: 40)),
+    );
+
+    SharedPreferences.setMockInitialValues({
+      'trashed_ads': jsonEncode([fresh.toJson(), expired.toJson()]),
+    });
+
+    final state = await AppState.load();
+    expect(state.trashedAds, hasLength(1));
+    expect(
+      state.trashedAds.single.deletedAt
+          .difference(fresh.deletedAt)
+          .inSeconds
+          .abs(),
+      lessThan(2),
+    );
   });
 
   test('Orders route to the nearest partner print shop', () {

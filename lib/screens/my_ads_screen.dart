@@ -7,6 +7,7 @@ import '../widgets/empty_state.dart';
 import '../widgets/icon_circle.dart';
 import '../widgets/section_header.dart';
 import 'create_ad/execute_screen.dart';
+import 'trash_screen.dart';
 
 class MyAdsScreen extends StatelessWidget {
   const MyAdsScreen({super.key});
@@ -15,9 +16,28 @@ class MyAdsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
     final ads = state.savedAds;
+    final trashCount = state.trashedAds.length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('إعلاناتي')),
+      appBar: AppBar(
+        title: const Text('إعلاناتي'),
+        actions: [
+          IconButton(
+            tooltip: 'سلة المهملات',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TrashScreen()),
+              );
+            },
+            icon: trashCount == 0
+                ? const Icon(Icons.delete_outline)
+                : Badge(
+                    label: Text('$trashCount'),
+                    child: const Icon(Icons.delete_outline),
+                  ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ads.isEmpty
             ? const EmptyState(
@@ -116,7 +136,19 @@ class _SavedAdCard extends StatelessWidget {
               ),
               IconButton(
                 tooltip: 'حذف',
-                onPressed: () => state.removeAd(ad),
+                onPressed: () {
+                  state.removeAd(ad);
+                  final trashed = state.trashedAds.first;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('نُقل الإعلان إلى سلة المهملات'),
+                      action: SnackBarAction(
+                        label: 'تراجع',
+                        onPressed: () => state.restoreAd(trashed),
+                      ),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.delete_outline, size: 20),
               ),
             ],

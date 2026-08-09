@@ -8,6 +8,7 @@ import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ad_design_preview.dart';
 import '../../widgets/icon_circle.dart';
+import '../../widgets/print_cost_calculator.dart';
 import '../../widgets/section_header.dart';
 import 'execute_screen.dart';
 
@@ -185,7 +186,26 @@ class _MagicScreenState extends State<MagicScreen> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: PrintCostCalculator(
+            onProceed: (product, sizeIndex, quantity) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ExecuteScreen(
+                    ad: ads[_selectedCard],
+                    isDigital: false,
+                    initialTemplate: widget.initialTemplate,
+                    initialProduct: product,
+                    initialSizeIndex: sizeIndex,
+                    initialQuantity: quantity,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Row(
             children: [
               Expanded(

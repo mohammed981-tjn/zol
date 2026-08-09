@@ -14,6 +14,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/payment_config.dart';
 import '../../widgets/ad_design_preview.dart';
 import '../../widgets/icon_circle.dart';
+import '../../widgets/print_cost_calculator.dart';
 import '../../widgets/print_mockup.dart';
 import '../order_map_screen.dart';
 import '../payment/payment_flow.dart';
@@ -25,10 +26,18 @@ class ExecuteScreen extends StatefulWidget {
     required this.ad,
     required this.isDigital,
     this.initialTemplate,
+    this.initialProduct,
+    this.initialSizeIndex,
+    this.initialQuantity,
   });
 
   /// القالب القادم من معرض القوالب (إن وُجد).
   final AdTemplate? initialTemplate;
+
+  /// اختيار مبدئي قادم من حاسبة تكلفة الطباعة (إن وُجد).
+  final PrintProduct? initialProduct;
+  final int? initialSizeIndex;
+  final int? initialQuantity;
 
   final GeneratedAd ad;
   final bool isDigital;
@@ -40,21 +49,15 @@ class ExecuteScreen extends StatefulWidget {
 class _ExecuteScreenState extends State<ExecuteScreen> {
   final GlobalKey _designKey = GlobalKey();
 
-  PrintProduct _product = printCatalog.first;
-  int _sizeIndex = 0;
-  int _quantity = 1;
+  late PrintProduct _product = widget.initialProduct ?? printCatalog.first;
+  late int _sizeIndex = widget.initialSizeIndex ?? 0;
+  late int _quantity = widget.initialQuantity ?? _product.quantities.first;
   final _addressController = TextEditingController();
   LatLng? _deliveryPoint;
   PayMethod _payMethod = PayMethod.cash;
   PrintOrder? _confirmedOrder;
   bool _exporting = false;
   late AdTemplate _template = widget.initialTemplate ?? AdTemplate.bold;
-
-  @override
-  void initState() {
-    super.initState();
-    _quantity = _product.quantities.first;
-  }
 
   @override
   void dispose() {
@@ -135,23 +138,24 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           icon: const Icon(Icons.ios_share),
           label: Text('نشر مباشر على ${widget.ad.brief.platform}'),
         ),
-        const SizedBox(height: 12),
-        // إغلاق الحلقة: من التصميم إلى طلب الطباعة مباشرة.
-        ElevatedButton.icon(
-          key: const ValueKey('print-from-design'),
-          onPressed: () {
+        const SizedBox(height: 16),
+        // إغلاق الحلقة: حاسبة تكلفة تُظهر السعر فورًا وتنتقل لطلب الطباعة
+        // بالاختيار نفسه — بدل اكتشاف السعر بعد عدة خطوات.
+        PrintCostCalculator(
+          onProceed: (product, sizeIndex, quantity) {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => ExecuteScreen(
                   ad: widget.ad,
                   isDigital: false,
                   initialTemplate: _template,
+                  initialProduct: product,
+                  initialSizeIndex: sizeIndex,
+                  initialQuantity: quantity,
                 ),
               ),
             );
           },
-          icon: const Icon(Icons.local_shipping_outlined),
-          label: const Text('اطبعه وصلّه'),
         ),
       ],
     );
@@ -441,25 +445,28 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                 width: 1.5,
               ),
             ),
-            child: RadioListTile<PayMethod>(
-              value: method,
-              activeColor: AppColors.coral,
-              title: Text(
-                method.label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: context.scheme.onSurface,
+            child: Material(
+              type: MaterialType.transparency,
+              child: RadioListTile<PayMethod>(
+                value: method,
+                activeColor: AppColors.coral,
+                title: Text(
+                  method.label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: context.scheme.onSurface,
+                  ),
                 ),
+                subtitle: isSimulated
+                    ? Text(
+                        'محاكاة تجريبية — تصبح بوابة «ميسر» الحقيقية بعد ضبط المفتاح',
+                        style: TextStyle(
+                            fontSize: 11.5, color: context.textMuted),
+                      )
+                    : null,
+                dense: true,
               ),
-              subtitle: isSimulated
-                  ? Text(
-                      'محاكاة تجريبية — تصبح بوابة «ميسر» الحقيقية بعد ضبط المفتاح',
-                      style:
-                          TextStyle(fontSize: 11.5, color: context.textMuted),
-                    )
-                  : null,
-              dense: true,
             ),
           );
         }).toList(),

@@ -58,7 +58,9 @@ class _OrderCard extends StatelessWidget {
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
+        child: Material(
+          type: MaterialType.transparency,
+          child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           leading: Icon(order.status.icon, color: AppColors.coral),
@@ -111,6 +113,7 @@ class _OrderCard extends StatelessWidget {
               ],
             ),
           ],
+          ),
         ),
       ),
     );
