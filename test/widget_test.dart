@@ -1081,6 +1081,40 @@ void main() {
     expect(state.trashedAds, isEmpty);
   });
 
+  testWidgets(
+      'Saved ad card exposes delete and copy as individually reachable '
+      'accessibility actions, not merged into the whole card', (tester) async {
+    final handle = tester.ensureSemantics();
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+
+    await tester.tap(find.text('حفظ').first);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    Navigator.of(tester.element(find.byType(Scaffold).last))
+        .popUntil((route) => route.isFirst);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إعلاناتي'));
+    await tester.pumpAndSettle();
+
+    // كون الزرّين خارج شجرة InkWell فتح التصميم (لا عنصر تفاعلي داخل
+    // عنصر تفاعلي آخر) يضمن أن لكل منهما عقدة إتاحة مستقلة بصفة button،
+    // وSemantics.label الصريح يضمن اسمًا يقرأه قارئ الشاشة (تلميح
+    // IconButton وحده لا يُترجم إلى aria-label في محرك الويب الحالي).
+    final deleteData = tester.getSemantics(find.byTooltip('حذف'));
+    expect(deleteData.flagsCollection.isButton, isTrue);
+    expect(deleteData.label, 'حذف');
+
+    final copyData = tester.getSemantics(find.byTooltip('نسخ النص'));
+    expect(copyData.flagsCollection.isButton, isTrue);
+    expect(copyData.label, 'نسخ النص');
+
+    handle.dispose();
+  });
+
   testWidgets('Trash screen restores an ad back to the library',
       (tester) async {
     final state = AppState();
