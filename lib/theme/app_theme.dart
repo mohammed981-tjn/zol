@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+/// اسم الخط العربي المضمَّن. يُصرَّح صريحاً في كل TextStyle مبني يدوياً،
+/// لأن TextStyle المُنشأ داخل ثيم مكوّن لا يرث fontFamily من ThemeData —
+/// وإغفاله يُسقط النص على الخط الافتراضي فيظهر بطباعة مختلفة أو لا يظهر
+/// أصلاً على الويب حين يتعذّر تحميل الخط الافتراضي.
+const String kFontFamily = 'Cairo';
+
 class AppColors {
   AppColors._();
 
@@ -22,7 +28,9 @@ ThemeData buildAppTheme() {
       tertiary: AppColors.gold,
     ),
     scaffoldBackgroundColor: Colors.white,
-    fontFamily: 'Roboto',
+    // خط عربي مضمَّن في التطبيق لا مُستعار من النظام: يضمن تشكيلاً وطباعة
+    // عربية صحيحة على أندرويد وiOS والويب بالتساوي، ويوحّد الهوية مع ZadGo.
+    fontFamily: kFontFamily,
   );
 
   return base.copyWith(
@@ -38,7 +46,11 @@ ThemeData buildAppTheme() {
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        textStyle: const TextStyle(
+          fontFamily: kFontFamily,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -47,7 +59,11 @@ ThemeData buildAppTheme() {
         side: const BorderSide(color: AppColors.navy),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        textStyle: const TextStyle(
+          fontFamily: kFontFamily,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     ),
   );
