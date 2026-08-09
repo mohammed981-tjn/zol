@@ -22,7 +22,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       tertiary: AppColors.gold,
     ),
     scaffoldBackgroundColor: isDark ? const Color(0xFF10142B) : Colors.white,
-    fontFamily: 'Roboto',
+    fontFamily: 'Tajawal',
   );
 
   return base.copyWith(
@@ -42,7 +42,11 @@ ThemeData buildAppTheme(Brightness brightness) {
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Tajawal',
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -51,7 +55,11 @@ ThemeData buildAppTheme(Brightness brightness) {
         side: BorderSide(color: base.colorScheme.primary),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Tajawal',
+        ),
       ),
     ),
   );

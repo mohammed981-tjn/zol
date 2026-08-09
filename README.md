@@ -51,6 +51,11 @@
 
 المحتوى المولَّد حاليًا من `lib/services/ad_generator.dart` (محاكاة حتمية لمزوّد ذكاء اصطناعي)، والحالة في الذاكرة عبر `lib/state/app_state.dart`.
 
+ملاحظات تقنية:
+
+- الخط العربي [Tajawal](https://fonts.google.com/specimen/Tajawal) (رخصة SIL OFL) مضمّن في `assets/fonts/` بدل الاعتماد على تنزيله من CDN.
+- على الويب، يُحمَّل محرك CanvasKit من النسخة المضمّنة محليًا (انظر `web/flutter_bootstrap.js`) حتى يعمل التطبيق خلف الشبكات التي تحجب CDN جوجل.
+
 ### التشغيل
 
 ```bash
