@@ -16,6 +16,7 @@ import 'package:zol/screens/settings_screen.dart';
 import 'package:zol/screens/create_ad/upload_details_screen.dart';
 import 'package:zol/services/ad_generator.dart';
 import 'package:zol/models/ad_template.dart';
+import 'package:zol/models/business_category.dart';
 import 'package:zol/models/template_category.dart';
 import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/services/background_remover.dart';
@@ -76,14 +77,14 @@ void main() {
     expect(find.text('إعلانك يولد في ثوانٍ'), findsOneWidget);
     expect(find.text('أنشئ إعلانك الآن'), findsNothing);
 
-    // التنقل بين الصفحات الثلاث ثم الدخول.
+    // التنقل بين صفحات التعريف الثلاث ثم التخطّي بلا اختيار نشاط.
     await tester.tap(find.text('التالي'));
     await tester.pumpAndSettle();
     expect(find.text('اطبعه عند أقرب مطبعة'), findsOneWidget);
     await tester.tap(find.text('التالي'));
     await tester.pumpAndSettle();
     expect(find.text('ويصلك حتى الباب'), findsOneWidget);
-    await tester.tap(find.text('ابدأ الآن'));
+    await tester.tap(find.text('تخطٍّ'));
     await tester.pumpAndSettle();
 
     expect(state.hasOnboarded, isTrue);
@@ -654,6 +655,97 @@ void main() {
     expect(details.initialTemplate, AdTemplate.spotlight);
   });
 
+  test('Generated copy uses the merchant business vocabulary', () {
+    AdBrief briefFor(BusinessCategory category) => AdBrief(
+      productName: 'منتجي',
+      description: '',
+      tone: 'حماسي',
+      platform: 'إنستغرام',
+      format: 'منشور مربع',
+      category: category,
+    );
+
+    final cafe = AdGenerator.preview(briefFor(BusinessCategory.cafe));
+    final realEstate =
+        AdGenerator.preview(briefFor(BusinessCategory.realEstate));
+
+    // مفردات الكافيه لا تشبه مفردات العقار — لا نص عام واحد للاثنين.
+    final cafeText = cafe.map((a) => '${a.headline} ${a.body}').join(' ');
+    final estateText =
+        realEstate.map((a) => '${a.headline} ${a.body}').join(' ');
+    expect(cafeText, contains('تحميص'));
+    expect(estateText, contains('تشطيب'));
+    expect(cafeText, isNot(contains('تشطيب')));
+    expect(estateText, isNot(contains('تحميص')));
+
+    // دعوة الإجراء والهاشتاقات تتبع النشاط أيضًا.
+    expect(cafe.first.cta, BusinessCategory.cafe.cta);
+    expect(realEstate.first.cta, BusinessCategory.realEstate.cta);
+    expect(cafe.first.hashtags, contains('#قهوة_مختصة'));
+    expect(realEstate.first.hashtags, contains('#عقار'));
+
+    // النبرة تُغيّر الصياغة مع بقاء مفردات النشاط.
+    final formalCafe = AdGenerator.preview(
+      AdBrief(
+        productName: 'منتجي',
+        description: '',
+        tone: 'رسمي',
+        platform: 'إنستغرام',
+        format: 'منشور مربع',
+        category: BusinessCategory.cafe,
+      ),
+    );
+    expect(formalCafe.first.headline, isNot(cafe.first.headline));
+  });
+
+  testWidgets('Onboarding asks for the business and stores it', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+    await tester.pumpWidget(ZolApp(state: state));
+    await tester.pumpAndSettle();
+
+    // تجاوز صفحات التعريف الثلاث حتى سؤال النشاط.
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.text('التالي'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('ما نشاطك؟'), findsOneWidget);
+
+    // لا متابعة قبل الاختيار.
+    final cta = find.widgetWithText(ElevatedButton, 'اختر نشاطك للمتابعة');
+    expect(tester.widget<ElevatedButton>(cta).enabled, isFalse);
+
+    await tester.tap(find.byKey(const ValueKey('category-cafe')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ابدأ الآن'));
+    await tester.pumpAndSettle();
+
+    expect(state.businessCategory, BusinessCategory.cafe);
+    expect(find.text('أنشئ إعلانك الآن'), findsOneWidget);
+
+    // الاختيار محفوظ بعد إعادة التشغيل.
+    final reloaded = await AppState.load();
+    expect(reloaded.businessCategory, BusinessCategory.cafe);
+  });
+
+  testWidgets('Business category can be changed from settings',
+      (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+
+    await tester.tap(find.text('الإعدادات'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('settings-category-beauty')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.byKey(const ValueKey('settings-category-beauty')));
+    await tester.pumpAndSettle();
+
+    expect(state.businessCategory, BusinessCategory.beauty);
+  });
+
   test('Orders route to the nearest partner print shop', () {
     // موقع في شمال الرياض → مطبعة العليا لا الشفا.
     expect(nearestShop(24.80, 46.65).name, 'مطبعة العليا');
@@ -675,9 +767,11 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    await tester.tap(
-      find.byKey(ValueKey('brand-swatch-${SettingsScreen.brandSwatches.first}')),
-    );
+    final swatch =
+        find.byKey(ValueKey('brand-swatch-${SettingsScreen.brandSwatches.first}'));
+    await tester.ensureVisible(swatch);
+    await tester.pumpAndSettle();
+    await tester.tap(swatch);
     await tester.pump();
 
     expect(state.brandColorValue, SettingsScreen.brandSwatches.first);

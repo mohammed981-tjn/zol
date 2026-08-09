@@ -26,6 +26,7 @@ class GeneratedAd {
     required this.hashtags,
     required this.score,
     required this.createdAt,
+    this.cta = 'اطلب الآن',
   });
 
   final AdBrief brief;
@@ -38,6 +39,9 @@ class GeneratedAd {
   final int score;
   final DateTime createdAt;
 
+  /// دعوة الإجراء المشتقة من نشاط التاجر (تظهر على زر التصميم).
+  final String cta;
+
   String get shareText => '$headline\n$body\n${hashtags.join(' ')}';
 
   GeneratedAd copyWith({AdBrief? brief}) => GeneratedAd(
@@ -48,6 +52,7 @@ class GeneratedAd {
     hashtags: hashtags,
     score: score,
     createdAt: createdAt,
+    cta: cta,
   );
 
   Map<String, dynamic> toJson() => {
@@ -57,6 +62,7 @@ class GeneratedAd {
     'body': body,
     'hashtags': hashtags,
     'score': score,
+    'cta': cta,
     'createdAt': createdAt.toIso8601String(),
   };
 
@@ -67,6 +73,7 @@ class GeneratedAd {
     body: json['body'] as String? ?? '',
     hashtags: (json['hashtags'] as List?)?.cast<String>() ?? const [],
     score: json['score'] as int? ?? 0,
+    cta: json['cta'] as String? ?? 'اطلب الآن',
     createdAt:
         DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
   );

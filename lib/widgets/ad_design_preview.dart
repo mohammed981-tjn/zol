@@ -189,7 +189,7 @@ class _Cta extends StatelessWidget {
         borderRadius: BorderRadius.circular(22 * spec.s),
       ),
       child: Text(
-        'اطلب الآن',
+        spec.ad.cta,
         style: TextStyle(
           color: foreground,
           fontWeight: FontWeight.bold,

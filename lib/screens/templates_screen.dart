@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/ad_brief.dart';
 import '../models/ad_template.dart';
 import '../models/generated_ad.dart';
+import '../models/business_category.dart';
 import '../models/template_category.dart';
 import '../services/ad_generator.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ad_design_preview.dart';
 import '../widgets/section_header.dart';
@@ -105,14 +107,16 @@ class _CategoryRow extends StatelessWidget {
 
   final TemplateCategory category;
 
-  /// إعلان توضيحي بلا صورة منتج — يُظهر شكل القالب قبل أن يرفع التاجر شيئًا.
-  GeneratedAd _sampleAd() {
+  /// إعلان توضيحي بلا صورة منتج — يُظهر شكل القالب قبل أن يرفع التاجر شيئًا،
+  /// بمفردات نشاطه هو لا بنص عام.
+  GeneratedAd _sampleAd(BusinessCategory business) {
     final brief = AdBrief(
       productName: 'اسم منتجك',
       description: '',
       tone: 'حماسي',
       platform: category.suggestedPlatform,
       format: category.adFormat,
+      category: business,
     );
     return AdGenerator.preview(brief).firstWhere(
       (ad) => ad.kind == AdKind.image,
@@ -122,7 +126,7 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sample = _sampleAd();
+    final sample = _sampleAd(AppStateScope.of(context).businessCategory);
     final templates = category.templates;
 
     return Padding(

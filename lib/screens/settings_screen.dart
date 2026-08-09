@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/business_category.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/payment_config.dart';
@@ -40,6 +41,8 @@ class SettingsScreen extends StatelessWidget {
             const SectionHeader(kicker: 'التفضيلات', title: 'إعدادات التطبيق'),
             const SizedBox(height: 20),
             _buildAccountSection(context, state),
+            const SizedBox(height: 28),
+            _buildBusinessSection(context, state),
             const SizedBox(height: 28),
             _buildBrandKitSection(context, state),
             const SizedBox(height: 28),
@@ -90,6 +93,68 @@ class SettingsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// تغيير النشاط لاحقًا — يعيد ضبط مفردات كل نص يُولَّد بعده.
+  Widget _buildBusinessSection(BuildContext context, AppState state) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'نشاطك',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: context.scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'يحدّد مفردات النصوص المولَّدة ومنافعها ودعوة الإجراء فيها.',
+            style: TextStyle(color: context.textMuted, fontSize: 12.5),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: BusinessCategory.values.map((category) {
+              final isSelected = category == state.businessCategory;
+              return ChoiceChip(
+                key: ValueKey('settings-category-${category.name}'),
+                avatar: Icon(
+                  category.icon,
+                  size: 16,
+                  color: isSelected
+                      ? context.scheme.onPrimary
+                      : context.scheme.onSurface,
+                ),
+                label: Text(category.label),
+                selected: isSelected,
+                onSelected: (_) => state.setBusinessCategory(category),
+                selectedColor: context.scheme.primary,
+                labelStyle: TextStyle(
+                  fontSize: 12.5,
+                  color: isSelected
+                      ? context.scheme.onPrimary
+                      : context.scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+                backgroundColor: context.scheme.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                side: BorderSide.none,
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

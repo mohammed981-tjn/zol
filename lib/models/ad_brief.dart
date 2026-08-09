@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'business_category.dart';
+
 class AdBrief {
   AdBrief({
     required this.productName,
@@ -8,6 +10,7 @@ class AdBrief {
     required this.tone,
     required this.platform,
     required this.format,
+    this.category = BusinessCategory.retail,
     this.imageBytes,
     this.paletteColor,
   });
@@ -17,6 +20,9 @@ class AdBrief {
   final String tone;
   final String platform;
   final String format;
+
+  /// نشاط التاجر — يحدد مفردات النص المولَّد ومنافعه ودعوة الإجراء.
+  final BusinessCategory category;
 
   /// صورة المنتج الحقيقية المختارة من الجهاز (null إن لم تُختر بعد).
   final Uint8List? imageBytes;
@@ -33,6 +39,7 @@ class AdBrief {
     'tone': tone,
     'platform': platform,
     'format': format,
+    'category': category.name,
     'paletteColor': paletteColor,
     // تُحفظ الصورة (مضغوطة مسبقًا عبر ImageStore) حتى يمكن فتح الإعلان
     // من المكتبة وإعادة تصديره أو طباعته بعد إغلاق التطبيق.
@@ -45,6 +52,7 @@ class AdBrief {
     tone: tone,
     platform: platform,
     format: format,
+    category: category,
     imageBytes: imageBytes ?? this.imageBytes,
     paletteColor: paletteColor,
   );
@@ -55,6 +63,10 @@ class AdBrief {
     tone: json['tone'] as String? ?? '',
     platform: json['platform'] as String? ?? '',
     format: json['format'] as String? ?? '',
+    category: BusinessCategory.values.firstWhere(
+      (c) => c.name == json['category'],
+      orElse: () => BusinessCategory.retail,
+    ),
     paletteColor: json['paletteColor'] as int?,
     imageBytes: switch (json['imageBytes']) {
       final String encoded when encoded.isNotEmpty => _tryDecode(encoded),

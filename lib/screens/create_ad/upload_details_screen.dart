@@ -5,6 +5,7 @@ import '../../models/ad_brief.dart';
 import '../../models/ad_template.dart';
 import '../../services/background_remover.dart';
 import '../../services/palette_extractor.dart';
+import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/choice_chip_group.dart';
 import '../../widgets/section_header.dart';
@@ -187,6 +188,8 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                               tone: _selectedTone,
                               platform: _selectedPlatform,
                               format: _selectedFormat,
+                              category:
+                                  AppStateScope.of(context).businessCategory,
                               imageBytes: _useCutout && _cutoutBytes != null
                                   ? _cutoutBytes
                                   : _imageBytes,

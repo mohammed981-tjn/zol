@@ -98,7 +98,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
         _buildTemplatePicker(),
         const SizedBox(height: 8),
         Text(
-          '${widget.ad.kind.label} بنبرة ${widget.ad.brief.tone} — '
+          '${widget.ad.kind.label} بأسلوب ${widget.ad.brief.tone} — '
           'مهيأة لمنصة ${widget.ad.brief.platform}',
           textAlign: TextAlign.center,
           style: TextStyle(color: context.textMuted, fontSize: 12.5),

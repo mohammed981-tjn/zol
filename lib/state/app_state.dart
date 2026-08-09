@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/generated_ad.dart';
+import '../models/business_category.dart';
 import '../models/merchant_account.dart';
 import '../models/print_order.dart';
 import '../services/image_store.dart';
@@ -27,6 +28,7 @@ class AppState extends ChangeNotifier {
   static const _brandColorKey = 'brand_color';
   static const _brandLogoKey = 'brand_logo';
   static const _onboardedKey = 'onboarded';
+  static const _categoryKey = 'business_category';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
@@ -41,6 +43,9 @@ class AppState extends ChangeNotifier {
 
   /// هل شاهد المستخدم شاشة الترحيب؟ تُعرض مرة واحدة عند أول تشغيل.
   bool hasOnboarded = false;
+
+  /// نشاط التاجر — يُسأل عنه عند أول تشغيل ويوجّه النص المولَّد كله.
+  BusinessCategory businessCategory = BusinessCategory.retail;
 
   /// هوية العلامة (Brand Kit — نمط Canva): لون العلامة وشعار المتجر
   /// يُطبَّقان تلقائيًا على كل التصاميم المولَّدة.
@@ -87,6 +92,10 @@ class AppState extends ChangeNotifier {
     _nextOrderNumber = prefs.getInt(_orderNumberKey) ?? 1001;
     isPro = prefs.getBool(_proKey) ?? false;
     hasOnboarded = prefs.getBool(_onboardedKey) ?? false;
+    businessCategory = BusinessCategory.values.firstWhere(
+      (c) => c.name == prefs.getString(_categoryKey),
+      orElse: () => BusinessCategory.retail,
+    );
     brandColorValue = prefs.getInt(_brandColorKey);
     final logo = prefs.getString(_brandLogoKey);
     if (logo != null && logo.isNotEmpty) {
@@ -176,6 +185,12 @@ class AppState extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     themeMode = mode;
     _persist();
+    notifyListeners();
+  }
+
+  void setBusinessCategory(BusinessCategory category) {
+    businessCategory = category;
+    _prefs?.setString(_categoryKey, category.name);
     notifyListeners();
   }
 

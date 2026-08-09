@@ -1,10 +1,14 @@
 import '../models/ad_brief.dart';
+import '../models/business_category.dart';
 import '../models/generated_ad.dart';
 
-/// مولّد محتوى وهمي (mock) يحاكي مخرجات مزوّد ذكاء اصطناعي حقيقي.
-/// المحتوى والدرجات محسوبة بشكل حتمي من المدخلات حتى تكون
-/// التجربة والاختبارات قابلة للتكرار، ويتغيّر الناتج مع كل «إعادة توليد»
-/// عبر البذرة [seed].
+/// مولّد المحتوى الإعلاني — يعمل بالكامل على الجهاز (الطبقة 1).
+///
+/// الجودة تأتي من تقاطع ثلاثة مصادر بدل قوالب عامة:
+/// **نشاط التاجر** (يحدد المفردات والمنافع ودعوة الإجراء)،
+/// **النبرة** (تحدد الصياغة والانفعال)، و**المنصة** (تحدد الهاشتاقات).
+/// الناتج حتمي لنفس المدخلات ليبقى قابلًا للتكرار في الاختبارات،
+/// ويتغيّر مع كل «إعادة توليد» عبر البذرة [seed].
 class AdGenerator {
   AdGenerator._();
 
@@ -16,86 +20,112 @@ class AdGenerator {
 
   static const stageDuration = Duration(milliseconds: 800);
 
-  static const _hooksByTone = {
-    'حماسي': ['عرض لا يفوّت!', 'الفرصة اللي تنتظرها وصلت 🔥', 'خلّك أول من يجرب!'],
-    'كوميدي': ['جرّبته؟ لا تلومنا إذا أدمنت 😄', 'تحذير: قد يسبب الإعجاب الشديد', 'أخيرًا شي يستاهل التصوير'],
-    'رسمي': ['جودة تليق بأعمالكم', 'اختيار الشركات الرائدة', 'التميز يبدأ من التفاصيل'],
-    'عاطفي': ['لأن أهلك يستاهلون الأفضل ❤️', 'لحظات لا تُنسى تبدأ من هنا', 'صنعناه بحب، لتشاركه مع من تحب'],
+  /// صياغة العنوان حسب النبرة: تُطبَّق على عبارة الجذب الخاصة بالنشاط.
+  static const _headlineByTone = {
+    'حماسي': ['{hook} — لا تفوّت!', '{hook} 🔥', 'أخيرًا: {hook}!'],
+    'كوميدي': ['{hook}… لا تلومنا 😄', 'تحذير: {hook}', '{hook} وبس!'],
+    'رسمي': ['{hook}', 'نقدّم لكم: {hook}', '{hook} — بمعايير تليق بكم'],
+    'عاطفي': ['{hook} ❤️', '{hook}… لمن تحب', 'لأنك تستاهل: {hook}'],
   };
 
   static const _hashtagsByPlatform = {
-    'إنستغرام': ['#اكسبلور', '#تسويق', '#عروض'],
-    'تيك توك': ['#فوريو', '#ترند', '#اكتشف'],
-    'فيسبوك': ['#تسوق_اونلاين', '#عروض_اليوم', '#جديدنا'],
-    'سناب شات': ['#سناب', '#وصل_حديثا', '#مميز'],
+    'إنستغرام': ['#اكسبلور', '#عروض'],
+    'تيك توك': ['#فوريو', '#ترند'],
+    'فيسبوك': ['#تسوق_اونلاين', '#جديدنا'],
+    'سناب شات': ['#سناب', '#وصل_حديثا'],
   };
 
   static Future<List<GeneratedAd>> generate(
     AdBrief brief, {
     int seed = 0,
   }) async {
-    await Future<void>.delayed(
-      stageDuration * generationStages.length,
-    );
+    await Future<void>.delayed(stageDuration * generationStages.length);
     return preview(brief, seed: seed);
   }
 
   static List<GeneratedAd> preview(AdBrief brief, {int seed = 0}) {
-    final hooks = _hooksByTone[brief.tone] ?? _hooksByTone.values.first;
-    final hook = hooks[seed % hooks.length];
-    final tags = _hashtagsByPlatform[brief.platform] ??
-        _hashtagsByPlatform.values.first;
+    final category = brief.category;
     final product = brief.productName.trim().isEmpty
         ? 'منتجك'
         : brief.productName.trim();
-    final about = brief.description.trim().isEmpty
-        ? ''
-        : ' ${brief.description.trim()}.';
+    final about = brief.description.trim();
+
+    final hook = _pick(category.hooks, seed);
+    final headline = _pick(
+      _headlineByTone[brief.tone] ?? _headlineByTone.values.first,
+      seed,
+    ).replaceAll('{hook}', hook);
+
+    // منفعتان مختلفتان حتى لا تتكرر الجملة نفسها في النسخ الثلاث.
+    final benefit = _pick(category.benefits, seed);
+    final benefitAlt = _pick(category.benefits, seed + 1);
+
+    final tags = [
+      ..._hashtagsByPlatform[brief.platform] ??
+          _hashtagsByPlatform.values.first,
+      ...category.hashtags,
+    ];
+    final productTag = '#${product.replaceAll(' ', '_')}';
+    final cta = category.cta;
     final now = DateTime.now();
+
+    // الوصف الاختياري يُدمج جملةً كاملة بدل إقحامه كما هو.
+    final aboutClause = about.isEmpty ? '' : ' $about.';
 
     return [
       GeneratedAd(
         brief: brief,
         kind: AdKind.video,
-        headline: hook,
+        headline: headline,
         body:
-            'سيناريو ${brief.format} من 15 ثانية: لقطة افتتاحية للمنتج، '
-            'ثم عرض $product مع تعليق صوتي بنبرة ${brief.tone}،'
-            '$about وختام بدعوة واضحة «اطلب الآن».',
-        hashtags: [...tags, '#$product'.replaceAll(' ', '_')],
+            'سيناريو ${brief.format} من 15 ثانية: لقطة افتتاحية لـ$product، '
+            'ثم تعليق صوتي بأسلوب ${brief.tone} يذكر أن $benefit،'
+            '$aboutClause وختام بدعوة واضحة «$cta».',
+        hashtags: _dedupe([...tags, productTag]),
         score: _score(brief, AdKind.video, seed),
+        cta: cta,
         createdAt: now,
       ),
       GeneratedAd(
         brief: brief,
         kind: AdKind.image,
-        headline: hook,
+        headline: headline,
         body:
-            'تصميم ${brief.format} بخلفية احترافية تُبرز $product '
-            'مع إضاءة استوديو وألوان متوافقة مع هوية ${brief.platform}.$about',
-        hashtags: tags,
+            'تصميم ${brief.format} يُبرز $product بإضاءة تُظهر تفاصيله، '
+            'ونصّ جانبي يؤكد أن $benefitAlt.$aboutClause',
+        hashtags: _dedupe(tags),
         score: _score(brief, AdKind.image, seed),
+        cta: cta,
         createdAt: now,
       ),
       GeneratedAd(
         brief: brief,
         kind: AdKind.copy,
-        headline: hook,
+        headline: headline,
         body:
-            '$product الآن بين يديك.$about اطلبه اليوم عبر ${brief.platform} '
-            'واستمتع بتجربة تستحق المشاركة.',
-        hashtags: [...tags, '#عرض_خاص'],
+            '$product الآن بين يديك — $benefit.$aboutClause '
+            '$cta عبر ${brief.platform}.',
+        hashtags: _dedupe([...tags, '#عرض_خاص']),
         score: _score(brief, AdKind.copy, seed),
+        cta: cta,
         createdAt: now,
       ),
     ];
   }
+
+  /// يمنع تكرار الهاشتاق حين يطابق اسمُ المنتج أحدَ هاشتاقات الفئة.
+  static List<String> _dedupe(List<String> tags) =>
+      tags.toSet().toList(growable: false);
+
+  static String _pick(List<String> options, int seed) =>
+      options[seed.abs() % options.length];
 
   /// درجة توافق (78-97) على نمط Creative Score، حتمية لنفس المدخلات.
   static int _score(AdBrief brief, AdKind kind, int seed) {
     final hash = brief.tone.length * 7 +
         brief.platform.length * 5 +
         brief.format.length * 3 +
+        brief.category.index * 17 +
         kind.index * 13 +
         seed * 11;
     return 78 + (hash % 20);
