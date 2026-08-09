@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 class AdBrief {
@@ -33,7 +34,20 @@ class AdBrief {
     'platform': platform,
     'format': format,
     'paletteColor': paletteColor,
+    // تُحفظ الصورة (مضغوطة مسبقًا عبر ImageStore) حتى يمكن فتح الإعلان
+    // من المكتبة وإعادة تصديره أو طباعته بعد إغلاق التطبيق.
+    if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
   };
+
+  AdBrief copyWith({Uint8List? imageBytes}) => AdBrief(
+    productName: productName,
+    description: description,
+    tone: tone,
+    platform: platform,
+    format: format,
+    imageBytes: imageBytes ?? this.imageBytes,
+    paletteColor: paletteColor,
+  );
 
   factory AdBrief.fromJson(Map<String, dynamic> json) => AdBrief(
     productName: json['productName'] as String? ?? '',
@@ -42,5 +56,17 @@ class AdBrief {
     platform: json['platform'] as String? ?? '',
     format: json['format'] as String? ?? '',
     paletteColor: json['paletteColor'] as int?,
+    imageBytes: switch (json['imageBytes']) {
+      final String encoded when encoded.isNotEmpty => _tryDecode(encoded),
+      _ => null,
+    },
   );
+
+  static Uint8List? _tryDecode(String encoded) {
+    try {
+      return base64Decode(encoded);
+    } catch (_) {
+      return null;
+    }
+  }
 }

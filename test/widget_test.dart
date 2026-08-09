@@ -9,12 +9,15 @@ import 'package:image/image.dart' as img;
 import 'package:zol/main.dart';
 import 'package:zol/models/ad_brief.dart';
 import 'package:zol/models/print_order.dart';
+import 'package:zol/models/print_catalog.dart';
 import 'package:zol/models/print_shop.dart';
+import 'package:zol/widgets/print_mockup.dart';
 import 'package:zol/screens/settings_screen.dart';
 import 'package:zol/screens/create_ad/upload_details_screen.dart';
 import 'package:zol/services/ad_generator.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/services/background_remover.dart';
+import 'package:zol/services/image_store.dart';
 import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
 
@@ -59,6 +62,7 @@ void main() {
     UploadDetailsScreen.debugPickImageOverride = () async => _fakeImage;
     BackgroundRemover.debugRunSynchronously = true;
     PaletteExtractor.debugRunSynchronously = true;
+    ImageStore.debugRunSynchronously = true;
   });
 
   testWidgets('Onboarding shows on first run and only once', (tester) async {
@@ -159,7 +163,7 @@ void main() {
     // بنر 1×2 متر: 90 + توصيل 25 + ضريبة 15% = 132.25
     final confirm = find.widgetWithText(ElevatedButton, 'تأكيد الطلب — 132.25 ر.س');
     // التمرير لأسفل القائمة (السحب المباشر يتفادى التباس تعدد الـ Scrollables).
-    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.drag(find.byType(ListView).last, const Offset(0, -1600));
     await tester.pumpAndSettle();
     // ملخص السعر ظاهر وزر التأكيد معطل قبل إدخال العنوان.
     expect(find.text('الإجمالي'), findsOneWidget);
@@ -168,7 +172,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'الرياض، حي النرجس');
     tester.binding.focusManager.primaryFocus?.unfocus();
     await tester.pump();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+    await tester.drag(find.byType(ListView).last, const Offset(0, -800));
     await tester.pumpAndSettle();
     await tester.tap(confirm);
     await tester.pump();
@@ -235,7 +239,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // اختيار الدفع بالبطاقة بعد التمرير لأسفل القائمة.
-    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.drag(find.byType(ListView).last, const Offset(0, -1600));
     await tester.pumpAndSettle();
     await tester.tap(find.text('بطاقة (mada / Visa / Mastercard)'));
     await tester.pump();
@@ -243,7 +247,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'الرياض، حي النرجس');
     tester.binding.focusManager.primaryFocus?.unfocus();
     await tester.pump();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+    await tester.drag(find.byType(ListView).last, const Offset(0, -800));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('ادفع وأكّد الطلب'));
     await tester.pumpAndSettle();
@@ -266,14 +270,14 @@ void main() {
 
     await tester.tap(find.text('اطبعه وصلّه'));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.drag(find.byType(ListView).last, const Offset(0, -1600));
     await tester.pumpAndSettle();
     await tester.tap(find.text('بطاقة (mada / Visa / Mastercard)'));
     await tester.pump();
     await tester.enterText(find.byType(TextField), 'الرياض');
     tester.binding.focusManager.primaryFocus?.unfocus();
     await tester.pump();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
+    await tester.drag(find.byType(ListView).last, const Offset(0, -800));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('ادفع وأكّد الطلب'));
     await tester.pumpAndSettle();
@@ -501,6 +505,104 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(AdTemplate.spotlight.description), findsOneWidget);
     expect(find.text(AdTemplate.bold.description), findsNothing);
+  });
+
+  testWidgets('Print flow previews the design on the actual product',
+      (tester) async {
+    await _pumpApp(tester);
+    await _reachMagicResults(tester);
+
+    await tester.tap(find.text('اطبعه وصلّه'));
+    await tester.pumpAndSettle();
+
+    // المعاينة ظاهرة بمقاس المطبوع المختار قبل الشراء.
+    expect(find.byType(PrintMockupPreview), findsOneWidget);
+    expect(find.textContaining('معاينة تقريبية'), findsOneWidget);
+    expect(find.textContaining('1×2 متر'), findsWidgets);
+
+    // تغيير المطبوع يغيّر شكل المجسّم ومقاسه في المعاينة.
+    await tester.drag(find.byType(ListView).last, const Offset(0, -260));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('كروت أعمال'));
+    await tester.pumpAndSettle();
+
+    final preview = tester.widget<PrintMockupPreview>(
+      find.byType(PrintMockupPreview),
+    );
+    expect(preview.mockup, PrintMockup.card);
+    expect(preview.sizeLabel, contains('9×5'));
+  });
+
+  testWidgets('Saved ads reopen from the library for re-export',
+      (tester) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+
+    await tester.tap(find.text('حفظ').first);
+    await tester.pumpAndSettle();
+    expect(state.savedAds, hasLength(1));
+    // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    // العودة للجذر ثم فتح تبويب المكتبة.
+    Navigator.of(tester.element(find.byType(Scaffold).last))
+        .popUntil((route) => route.isFirst);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إعلاناتي'));
+    await tester.pumpAndSettle();
+
+    // النقر على الإعلان المحفوظ يفتح شاشة التصميم لا طريقًا مسدودًا.
+    final saved = state.savedAds.single;
+    await tester.tap(
+      find.byKey(ValueKey('saved-ad-${saved.createdAt.microsecondsSinceEpoch}')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('اختر قالب التصميم'), findsOneWidget);
+    // القائمة الرأسية لشاشة التصميم (لا شريط القوالب الأفقي).
+    await tester.drag(
+      find
+          .byWidgetPredicate(
+            (w) => w is ListView && w.scrollDirection == Axis.vertical,
+          )
+          .last,
+      const Offset(0, -900),
+    );
+    await tester.pumpAndSettle();
+    // إعادة التصدير متاحة من الإعلان المحفوظ.
+    expect(find.textContaining('تحميل/مشاركة التصميم'), findsOneWidget);
+
+    // والحلقة مكتملة: من المكتبة إلى طلب طباعة بمعاينة على المطبوع.
+    const printButton = ValueKey('print-from-design');
+    await tester.ensureVisible(find.byKey(printButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(printButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(PrintMockupPreview), findsOneWidget);
+    expect(find.text('اختر نوع المطبوع'), findsOneWidget);
+  });
+
+  test('Saved ad keeps its product image across a restart', () async {
+    SharedPreferences.setMockInitialValues({});
+    final first = await AppState.load();
+
+    final brief = AdBrief(
+      productName: 'قهوة مختصة',
+      description: '',
+      tone: 'حماسي',
+      platform: 'إنستغرام',
+      format: 'منشور مربع',
+      imageBytes: _fakeImage,
+    );
+    await first.saveAd(AdGenerator.preview(brief).first);
+
+    final second = await AppState.load();
+    expect(second.savedAds, hasLength(1));
+    // الصورة تُسترجع فيبقى التصميم قابلًا لإعادة التصدير.
+    expect(second.savedAds.single.brief.imageBytes, isNotNull);
+    expect(second.savedAds.single.brief.imageBytes, isNotEmpty);
   });
 
   test('Orders route to the nearest partner print shop', () {

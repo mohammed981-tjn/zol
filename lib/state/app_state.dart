@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/generated_ad.dart';
 import '../models/merchant_account.dart';
 import '../models/print_order.dart';
+import '../services/image_store.dart';
 
 /// حالة التطبيق: إعلانات محفوظة، طلبات طباعة، سمة العرض.
 /// تُحفظ دائمًا على الجهاز عبر SharedPreferences فلا تضيع عند إغلاق
@@ -129,8 +130,17 @@ class AppState extends ChangeNotifier {
     prefs.setInt(_orderNumberKey, _nextOrderNumber);
   }
 
-  void saveAd(GeneratedAd ad) {
-    savedAds.insert(0, ad);
+  /// يحفظ الإعلان في المكتبة. تُضغط صورة المنتج أولًا حتى لا ينتفخ
+  /// التخزين المحلي، ثم يُحفظ الإعلان بالصورة المضغوطة نفسها فيبقى
+  /// قابلًا لإعادة الفتح والتصدير بعد إغلاق التطبيق.
+  Future<void> saveAd(GeneratedAd ad) async {
+    final image = ad.brief.imageBytes;
+    var stored = ad;
+    if (image != null) {
+      final compressed = await ImageStore.compressForStorage(image);
+      stored = ad.copyWith(brief: ad.brief.copyWith(imageBytes: compressed));
+    }
+    savedAds.insert(0, stored);
     _persist();
     notifyListeners();
   }

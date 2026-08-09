@@ -40,7 +40,16 @@ class GeneratedAd {
 
   String get shareText => '$headline\n$body\n${hashtags.join(' ')}';
 
-  /// ملاحظة: صورة المنتج لا تُخزَّن ضمن JSON (ثقيلة) — تُحفظ النصوص فقط.
+  GeneratedAd copyWith({AdBrief? brief}) => GeneratedAd(
+    brief: brief ?? this.brief,
+    kind: kind,
+    headline: headline,
+    body: body,
+    hashtags: hashtags,
+    score: score,
+    createdAt: createdAt,
+  );
+
   Map<String, dynamic> toJson() => {
     'brief': brief.toJson(),
     'kind': kind.index,

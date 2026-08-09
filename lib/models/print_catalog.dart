@@ -9,6 +9,9 @@ class PrintSize {
   final double unitPrice;
 }
 
+/// شكل المجسّم المستخدم لعرض التصميم على المطبوع قبل الشراء.
+enum PrintMockup { banner, stickers, card, rollup }
+
 class PrintProduct {
   const PrintProduct({
     required this.label,
@@ -16,10 +19,12 @@ class PrintProduct {
     required this.unitName,
     required this.sizes,
     required this.quantities,
+    required this.mockup,
   });
 
   final String label;
   final IconData icon;
+  final PrintMockup mockup;
 
   /// اسم وحدة البيع (قطعة، حزمة...) لعرضها بجانب الكمية.
   final String unitName;
@@ -32,6 +37,7 @@ const printCatalog = [
     label: 'بنر',
     icon: Icons.flag_outlined,
     unitName: 'بنر',
+    mockup: PrintMockup.banner,
     sizes: [
       PrintSize(label: '1×2 متر', unitPrice: 90),
       PrintSize(label: '2×3 متر', unitPrice: 220),
@@ -43,6 +49,7 @@ const printCatalog = [
     label: 'استيكرات',
     icon: Icons.sticky_note_2_outlined,
     unitName: 'حزمة (50 قطعة)',
+    mockup: PrintMockup.stickers,
     sizes: [
       PrintSize(label: '5×5 سم', unitPrice: 45),
       PrintSize(label: '8×8 سم', unitPrice: 70),
@@ -54,6 +61,7 @@ const printCatalog = [
     label: 'كروت أعمال',
     icon: Icons.badge_outlined,
     unitName: 'حزمة (100 كرت)',
+    mockup: PrintMockup.card,
     sizes: [
       PrintSize(label: 'قياسي 9×5 سم', unitPrice: 60),
       PrintSize(label: 'فاخر مع تغليف لامع', unitPrice: 110),
@@ -64,6 +72,7 @@ const printCatalog = [
     label: 'رول أب',
     icon: Icons.view_agenda_outlined,
     unitName: 'ستاند',
+    mockup: PrintMockup.rollup,
     sizes: [
       PrintSize(label: '85×200 سم', unitPrice: 260),
       PrintSize(label: '100×200 سم', unitPrice: 320),

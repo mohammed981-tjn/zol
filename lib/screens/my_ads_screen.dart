@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/icon_circle.dart';
 import '../widgets/section_header.dart';
+import 'create_ad/execute_screen.dart';
 
 class MyAdsScreen extends StatelessWidget {
   const MyAdsScreen({super.key});
@@ -51,14 +52,25 @@ class _SavedAdCard extends StatelessWidget {
     final state = AppStateScope.of(context);
     final d = ad.createdAt;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
+    return InkWell(
+      key: ValueKey('saved-ad-${ad.createdAt.microsecondsSinceEpoch}'),
+      borderRadius: BorderRadius.circular(16),
+      // فتح الإعلان المحفوظ لإعادة تصديره أو طلب طباعته.
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ExecuteScreen(ad: ad, isDigital: true),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.cardBg,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -125,7 +137,19 @@ class _SavedAdCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: context.textMuted, fontSize: 12.5),
           ),
-        ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.touch_app_outlined, size: 15, color: context.textMuted),
+              const SizedBox(width: 5),
+              Text(
+                'اضغط لفتح التصميم وإعادة تصديره أو طباعته',
+                style: TextStyle(color: context.textMuted, fontSize: 11.5),
+              ),
+            ],
+          ),
+          ],
+        ),
       ),
     );
   }

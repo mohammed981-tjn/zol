@@ -14,6 +14,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/payment_config.dart';
 import '../../widgets/ad_design_preview.dart';
 import '../../widgets/icon_circle.dart';
+import '../../widgets/print_mockup.dart';
 import '../order_map_screen.dart';
 import '../payment/payment_flow.dart';
 import '../pick_location_screen.dart';
@@ -125,6 +126,20 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           ),
           icon: const Icon(Icons.ios_share),
           label: Text('نشر مباشر على ${widget.ad.brief.platform}'),
+        ),
+        const SizedBox(height: 12),
+        // إغلاق الحلقة: من التصميم إلى طلب الطباعة مباشرة.
+        ElevatedButton.icon(
+          key: const ValueKey('print-from-design'),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ExecuteScreen(ad: widget.ad, isDigital: false),
+              ),
+            );
+          },
+          icon: const Icon(Icons.local_shipping_outlined),
+          label: const Text('اطبعه وصلّه'),
         ),
       ],
     );
@@ -245,6 +260,16 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        // معاينة التصميم على المطبوع قبل الشراء.
+        PrintMockupPreview(
+          ad: widget.ad,
+          template: _template,
+          mockup: _product.mockup,
+          sizeLabel: _product.sizes[_sizeIndex].label,
+        ),
+        const SizedBox(height: 16),
+        _buildTemplatePicker(),
+        const SizedBox(height: 24),
         _sectionTitle('اختر نوع المطبوع'),
         const SizedBox(height: 10),
         Wrap(
