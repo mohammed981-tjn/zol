@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:image/image.dart' as img;
@@ -58,6 +59,8 @@ Future<void> _reachMagicResults(WidgetTester tester) async {
     200,
     scrollable: find.byType(Scrollable).first,
   );
+  await tester.ensureVisible(find.text('اعرض شاشة السحر'));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('اعرض شاشة السحر'));
   await tester.pump();
 
@@ -936,6 +939,8 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(ramadanChip);
+    await tester.pumpAndSettle();
     await tester.tap(ramadanChip);
     await tester.pump();
 
@@ -944,6 +949,8 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.text('اعرض شاشة السحر'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('اعرض شاشة السحر'));
     await tester.pump();
     final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
@@ -952,6 +959,54 @@ void main() {
 
     // شارة الموسم تظهر على التصميم المولَّد.
     expect(find.textContaining(SeasonalTheme.ramadan.label), findsWidgets);
+  });
+
+  testWidgets(
+      'Decorative background toggle renders the category SVG pattern on '
+      'the design, off by default', (tester) async {
+    await _pumpApp(tester);
+    await tester.tap(find.text('أنشئ إعلانك الآن'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('اضغط لرفع صورة المنتج'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
+    await tester.tap(find.text('اضغط لرفع صورة المنتج'));
+    await tester.pump();
+
+    final toggle =
+        find.byKey(const ValueKey('decorative-background-toggle'));
+    await tester.scrollUntilVisible(
+      toggle,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
+    // افتراضيًا معطّلة — بلا خلفية مصمَّمة قبل التفعيل.
+    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+
+    await tester.scrollUntilVisible(
+      find.text('اعرض شاشة السحر'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('اعرض شاشة السحر'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('اعرض شاشة السحر'));
+    await tester.pump();
+    final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
+    await tester.pump(total + const Duration(milliseconds: 100));
+    await tester.pump();
+
+    // زخرفة الخلفية (SVG مضمَّنة) تظهر على التصميم المولَّد بعد التفعيل.
+    expect(find.byType(SvgPicture), findsWidgets);
   });
 
   testWidgets('Onboarding asks for the business and stores it', (tester) async {

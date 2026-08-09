@@ -63,6 +63,9 @@ dependencies:
   # المفتاح المنشور يُمرَّر عند البناء عبر --dart-define ولا يوضع بالمستودع.
   moyasar: ^2.0.16
 
+  # رسم أنماط الخلفية المصمَّمة (SVG مضمَّنة مع التطبيق) في محرك القوالب.
+  flutter_svg: ^2.0.10+1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -85,10 +88,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # أنماط خلفية مصمَّمة (رسوم متجهة SVG) لكل نشاط تجاري — تُلوَّن وقت
+  # التشغيل بلوحة الإعلان (لون العلامة/الموسم/المنتج) بدل التدرّج
+  # المسطّح فقط، كخيار بديل يختاره التاجر (نمط قوالب Canva الجاهزة).
+  assets:
+    - assets/backgrounds/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

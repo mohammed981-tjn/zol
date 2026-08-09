@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../models/ad_template.dart';
 import '../models/brand_font.dart';
 import '../models/generated_ad.dart';
@@ -72,6 +73,28 @@ class AdDesignPreview extends StatelessWidget {
                     AdTemplate.offer => _OfferLayout(spec: spec),
                   },
                 ),
+                // خلفية مصمَّمة اختيارية: زخرفة زاوية مستوحاة من النشاط
+                // (نمط قوالب Canva الجاهزة) بدل التدرّج المسطّح وحده —
+                // ركن صغير شفاف حتى لا يزاحم النص أو المنتج في أي قالب.
+                if (ad.brief.useDecorativeBackground)
+                  Positioned(
+                    bottom: -28 * spec.s,
+                    right: -28 * spec.s,
+                    child: IgnorePointer(
+                      child: Opacity(
+                        opacity: 0.16,
+                        child: SvgPicture.asset(
+                          'assets/backgrounds/${ad.brief.category.name}.svg',
+                          width: spec.width * 0.55,
+                          height: spec.width * 0.55,
+                          colorFilter: ColorFilter.mode(
+                            spec.palette.onPrimary,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (spec.logo != null)
                   Positioned(
                     top: 12 * spec.s,

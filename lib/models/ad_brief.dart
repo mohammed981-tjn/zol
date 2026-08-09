@@ -15,6 +15,7 @@ class AdBrief {
     this.imageBytes,
     this.paletteColor,
     this.season,
+    this.useDecorativeBackground = false,
   });
 
   final String productName;
@@ -37,6 +38,10 @@ class AdBrief {
   /// للنص واللوحة والشارة دون تغيير مفردات النشاط نفسها.
   final SeasonalTheme? season;
 
+  /// خلفية مصمَّمة (نمط زخرفي مستوحى من النشاط) بدل التدرّج المسطّح —
+  /// خيار بصري بديل، لا يُغيّر ألوان اللوحة (العلامة/الموسم/المنتج).
+  final bool useDecorativeBackground;
+
   bool get hasProductImage => imageBytes != null;
 
   Map<String, dynamic> toJson() => {
@@ -48,6 +53,7 @@ class AdBrief {
     'category': category.name,
     'paletteColor': paletteColor,
     if (season != null) 'season': season!.name,
+    'useDecorativeBackground': useDecorativeBackground,
     // تُحفظ الصورة (مضغوطة مسبقًا عبر ImageStore) حتى يمكن فتح الإعلان
     // من المكتبة وإعادة تصديره أو طباعته بعد إغلاق التطبيق.
     if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
@@ -63,6 +69,7 @@ class AdBrief {
     imageBytes: imageBytes ?? this.imageBytes,
     paletteColor: paletteColor,
     season: season,
+    useDecorativeBackground: useDecorativeBackground,
   );
 
   factory AdBrief.fromJson(Map<String, dynamic> json) => AdBrief(
@@ -79,6 +86,7 @@ class AdBrief {
     season: SeasonalTheme.values
         .cast<SeasonalTheme?>()
         .firstWhere((s) => s?.name == json['season'], orElse: () => null),
+    useDecorativeBackground: json['useDecorativeBackground'] as bool? ?? false,
     imageBytes: switch (json['imageBytes']) {
       final String encoded when encoded.isNotEmpty => _tryDecode(encoded),
       _ => null,

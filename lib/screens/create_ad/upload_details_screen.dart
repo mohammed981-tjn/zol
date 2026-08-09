@@ -54,6 +54,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   bool _isolating = false;
   bool _picking = false;
   SeasonalTheme? _season;
+  bool _useDecorativeBackground = false;
 
   bool get _canContinue =>
       _imageBytes != null && _nameController.text.trim().isNotEmpty;
@@ -178,6 +179,8 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             ),
             const SizedBox(height: 24),
             _buildSeasonPicker(),
+            const SizedBox(height: 24),
+            _buildDecorativeBackgroundToggle(),
             const SizedBox(height: 36),
             ElevatedButton(
               onPressed: _canContinue
@@ -199,6 +202,8 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                                   : _imageBytes,
                               paletteColor: _paletteColor,
                               season: _season,
+                              useDecorativeBackground:
+                                  _useDecorativeBackground,
                             ),
                           ),
                         ),
@@ -289,6 +294,40 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
       side: isUpcoming && !isSelected
           ? BorderSide(color: season!.color, width: 1.2)
           : BorderSide.none,
+    );
+  }
+
+  /// خلفية مصمَّمة اختيارية: زخرفة زاوية مستوحاة من نشاط التاجر (رسوم
+  /// متجهة حقيقية مضمَّنة، لا تدرّج لوني محسوب فقط) — بديل بصري نمط
+  /// قوالب Canva الجاهزة، لا يغيّر لوحة الألوان (العلامة/الموسم/المنتج).
+  Widget _buildDecorativeBackgroundToggle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: SwitchListTile(
+          key: const ValueKey('decorative-background-toggle'),
+          contentPadding: EdgeInsets.zero,
+          value: _useDecorativeBackground,
+          onChanged: (v) => setState(() => _useDecorativeBackground = v),
+          activeThumbColor: AppColors.coral,
+          title: Text(
+            'خلفية مصمَّمة بدل التدرّج',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: context.scheme.onSurface,
+            ),
+          ),
+          subtitle: Text(
+            'زخرفة زاوية مستوحاة من نشاطك تُضاف فوق ألوان تصميمك',
+            style: TextStyle(color: context.textMuted, fontSize: 12),
+          ),
+        ),
+      ),
     );
   }
 

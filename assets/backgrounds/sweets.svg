@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <g id="cupcake" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 26 L44 26 L38 54 Q26 60 14 54 Z"/>
+      <path d="M6 26 Q26 4 46 26"/>
+      <circle cx="26" cy="0" r="4" fill="#000" stroke="none"/>
+    </g>
+  </defs>
+  <g opacity="0.9">
+    <use href="#cupcake" x="30" y="24" transform="rotate(-6 56 70)"/>
+    <use href="#cupcake" x="250" y="16" transform="rotate(10 276 62)"/>
+    <use href="#cupcake" x="130" y="150" transform="rotate(-10 156 196)"/>
+    <use href="#cupcake" x="300" y="180" transform="rotate(8 326 226)"/>
+    <use href="#cupcake" x="30" y="270" transform="rotate(6 56 316)"/>
+    <use href="#cupcake" x="210" y="290" transform="rotate(-8 236 336)"/>
+    <use href="#cupcake" x="330" y="300" transform="rotate(12 356 346)"/>
+  </g>
+</svg>

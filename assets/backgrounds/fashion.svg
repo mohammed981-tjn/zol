@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <g id="hanger" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="30" cy="6" r="6"/>
+      <line x1="30" y1="12" x2="30" y2="20"/>
+      <path d="M6 50 L30 20 L54 50"/>
+      <line x1="4" y1="50" x2="56" y2="50"/>
+    </g>
+  </defs>
+  <g opacity="0.9">
+    <use href="#hanger" x="20" y="20" transform="rotate(-8 50 66)"/>
+    <use href="#hanger" x="250" y="10" transform="rotate(10 280 56)"/>
+    <use href="#hanger" x="130" y="140" transform="rotate(-12 160 186)"/>
+    <use href="#hanger" x="300" y="170" transform="rotate(8 330 216)"/>
+    <use href="#hanger" x="30" y="260" transform="rotate(6 60 306)"/>
+    <use href="#hanger" x="200" y="280" transform="rotate(-10 230 326)"/>
+    <use href="#hanger" x="330" y="290" transform="rotate(12 360 336)"/>
+  </g>
+</svg>
