@@ -66,6 +66,11 @@ dependencies:
   # رسم أنماط الخلفية المصمَّمة (SVG مضمَّنة مع التطبيق) في محرك القوالب.
   flutter_svg: ^2.0.10+1
 
+  # الخادم السحابي (قاعدة بيانات Postgres + مصادقة + Edge Functions).
+  # رابط المشروع ومفتاح publishable ليسا سرّيين ويجوز تضمينهما هنا؛
+  # مفتاح service_role السرّي لا يوضع في التطبيق مطلقًا.
+  supabase_flutter: ^2.8.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

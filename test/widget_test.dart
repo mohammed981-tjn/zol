@@ -376,7 +376,7 @@ void main() {
 
     final first = await AppState.load();
     expect(
-      first.register(
+      await first.register(
         name: 'محمد',
         storeName: 'محمصة الفجر',
         email: 'M@Example.com',
@@ -388,7 +388,7 @@ void main() {
 
     // بريد مكرر يرفض.
     expect(
-      first.register(
+      await first.register(
         name: 'آخر',
         storeName: 'متجر',
         email: 'm@example.com',
@@ -405,11 +405,11 @@ void main() {
     second.logout();
     expect(second.isLoggedIn, isFalse);
     expect(
-      second.login(email: 'm@example.com', password: 'wrong'),
+      await second.login(email: 'm@example.com', password: 'wrong'),
       isNotNull,
     );
     expect(
-      second.login(email: 'm@example.com', password: 'secret123'),
+      await second.login(email: 'm@example.com', password: 'secret123'),
       isNull,
     );
     expect(second.account?.storeName, 'محمصة الفجر');

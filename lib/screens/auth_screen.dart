@@ -3,8 +3,8 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/icon_circle.dart';
 
-/// تسجيل الدخول / إنشاء حساب تاجر. الحسابات محلية حاليًا وتُستبدل
-/// بمزوّد سحابي (Firebase Auth) عند بناء الخادم دون تغيير هذه الشاشة.
+/// تسجيل الدخول / إنشاء حساب تاجر عبر Supabase Auth (أو محليًا حين لا
+/// يتوفر عميل سحابي، كما في الاختبارات).
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -14,6 +14,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
+  bool _isSubmitting = false;
   final _nameController = TextEditingController();
   final _storeController = TextEditingController();
   final _emailController = TextEditingController();
@@ -29,7 +30,7 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final state = AppStateScope.of(context);
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -43,19 +44,32 @@ class _AuthScreenState extends State<AuthScreen> {
       error = 'أدخل اسمك';
     } else if (!_isLogin && _storeController.text.trim().isEmpty) {
       error = 'أدخل اسم متجرك أو نشاطك';
-    } else if (_isLogin) {
-      error = state.login(email: email, password: password);
-    } else {
-      error = state.register(
-        name: _nameController.text,
-        storeName: _storeController.text,
-        email: email,
-        password: password,
-      );
     }
 
     if (error != null) {
       setState(() => _error = error);
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+    error = _isLogin
+        ? await state.login(email: email, password: password)
+        : await state.register(
+            name: _nameController.text,
+            storeName: _storeController.text,
+            email: email,
+            password: password,
+          );
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _isSubmitting = false;
+        _error = error;
+      });
       return;
     }
     Navigator.of(context).pop();
@@ -153,15 +167,23 @@ class _AuthScreenState extends State<AuthScreen> {
             ],
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _submit,
-              child: Text(_isLogin ? 'دخول' : 'إنشاء الحساب'),
+              onPressed: _isSubmitting ? null : _submit,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    )
+                  : Text(_isLogin ? 'دخول' : 'إنشاء الحساب'),
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () => setState(() {
-                _isLogin = !_isLogin;
-                _error = null;
-              }),
+              onPressed: _isSubmitting
+                  ? null
+                  : () => setState(() {
+                      _isLogin = !_isLogin;
+                      _error = null;
+                    }),
               child: Text(
                 _isLogin
                     ? 'ليس لديك حساب؟ أنشئ حسابًا جديدًا'

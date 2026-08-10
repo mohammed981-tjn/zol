@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/shell_screen.dart';
+import 'services/supabase_config.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // استرجاع الإعلانات والطلبات والتفضيلات المحفوظة على الجهاز.
-  final state = await AppState.load();
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    publishableKey: SupabaseConfig.publishableKey,
+  );
+  // استرجاع الإعلانات والطلبات والتفضيلات المحفوظة على الجهاز، وجلسة
+  // حساب التاجر من Supabase إن كانت محفوظة من زيارة سابقة.
+  final state = await AppState.load(client: Supabase.instance.client);
   runApp(ZolApp(state: state));
 }
 

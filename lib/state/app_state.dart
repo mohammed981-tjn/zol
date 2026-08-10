@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../models/generated_ad.dart';
 import '../models/business_category.dart';
 import '../models/brand_font.dart';
@@ -12,13 +14,20 @@ import '../models/print_order.dart';
 import '../models/trashed_ad.dart';
 import '../services/image_store.dart';
 
-/// حالة التطبيق: إعلانات محفوظة، طلبات طباعة، سمة العرض.
+/// حالة التطبيق: إعلانات محفوظة، طلبات طباعة، سمة العرض، وحساب التاجر.
 /// تُحفظ دائمًا على الجهاز عبر SharedPreferences فلا تضيع عند إغلاق
-/// التطبيق. (تُستبدل لاحقًا بمزامنة سحابية مع حساب التاجر.)
+/// التطبيق. حساب التاجر يُصادَق عبر Supabase عند توفر عميل سحابي.
 class AppState extends ChangeNotifier {
-  AppState([this._prefs]);
+  AppState({SharedPreferences? prefs, supa.SupabaseClient? client})
+    : _prefs = prefs,
+      _client = client;
 
   final SharedPreferences? _prefs;
+
+  /// عميل Supabase الحقيقي عند توفره (يُمرَّر من main.dart بعد التهيئة).
+  /// عند تركه null (كما في كل اختبارات الودجت الحالية) تبقى المصادقة
+  /// محلية بالكامل تمامًا كسابقًا — بلا أي اتصال شبكة.
+  final supa.SupabaseClient? _client;
 
   static const _adsKey = 'saved_ads';
   static const _ordersKey = 'orders';
@@ -63,18 +72,21 @@ class AppState extends ChangeNotifier {
   Color? get brandColor =>
       brandColorValue == null ? null : Color(brandColorValue!);
 
-  /// سجل الحسابات المحلية: بريد → {name, storeName, salt, hash}.
-  /// يُستبدل بمزوّد مصادقة سحابي (Firebase Auth كما في zadgo2) عند
-  /// بناء الخادم — واجهة register/login/logout تبقى كما هي.
+  /// سجل الحسابات المحلية (وضع عدم الاتصال بـ Supabase فقط، ومنه
+  /// الاختبارات): بريد → {name, storeName, salt, hash}.
   Map<String, dynamic> _accounts = {};
 
   int _nextOrderNumber = 1001;
 
-  /// تحميل الحالة المحفوظة من الجهاز.
-  static Future<AppState> load() async {
+  /// تحميل الحالة المحفوظة من الجهاز، وجلسة حساب التاجر — من Supabase إن
+  /// مُرِّر [client]، وإلا من التخزين المحلي كسابقًا.
+  static Future<AppState> load({supa.SupabaseClient? client}) async {
     final prefs = await SharedPreferences.getInstance();
-    final state = AppState(prefs);
+    final state = AppState(prefs: prefs, client: client);
     state._restore();
+    if (client != null) {
+      await state._restoreSupabaseSession();
+    }
     return state;
   }
 
@@ -129,6 +141,14 @@ class AppState extends ChangeNotifier {
       }
     }
 
+    // جلسة Supabase (إن وُجدت) تُستعاد لاحقًا في _restoreSupabaseSession —
+    // لا حاجة للحساب المحلي حين يكون هناك عميل سحابي حقيقي.
+    if (_client == null) {
+      _restoreLocalAccount(prefs);
+    }
+  }
+
+  void _restoreLocalAccount(SharedPreferences prefs) {
     try {
       _accounts =
           jsonDecode(prefs.getString(_accountsKey) ?? '{}')
@@ -145,6 +165,34 @@ class AppState extends ChangeNotifier {
         email: sessionEmail!,
       );
     }
+  }
+
+  /// يستعيد حساب التاجر من جلسة Supabase محفوظة (بعد إغلاق التطبيق وفتحه
+  /// من جديد) بجلب صفه من جدول merchants. فشل الشبكة هنا لا يُسقط
+  /// الجلسة — تبقى صالحة ويُعاد المحاولة عند أول عملية تحتاج الحساب.
+  Future<void> _restoreSupabaseSession() async {
+    final user = _client!.auth.currentUser;
+    if (user == null) return;
+    try {
+      account = await _fetchMerchantProfile(user);
+    } catch (_) {
+      // لا اتصال إنترنت الآن — نتابع بلا حساب مُحمَّل ونحاول لاحقًا.
+    }
+  }
+
+  Future<MerchantAccount> _fetchMerchantProfile(supa.User user) async {
+    final row = await _client!
+        .from('merchants')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
+    return MerchantAccount(
+      name:
+          row?['owner_name'] as String? ??
+          (user.userMetadata?['name'] as String? ?? ''),
+      storeName: row?['business_name'] as String? ?? '',
+      email: user.email ?? '',
+    );
   }
 
   void _persist() {
@@ -298,21 +346,45 @@ class AppState extends ChangeNotifier {
       sha256.convert(utf8.encode('$salt$password')).toString();
 
   /// إنشاء حساب تاجر جديد. يعيد رسالة خطأ بالعربية أو null عند النجاح.
-  String? register({
+  /// يستخدم Supabase Auth الحقيقي عند توفر عميل، وإلا حسابًا محليًا
+  /// مُجزَّأ بكلمة مرور مملّحة (كما في كل اختبارات الودجت).
+  Future<String?> register({
     required String name,
     required String storeName,
     required String email,
     required String password,
   }) {
     final key = email.trim().toLowerCase();
-    if (_accounts.containsKey(key)) {
+    if (_client != null) {
+      return _registerWithSupabase(
+        name: name.trim(),
+        storeName: storeName.trim(),
+        email: key,
+        password: password,
+      );
+    }
+    return _registerLocally(
+      name: name,
+      storeName: storeName,
+      email: key,
+      password: password,
+    );
+  }
+
+  Future<String?> _registerLocally({
+    required String name,
+    required String storeName,
+    required String email,
+    required String password,
+  }) async {
+    if (_accounts.containsKey(email)) {
       return 'هذا البريد مسجَّل مسبقًا — سجّل دخولك بدلًا من ذلك';
     }
     final salt = List.generate(
       16,
       (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
     ).join();
-    _accounts[key] = {
+    _accounts[email] = {
       'name': name.trim(),
       'storeName': storeName.trim(),
       'salt': salt,
@@ -321,18 +393,60 @@ class AppState extends ChangeNotifier {
     account = MerchantAccount(
       name: name.trim(),
       storeName: storeName.trim(),
-      email: key,
+      email: email,
     );
-    _prefs?.setString(_sessionKey, key);
+    _prefs?.setString(_sessionKey, email);
     _persistAccounts();
     notifyListeners();
     return null;
   }
 
+  Future<String?> _registerWithSupabase({
+    required String name,
+    required String storeName,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _client!.auth.signUp(
+        email: email,
+        password: password,
+        data: {'name': name},
+      );
+      final user = response.user;
+      if (user == null) {
+        return 'تعذّر إنشاء الحساب — حاول مجددًا';
+      }
+      await _client.from('merchants').upsert({
+        'id': user.id,
+        'owner_name': name,
+        'business_name': storeName,
+        'category': businessCategory.name,
+      });
+      account = MerchantAccount(name: name, storeName: storeName, email: email);
+      notifyListeners();
+      return null;
+    } on supa.AuthException catch (e) {
+      return _translateAuthError(e.message);
+    } catch (_) {
+      return 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مجددًا';
+    }
+  }
+
   /// تسجيل الدخول. يعيد رسالة خطأ بالعربية أو null عند النجاح.
-  String? login({required String email, required String password}) {
+  Future<String?> login({required String email, required String password}) {
     final key = email.trim().toLowerCase();
-    final stored = _accounts[key];
+    if (_client != null) {
+      return _loginWithSupabase(email: key, password: password);
+    }
+    return _loginLocally(email: key, password: password);
+  }
+
+  Future<String?> _loginLocally({
+    required String email,
+    required String password,
+  }) async {
+    final stored = _accounts[email];
     if (stored == null ||
         stored['hash'] != _hashPassword(password, stored['salt'] as String)) {
       return 'البريد أو كلمة المرور غير صحيحة';
@@ -340,17 +454,65 @@ class AppState extends ChangeNotifier {
     account = MerchantAccount(
       name: stored['name'] as String? ?? '',
       storeName: stored['storeName'] as String? ?? '',
-      email: key,
+      email: email,
     );
-    _prefs?.setString(_sessionKey, key);
+    _prefs?.setString(_sessionKey, email);
     notifyListeners();
     return null;
   }
 
+  Future<String?> _loginWithSupabase({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _client!.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      final user = response.user;
+      if (user == null) {
+        return 'البريد أو كلمة المرور غير صحيحة';
+      }
+      account = await _fetchMerchantProfile(user);
+      notifyListeners();
+      return null;
+    } on supa.AuthException catch (e) {
+      return _translateAuthError(e.message);
+    } catch (_) {
+      return 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مجددًا';
+    }
+  }
+
+  /// يمسح الحساب محليًا فورًا (بلا انتظار)، ويرسل طلب تسجيل الخروج
+  /// الحقيقي لـ Supabase في الخلفية عند وجود عميل سحابي.
   void logout() {
     account = null;
-    _prefs?.remove(_sessionKey);
+    if (_client != null) {
+      unawaited(_client.auth.signOut());
+    } else {
+      _prefs?.remove(_sessionKey);
+    }
     notifyListeners();
+  }
+
+  String _translateAuthError(String message) {
+    final m = message.toLowerCase();
+    if (m.contains('already registered') || m.contains('already exists')) {
+      return 'هذا البريد مسجَّل مسبقًا — سجّل دخولك بدلًا من ذلك';
+    }
+    if (m.contains('invalid login credentials') ||
+        m.contains('invalid_credentials')) {
+      return 'البريد أو كلمة المرور غير صحيحة';
+    }
+    if (m.contains('password') &&
+        (m.contains('character') || m.contains('short'))) {
+      return 'كلمة المرور 6 أحرف على الأقل';
+    }
+    if (m.contains('email') && m.contains('invalid')) {
+      return 'أدخل بريدًا إلكترونيًا صحيحًا';
+    }
+    return 'تعذّر إتمام العملية — حاول مجددًا';
   }
 
   void _persistAccounts() {
