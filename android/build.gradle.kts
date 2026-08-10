@@ -22,16 +22,16 @@ subprojects {
 // بعض إضافات الطرف الثالث (مثل pay_android) تحدد إعدادات JVM قديمة/متضاربة
 // بين مهام Java وKotlin الخاصة بها، وهو ما يفشّل البناء تحت AGP 9. توحيدها
 // هنا لكل الوحدات الفرعية يحل التعارض دون المساس بإعداد وحدة app نفسها.
-// لازم داخل afterEvaluate: AGP يكتب إعداد compileOptions الخاص بكل إضافة
-// على مهامها أثناء تقييم مشروعها الفرعي، أي بعد هذا الإعداد هنا مباشرة —
-// فبقيت قيمة javac القديمة (11) تكسب رغم هذا التوحيد قبل الإصلاح.
-// استثناء :app إلزامي: evaluationDependsOn(":app") أعلاه يجبر تقييمها
-// مبكرًا، فتكون مُقيَّمة فعلًا قبل وصول هذا البلوك إليها — واستدعاء
-// afterEvaluate على مشروع مُقيَّم أصلًا يفشل البناء فورًا. app أصلًا
-// معدّة على JVM 17 بشكل صريح في build.gradle.kts الخاص بها فلا تحتاج هذا.
-subprojects {
-    if (name == "app") return@subprojects
-    afterEvaluate {
+// محاولتان سابقتان فشلتا: التوحيد المباشر في subprojects{} ينفَّذ أثناء
+// تقييم الجذر — أي قبل أن تبدأ كل وحدة فرعية تقييم سكربتها الخاص أصلاً —
+// فيُسجَّل كأول عنصر في طابور afterEvaluate، فينفَّذ أولًا، ويكسبه AGP
+// بتسجيله المتأخر (من داخل سكربت الإضافة نفسه) الذي يُنفَّذ بعده مباشرة.
+// gradle.projectsEvaluated{} هو الحل الصحيح: خطّاف على مستوى البناء كله
+// يعمل فقط بعد اكتمال تقييم كل المشاريع (بما فيها كل afterEvaluate لكل
+// مشروع)، فيضمن أن توحيدنا هو آخر ما يُطبَّق فعليًا.
+gradle.projectsEvaluated {
+    rootProject.subprojects {
+        if (name == "app") return@subprojects
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
