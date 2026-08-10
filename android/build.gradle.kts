@@ -25,7 +25,12 @@ subprojects {
 // لازم داخل afterEvaluate: AGP يكتب إعداد compileOptions الخاص بكل إضافة
 // على مهامها أثناء تقييم مشروعها الفرعي، أي بعد هذا الإعداد هنا مباشرة —
 // فبقيت قيمة javac القديمة (11) تكسب رغم هذا التوحيد قبل الإصلاح.
+// استثناء :app إلزامي: evaluationDependsOn(":app") أعلاه يجبر تقييمها
+// مبكرًا، فتكون مُقيَّمة فعلًا قبل وصول هذا البلوك إليها — واستدعاء
+// afterEvaluate على مشروع مُقيَّم أصلًا يفشل البناء فورًا. app أصلًا
+// معدّة على JVM 17 بشكل صريح في build.gradle.kts الخاص بها فلا تحتاج هذا.
 subprojects {
+    if (name == "app") return@subprojects
     afterEvaluate {
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
