@@ -22,22 +22,33 @@ subprojects {
 // بعض إضافات الطرف الثالث (مثل pay_android) تحدد إعدادات JVM قديمة/متضاربة
 // بين مهام Java وKotlin الخاصة بها، وهو ما يفشّل البناء تحت AGP 9. توحيدها
 // هنا لكل الوحدات الفرعية يحل التعارض دون المساس بإعداد وحدة app نفسها.
-// محاولتان سابقتان فشلتا: التوحيد المباشر في subprojects{} ينفَّذ أثناء
-// تقييم الجذر — أي قبل أن تبدأ كل وحدة فرعية تقييم سكربتها الخاص أصلاً —
-// فيُسجَّل كأول عنصر في طابور afterEvaluate، فينفَّذ أولًا، ويكسبه AGP
-// بتسجيله المتأخر (من داخل سكربت الإضافة نفسه) الذي يُنفَّذ بعده مباشرة.
-// gradle.projectsEvaluated{} هو الحل الصحيح: خطّاف على مستوى البناء كله
-// يعمل فقط بعد اكتمال تقييم كل المشاريع (بما فيها كل afterEvaluate لكل
-// مشروع)، فيضمن أن توحيدنا هو آخر ما يُطبَّق فعليًا.
-gradle.projectsEvaluated {
-    rootProject.subprojects {
-        if (name == "app") return@subprojects
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+//
+// ثلاث محاولات سابقتان فشلتا كلها بإعادة كتابة خواص مهام JavaCompile/
+// KotlinCompile مباشرة (tasks.withType) — إما مبكرًا فيكسبها تسجيل AGP
+// المتأخر، أو عبر gradle.projectsEvaluated{} بعد اكتمال كل التقييم، وهو
+// ما وحّد فعلًا هدف JVM لكن كسر classpath الترجمة (فقدت geolocator_android
+// إمكانية الوصول لحزم android.* لأن إعادة كتابة الخاصية بعد اكتمال تهيئة
+// AGP لا تُعيد ربط classpath الخاص بها).
+//
+// الحل الصحيح: الإعداد عبر DSL نفسه (compileOptions / kotlin{}) لحظة تطبيق
+// الإضافة — عبر plugins.withId، الذي يُطلَق فعليًا في لحظة apply() لكل
+// وحدة فرعية (لا وقت تقييم الجذر) — فتقرأ AGP قيمتنا أثناء بنائها الطبيعي
+// لمهام الترجمة بدل أن نُعيد كتابتها لاحقًا فوق ما بنته.
+subprojects {
+    if (name == "app") return@subprojects
+    plugins.withId("com.android.library") {
+        extensions.configure<com.android.build.gradle.LibraryExtension> {
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
         }
-        tasks.withType<JavaCompile>().configureEach {
-            sourceCompatibility = "17"
-            targetCompatibility = "17"
+    }
+    plugins.withId("org.jetbrains.kotlin.android") {
+        extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            }
         }
     }
 }
