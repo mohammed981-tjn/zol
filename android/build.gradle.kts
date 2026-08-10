@@ -53,6 +53,22 @@ subprojects {
     }
 }
 
+// النتيجة بعد التوحيد عبر DSL أعلاه: نجح جانب Java (compileOptions) بلا
+// أي كسر لـ classpath — لكن pay_android يحدد kotlinOptions.jvmTarget="1.8"
+// صراحةً داخل سكربتها الخاص (سطر متأخر في ملفها)، فيُنفَّذ بعد withId
+// المبكر أعلاه ويكسبه. لا حل إلا تطبيق الهدف بعد اكتمال كل تقييم فعليًا.
+// نقصر هذا على مهام Kotlin فقط (لا Java) لأن كسر classpath السابق كان في
+// javac تحديدًا (geolocator فقدت android.*)، ولم يظهر أي كسر مشابه في
+// جانب Kotlin عند اختباره — فالمهمتان غير متكافئتين هنا في الأمان.
+gradle.projectsEvaluated {
+    rootProject.subprojects {
+        if (name == "app") return@subprojects
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
