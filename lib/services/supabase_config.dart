@@ -7,7 +7,7 @@
 class SupabaseConfig {
   const SupabaseConfig._();
 
-  static const String url = 'https://fygettwuhlmkjotqzwhs.supabase.co';
+  static const String url = 'https://fbbrkwragezhztffbvxf.supabase.co';
   static const String publishableKey =
-      'sb_publishable_6HaY3BxEUeKmEYhuH2Ovlg_9ApLuAnM';
+      'sb_publishable_l6cZctfpZSOquWbRdxg6hw_ulgI1kbM';
 }
