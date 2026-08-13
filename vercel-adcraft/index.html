@@ -323,7 +323,10 @@ small.dim{color:var(--muted);font-size:.74rem}
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<!-- مكتبة Supabase محليًا (supabase-js 2.45.4 UMD) بدل CDN — تبقى اللوحة
+     تعمل لو حُجب jsdelivr أو كانت الشبكة مقيّدة. لا تُضمَّن داخل الوسم
+     نفسه لأن webpack يشتق publicPath من currentScript.src فيفشل بلا src. -->
+<script src="./supabase.js"></script>
 <script>
 /* ================= الإعداد ================= */
 const SUPABASE_URL = 'https://fbbrkwragezhztffbvxf.supabase.co';

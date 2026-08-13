@@ -1,11 +1,18 @@
 # لوحة إدارة AdCraft — حزمة النشر على Vercel
 
-ملفان فقط: `index.html` (اللوحة كاملة، بلا بناء وبلا اعتماديات) و`vercel.json` (ترويسات أمان).
+`index.html` (اللوحة كاملة، بلا بناء) و`vercel.json` (ترويسات أمان)،
+و`supabase.js` + `591.supabase.js` (مكتبة supabase-js 2.45.4 نسخة UMD
+محفوظة محليًا بدل CDN — فلا تتوقف اللوحة لو حُجب jsdelivr أو كانت الشبكة
+مقيّدة). لا اعتماديات npm ولا خطوة بناء إطلاقًا.
+
+> المكتبة تُحمَّل عبر `<script src="./supabase.js">` ولا تُلصَق داخل
+> `index.html` نفسه: webpack يشتق `publicPath` من `document.currentScript.src`،
+> فالسكربت المضمَّن بلا `src` يرمي «Automatic publicPath is not supported».
 
 ## النشر
-مشروع جديد مستقل. لا يلمس مشروعك القائم — كل مشروع في Vercel معزول.
-1. ارفع الملفين إلى مستودع GitHub جديد.
-2. Vercel → Add New → Project → استورد المستودع.
+هذه الحزمة داخل مستودع zol في مجلد `vercel-adcraft/`.
+1. Vercel → Add New → Project → استورد `mohammed981-tjn/zol`.
+2. **Root Directory: `vercel-adcraft`** ← الخطوة المهمة.
 3. Framework Preset: **Other**. اترك أمر البناء ومجلد الإخراج فارغين.
 4. Deploy.
 
