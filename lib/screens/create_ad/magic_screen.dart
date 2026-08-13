@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import '../../models/ad_brief.dart';
 import '../../models/ad_template.dart';
 import '../../models/generated_ad.dart';
+import '../../config/app_config.dart';
+import '../../models/generation.dart';
 import '../../services/ad_generator.dart';
+import '../../services/ai_gateway.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ad_design_preview.dart';
@@ -13,9 +16,22 @@ import '../../widgets/section_header.dart';
 import 'execute_screen.dart';
 
 class MagicScreen extends StatefulWidget {
-  const MagicScreen({super.key, required this.brief, this.initialTemplate});
+  const MagicScreen({
+    super.key,
+    required this.brief,
+    this.initialTemplate,
+    this.gateway,
+  });
 
   final AdBrief brief;
+
+  /// يُمرَّر في الاختبارات ببوابة وهمية بلا شبكة.
+  final AiGateway? gateway;
+
+  /// الاختبارات تصل إلى هذه الشاشة بالتنقّل من شاشة التفاصيل لا ببنائها
+  /// مباشرة، فلا سبيل لتمرير [gateway] عبر المُنشئ هناك. هذا المنفذ
+  /// يغطّي تلك الحالة — على نمط debugPickImageOverride في شاشة التفاصيل.
+  static AiGateway Function()? debugGatewayOverride;
 
   /// القالب القادم من معرض القوالب (إن وُجد).
   final AdTemplate? initialTemplate;
@@ -25,9 +41,14 @@ class MagicScreen extends StatefulWidget {
 }
 
 class _MagicScreenState extends State<MagicScreen> {
+  late final AiGateway _gateway =
+      widget.gateway ??
+      MagicScreen.debugGatewayOverride?.call() ??
+      AiGateway(baseUrl: AppConfig.orchestratorUrl);
+
   List<GeneratedAd>? _ads;
+  GatewayException? _error;
   int _stage = 0;
-  int _seed = 0;
   int _selectedCard = 0;
 
   @override
@@ -36,25 +57,77 @@ class _MagicScreenState extends State<MagicScreen> {
     _generate();
   }
 
+  @override
+  void dispose() {
+    if (widget.gateway == null && MagicScreen.debugGatewayOverride == null) {
+      _gateway.dispose();
+    }
+    super.dispose();
+  }
+
+  /// النص والصورة يأتيان من المنسّق الخلفي وحده — المفاتيح لا تسكن
+  /// التطبيق. شريط المراحل يعمل بالتوازي مع الطلب الحقيقي لا قبله،
+  /// فلا نضيف تأخيراً مصطنعاً فوق زمن الشبكة.
   Future<void> _generate() async {
     setState(() {
       _ads = null;
+      _error = null;
       _stage = 0;
       _selectedCard = 0;
     });
+
+    final request = _gateway.generatePreview(widget.brief);
+    final ticker = _runStages();
+
+    try {
+      final result = await request;
+      await ticker;
+      if (!mounted) return;
+      setState(() {
+        _ads = _toAds(result);
+        _selectedCard = result.bestIndex.clamp(0, result.variants.length - 1);
+      });
+    } on GatewayException catch (e) {
+      await ticker;
+      if (!mounted) return;
+      setState(() => _error = e);
+    }
+  }
+
+  Future<void> _runStages() async {
     for (var i = 0; i < AdGenerator.generationStages.length; i++) {
       await Future<void>.delayed(AdGenerator.stageDuration);
       if (!mounted) return;
       setState(() => _stage = i + 1);
     }
-    if (!mounted) return;
-    setState(() => _ads = AdGenerator.preview(widget.brief, seed: _seed));
   }
 
-  void _regenerate() {
-    _seed++;
-    _generate();
+  /// تحويل صيغ المنسّق إلى نموذج الإعلان الذي تعرفه بقية الشاشات.
+  ///
+  /// الصورة المولَّدة تُحقن في الموجز لتصير خلفية التصميم، والنص العربي
+  /// يُركَّب فوقها طبقةً في التطبيق — لأن نماذج الصور تُشوّه الحروف
+  /// العربية، فلا نطلب منها رسم أي حرف.
+  List<GeneratedAd> _toAds(PreviewResult result) {
+    final brief = result.backgroundImage != null
+        ? widget.brief.copyWith(imageBytes: result.backgroundImage)
+        : widget.brief;
+    final now = DateTime.now();
+    return [
+      for (final v in result.variants)
+        GeneratedAd(
+          brief: brief,
+          kind: result.backgroundImage != null ? AdKind.image : AdKind.copy,
+          headline: v.headline,
+          body: v.body,
+          hashtags: v.hashtags,
+          cta: v.cta.isEmpty ? 'اطلب الآن' : v.cta,
+          angle: v.angle.isEmpty ? null : v.angle,
+          createdAt: now,
+        ),
+    ];
   }
+
+  void _regenerate() => _generate();
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +146,52 @@ class _MagicScreenState extends State<MagicScreen> {
         ],
       ),
       body: SafeArea(
-        child: ads == null ? _buildGenerating() : _buildResults(ads),
+        child: switch ((ads, _error)) {
+          (_, final GatewayException e) => _buildError(e),
+          (final List<GeneratedAd> list, _) => _buildResults(list),
+          _ => _buildGenerating(),
+        },
+      ),
+    );
+  }
+
+  Widget _buildError(GatewayException e) {
+    final quotaHit = e.isQuota;
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconCircle(
+            icon: quotaHit
+                ? Icons.hourglass_disabled_outlined
+                : Icons.cloud_off_outlined,
+            background: quotaHit ? AppColors.gold : context.scheme.error,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            quotaHit ? 'انتهت حصتك لهذا الشهر' : 'تعذّر التوليد',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: context.scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            e.message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 22),
+          if (!quotaHit)
+            FilledButton.icon(
+              onPressed: _generate,
+              icon: const Icon(Icons.refresh),
+              label: const Text('إعادة المحاولة'),
+            ),
+        ],
       ),
     );
   }
@@ -296,7 +414,7 @@ class _AdPreviewCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    ad.kind.label,
+                    ad.angle ?? ad.kind.label,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -304,7 +422,7 @@ class _AdPreviewCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                _ScoreBadge(score: ad.score),
+                if (ad.score != null) _ScoreBadge(score: ad.score!),
               ],
             ),
             if (ad.kind == AdKind.image) ...[

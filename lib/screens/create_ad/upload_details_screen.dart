@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
+import '../../config/app_config.dart';
 import '../../models/ad_brief.dart';
 import '../../models/ad_template.dart';
 import '../../models/seasonal_theme.dart';
@@ -33,8 +35,11 @@ class UploadDetailsScreen extends StatefulWidget {
 }
 
 class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
-  static const _tones = ['حماسي', 'كوميدي', 'رسمي', 'عاطفي'];
-  static const _platforms = ['إنستغرام', 'تيك توك', 'فيسبوك', 'سناب شات'];
+  // النبرات والمنصات تُقرأ من AppConfig لا تُكتب هنا: الخادم يرفض أي
+  // قيمة خارج قوائمه المحصورة، ونسخة ثانية منها في الواجهة تعني انحرافاً
+  // صامتاً ينتهي بخطأ تحقّق عند التاجر.
+  static const _tones = AppConfig.tones;
+  static const _platforms = AppConfig.platforms;
   static const _formats = ['منشور مربع', 'ستوري', 'ريلز'];
 
   final _nameController = TextEditingController();

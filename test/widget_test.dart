@@ -7,6 +7,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:image/image.dart' as img;
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import 'package:zol/main.dart';
 import 'package:zol/models/ad_brief.dart';
@@ -17,6 +19,8 @@ import 'package:zol/widgets/print_mockup.dart';
 import 'package:zol/screens/settings_screen.dart';
 import 'package:zol/screens/create_ad/upload_details_screen.dart';
 import 'package:zol/services/ad_generator.dart';
+import 'package:zol/services/ai_gateway.dart';
+import 'package:zol/screens/create_ad/magic_screen.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/models/business_category.dart';
 import 'package:zol/models/template_category.dart';
@@ -64,14 +68,66 @@ Future<void> _reachMagicResults(WidgetTester tester) async {
   await tester.tap(find.text('اعرض شاشة السحر'));
   await tester.pump();
 
-  // ثلاث مراحل توليد ثم إخراج النتائج.
+  // شريط المراحل يعمل بالتوازي مع طلب المنسّق، فبعد انقضاء زمنه ننتظر
+  // استقرار الشجرة حتى يُحلّ مستقبل البوابة الوهمية وتُبنى النتائج.
   final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
   await tester.pump(total + const Duration(milliseconds: 100));
-  await tester.pump();
+  await tester.pumpAndSettle();
 }
+
+/// رد ناجح مطابق لشكل ما يعيده المنسّق فعلاً — الاختبارات لا تلمس الشبكة.
+String _orchestratorBody({bool withImage = true}) => jsonEncode({
+  'copy': {
+    'variants': [
+      {
+        'angle': 'المنفعة المباشرة',
+        'headline': 'قهوتك تبدأ يومك',
+        'body': 'حبوب محمّصة محلياً كل أسبوع.',
+        'cta': 'اطلبها الآن',
+        'hashtags': ['#قهوة', '#السعودية'],
+      },
+      {
+        'angle': 'الموقف اليومي',
+        'headline': 'رفيقة صباحك',
+        'body': 'نكهة تعرفها من أول رشفة.',
+        'cta': 'تعرّف أكثر',
+        'hashtags': ['#قهوة_مختصة'],
+      },
+    ],
+    'bestIndex': 1,
+    'critiqued': true,
+  },
+  'image': withImage
+      ? {
+          // نفس PNG الاختبار الصالحة المستعملة في بقية الملف — النسخة
+          // التي كانت هنا سابقاً تالفة (Invalid IDAT checksum) فتُسقط
+          // مسار الحفظ بأكمله حين تمرّ على ضاغط الصور.
+          'base64':
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+          'mimeType': 'image/png',
+          'aspectRatio': '4:5',
+        }
+      : null,
+  'quota': {'used': 2, 'limit': 5},
+  'textOverlayRequired': true,
+});
+
+AiGateway _fakeGateway() => AiGateway(
+  baseUrl: 'http://test.local',
+  // Response(String,…) يرمّز بـ Latin-1 وهو عاجز عن تمثيل العربية فيرمي
+  // عند البناء؛ نمرّر البايتات مرمّزة UTF-8 كما يفعل المنسّق الحقيقي.
+  client: MockClient(
+    (req) async => http.Response.bytes(
+      utf8.encode(_orchestratorBody()),
+      200,
+      headers: {'content-type': 'application/json; charset=utf-8'},
+    ),
+  ),
+);
 
 void main() {
   setUpAll(() {
+    MagicScreen.debugGatewayOverride = _fakeGateway;
     UploadDetailsScreen.debugPickImageOverride = () async => _fakeImage;
     BackgroundRemover.debugRunSynchronously = true;
     PaletteExtractor.debugRunSynchronously = true;
@@ -144,13 +200,19 @@ void main() {
     expect(tester.widget<ElevatedButton>(button).enabled, isTrue);
   });
 
-  testWidgets('Magic screen generates variants with compatibility scores',
+  testWidgets('Magic screen renders the orchestrator variants by angle',
       (tester) async {
     await _pumpApp(tester);
     await _reachMagicResults(tester);
 
     expect(find.text('اختر النسخة الأنسب'), findsOneWidget);
-    expect(find.textContaining('توافق'), findsWidgets);
+
+    // المنسّق يعيد زوايا نصّية ويرشّح الأفضل، ولا يمنح كل صيغة رقماً —
+    // فالعنوان صار الزاوية، وشارة الدرجة تغيب بدل اختلاق رقم لا مصدر له.
+    expect(find.text('المنفعة المباشرة'), findsOneWidget);
+    expect(find.text('الموقف اليومي'), findsOneWidget);
+    expect(find.textContaining('توافق'), findsNothing);
+
     expect(find.text('حفظ ونشر'), findsOneWidget);
     expect(find.text('اطبعه وصلّه'), findsOneWidget);
   });
@@ -161,6 +223,8 @@ void main() {
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
 
+    await tester.ensureVisible(find.text('حفظ').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('حفظ').first);
     await tester.pump();
     expect(state.savedAds, hasLength(1));
@@ -575,6 +639,8 @@ void main() {
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
 
+    await tester.ensureVisible(find.text('حفظ').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('حفظ').first);
     await tester.pumpAndSettle();
     expect(state.savedAds, hasLength(1));
@@ -955,7 +1021,7 @@ void main() {
     await tester.pump();
     final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
     await tester.pump(total + const Duration(milliseconds: 100));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     // شارة الموسم تظهر على التصميم المولَّد.
     expect(find.textContaining(SeasonalTheme.ramadan.label), findsWidgets);
@@ -1003,7 +1069,7 @@ void main() {
     await tester.pump();
     final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
     await tester.pump(total + const Duration(milliseconds: 100));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     // زخرفة الخلفية (SVG مضمَّنة) تظهر على التصميم المولَّد بعد التفعيل.
     expect(find.byType(SvgPicture), findsWidgets);
@@ -1106,6 +1172,8 @@ void main() {
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
 
+    await tester.ensureVisible(find.text('حفظ').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('حفظ').first);
     await tester.pumpAndSettle();
     expect(state.savedAds, hasLength(1));
@@ -1144,6 +1212,8 @@ void main() {
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
 
+    await tester.ensureVisible(find.text('حفظ').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('حفظ').first);
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 5));
@@ -1175,6 +1245,8 @@ void main() {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
+    await tester.ensureVisible(find.text('حفظ').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('حفظ').first);
     await tester.pumpAndSettle();
     // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه أولًا.
@@ -1208,6 +1280,8 @@ void main() {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
+    await tester.ensureVisible(find.text('حفظ').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('حفظ').first);
     await tester.pumpAndSettle();
     // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه أولًا.

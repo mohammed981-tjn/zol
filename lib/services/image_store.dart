@@ -22,7 +22,15 @@ class ImageStore {
   }
 
   static Uint8List _compressSync(Uint8List bytes) {
-    final decoded = img.decodeImage(bytes);
+    // decodeImage لا يكتفي بإرجاع null على البيانات التالفة، بل يرمي
+    // (ImageException: Invalid IDAT checksum مثلاً). ذلك الاستثناء كان
+    // يعبر saveAd فيموت الحفظ صامتاً ويظن التاجر أن إعلانه حُفظ.
+    final img.Image? decoded;
+    try {
+      decoded = img.decodeImage(bytes);
+    } catch (_) {
+      return bytes;
+    }
     // صورة غير مقروءة: تُحفظ كما هي بدل فقدانها.
     if (decoded == null) return bytes;
 

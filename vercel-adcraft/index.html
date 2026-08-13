@@ -593,7 +593,9 @@ function renderFeed(){
   $('feedBox').innerHTML = STATE.feed.map(g => {
     const slow = (g.latency_ms || 0) > 15000;
     const b = g.brief || {};
-    const briefLine = Object.keys(b).map(k => `${k}: ${b[k]}`).join('  ·  ');
+    const briefLine = Object.entries(b)
+      .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '')
+      .map(([k, v]) => `${k}: ${v}`).join('  ·  ');
     return `<div class="gen">
       <div class="gh">
         <b>${esc(g.merchant)}</b>

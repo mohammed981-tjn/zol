@@ -24,8 +24,9 @@ class GeneratedAd {
     required this.headline,
     required this.body,
     required this.hashtags,
-    required this.score,
     required this.createdAt,
+    this.score,
+    this.angle,
     this.cta = 'اطلب الآن',
   });
 
@@ -36,7 +37,15 @@ class GeneratedAd {
   final List<String> hashtags;
 
   /// درجة توافق متوقعة (0-100) على نمط Creative Score في AdCreative.ai.
-  final int score;
+  ///
+  /// تبقى null حين يأتي الإعلان من المنسّق الخلفي: وكيله الناقد يرشّح
+  /// أفضل صيغة ولا يمنح كل صيغة رقماً، فاختلاق رقم هنا يوهم بدقّة
+  /// لا مصدر لها. الواجهة تُخفي الشارة عند غيابها.
+  final int? score;
+
+  /// زاوية النص التي اختارها المولّد (عرض، منفعة، فضول...) — تأتي من
+  /// المنسّق وتحلّ محلّ تسمية النوع في العرض حين تتوفّر.
+  final String? angle;
   final DateTime createdAt;
 
   /// دعوة الإجراء المشتقة من نشاط التاجر (تظهر على زر التصميم).
@@ -51,6 +60,7 @@ class GeneratedAd {
     body: body,
     hashtags: hashtags,
     score: score,
+    angle: angle,
     createdAt: createdAt,
     cta: cta,
   );
@@ -61,7 +71,8 @@ class GeneratedAd {
     'headline': headline,
     'body': body,
     'hashtags': hashtags,
-    'score': score,
+    if (score != null) 'score': score,
+    if (angle != null) 'angle': angle,
     'cta': cta,
     'createdAt': createdAt.toIso8601String(),
   };
@@ -72,7 +83,8 @@ class GeneratedAd {
     headline: json['headline'] as String? ?? '',
     body: json['body'] as String? ?? '',
     hashtags: (json['hashtags'] as List?)?.cast<String>() ?? const [],
-    score: json['score'] as int? ?? 0,
+    score: json['score'] as int?,
+    angle: json['angle'] as String?,
     cta: json['cta'] as String? ?? 'اطلب الآن',
     createdAt:
         DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),

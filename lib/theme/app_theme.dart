@@ -1,5 +1,16 @@
 import 'package:flutter/material.dart';
 
+/// اسم الخط العربي المضمَّن. يُصرَّح صريحاً في كل TextStyle مبني يدوياً،
+/// لأن TextStyle المُنشأ داخل ثيم مكوّن لا يرث fontFamily من ThemeData —
+/// وإغفاله يُسقط النص على الخط الافتراضي فيظهر بطباعة مختلفة أو لا يظهر
+/// أصلاً على الويب حين يتعذّر تحميل الخط الافتراضي.
+///
+/// القيمة `Tajawal` لا `Cairo`: الفرع اعتمد Tajawal خطَّ الواجهة وأبقى
+/// Cairo وAlmarai خيارَي «خط العلامة التجارية» في Brand Kit، وخمسة مواضع
+/// في الواجهة تثبّت Tajawal صراحةً — فلو بقي الثابت على Cairo لانقسمت
+/// الواجهة بين خطين. تبديلها سطر واحد إن أُريد العكس.
+const String kFontFamily = 'Tajawal';
+
 class AppColors {
   AppColors._();
 
@@ -22,7 +33,9 @@ ThemeData buildAppTheme(Brightness brightness) {
       tertiary: AppColors.gold,
     ),
     scaffoldBackgroundColor: isDark ? const Color(0xFF10142B) : Colors.white,
-    fontFamily: 'Tajawal',
+    // خط عربي مضمَّن في التطبيق لا مُستعار من النظام: يضمن تشكيلاً وطباعة
+    // عربية صحيحة على أندرويد وiOS والويب بالتساوي.
+    fontFamily: kFontFamily,
   );
 
   return base.copyWith(
@@ -43,9 +56,9 @@ ThemeData buildAppTheme(Brightness brightness) {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
+          fontFamily: kFontFamily,
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Tajawal',
         ),
       ),
     ),
@@ -56,9 +69,9 @@ ThemeData buildAppTheme(Brightness brightness) {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
+          fontFamily: kFontFamily,
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Tajawal',
         ),
       ),
     ),
