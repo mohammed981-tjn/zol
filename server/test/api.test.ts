@@ -3,7 +3,7 @@ import { describe, it, before, after } from 'node:test';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 
-import { createApp } from '../src/app.ts';
+import { buildProvidersFromEnv, createApp } from '../src/app.ts';
 import { InMemoryUsageStore, PLANS } from '../src/lib/metering.ts';
 import { MockImageProvider, MockTextProvider } from '../src/providers/mock.ts';
 import type { ImageProvider } from '../src/providers/types.ts';
@@ -158,5 +158,75 @@ describe('GET /api/options', () => {
     assert.ok(json.tones.includes('حماسي'));
     assert.ok(json.platforms.includes('سناب شات'));
     assert.equal(json.plans.free.allowExpensiveRender, false, 'الفيديو ممنوع على المجاني');
+  });
+});
+
+describe('مزوّد الصور الاختياري ومصنع المزوّدين', () => {
+  let s: Server;
+  let b: string;
+
+  before(async () => {
+    // imageProvider = null يحاكي IMAGE_PROVIDER=none
+    const app = createApp({
+      textProvider: new MockTextProvider(),
+      imageProvider: null,
+      usageStore: new InMemoryUsageStore(),
+      allowedOrigins: ['*'],
+    });
+    s = app.listen(0);
+    await new Promise((r) => s.once('listening', r));
+    b = `http://127.0.0.1:${(s.address() as AddressInfo).port}`;
+  });
+
+  after(() => s.close());
+
+  it('يبلّغ عن الصور كمعطّلة في /health بدل الانهيار', async () => {
+    const json = (await (await fetch(`${b}/health`)).json()) as {
+      ok: boolean;
+      imageProvider: string;
+    };
+    assert.equal(json.ok, true);
+    assert.equal(json.imageProvider, 'none');
+  });
+
+  it('يعيد النص بلا صورة بدل رفض الطلب', async () => {
+    const res = await fetch(`${b}/api/generate/preview`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        productName: 'قهوة مختصة',
+        tone: 'حماسي',
+        platform: 'سناب شات',
+        includeImage: true,
+      }),
+    });
+    assert.equal(res.status, 200);
+    const json = (await res.json()) as {
+      copy: { variants: unknown[] };
+      image: unknown;
+    };
+    assert.ok(json.copy.variants.length > 0, 'النص يصل رغم تعطيل الصور');
+    assert.equal(json.image, null, 'لا صورة حين يكون المزوّد معطّلاً');
+  });
+
+  it('IMAGE_PROVIDER=none لا يطلب مفتاح FLUX', () => {
+    const { imageProvider, textProvider } = buildProvidersFromEnv({
+      TEXT_PROVIDER: 'openrouter',
+      OPENROUTER_API_KEY: 'sk-or-test',
+      IMAGE_PROVIDER: 'none',
+    } as NodeJS.ProcessEnv);
+    assert.equal(imageProvider, null);
+    assert.equal(textProvider.name, 'openrouter');
+  });
+
+  it('OPENROUTER_API_KEY الغائب يُرفض برسالة صريحة لا بانهيار غامض', () => {
+    assert.throws(
+      () =>
+        buildProvidersFromEnv({
+          TEXT_PROVIDER: 'openrouter',
+          IMAGE_PROVIDER: 'none',
+        } as NodeJS.ProcessEnv),
+      /OPENROUTER_API_KEY/,
+    );
   });
 });

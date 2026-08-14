@@ -84,3 +84,51 @@ describe('allowedOriginsFromEnv', () => {
     assert.ok(list.some((o) => o.includes('localhost')));
   });
 });
+
+describe('التساهل المحلي (localhost:*)', () => {
+  let devServer: Server;
+  let devBase: string;
+
+  before(async () => {
+    const app = createApp({
+      textProvider: new MockTextProvider(),
+      imageProvider: new MockImageProvider(),
+      allowedOrigins: allowedOriginsFromEnv({} as NodeJS.ProcessEnv),
+    });
+    devServer = app.listen(0);
+    await new Promise((r) => devServer.once('listening', r));
+    devBase = `http://127.0.0.1:${(devServer.address() as AddressInfo).port}`;
+  });
+
+  after(() => devServer.close());
+
+  it('يقبل أي منفذ محلي، لأن flutter run يختار منفذاً عشوائياً', async () => {
+    for (const origin of [
+      'http://localhost:53219',
+      'http://localhost:8877',
+      'http://127.0.0.1:41003',
+    ]) {
+      const res = await fetch(`${devBase}/health`, { headers: { origin } });
+      assert.equal(
+        res.headers.get('access-control-allow-origin'),
+        origin,
+        `المنفذ المحلي ${origin} يجب أن يُقبل في التطوير`,
+      );
+    }
+  });
+
+  it('لا يقبل أصلاً بعيداً رغم التساهل المحلي', async () => {
+    const res = await fetch(`${devBase}/health`, {
+      headers: { origin: 'https://attacker.example' },
+    });
+    assert.equal(res.headers.get('access-control-allow-origin'), null);
+  });
+
+  it('ضبط ALLOWED_ORIGINS صراحةً يُسقط التساهل المحلي', () => {
+    const list = allowedOriginsFromEnv({
+      ALLOWED_ORIGINS: 'https://zol.app',
+    } as NodeJS.ProcessEnv);
+    assert.deepEqual(list, ['https://zol.app']);
+    assert.ok(!list.includes('localhost:*'), 'الإنتاج لا يرث تساهل التطوير');
+  });
+});

@@ -29,19 +29,33 @@ npm run build && npm start
 | المتغير | الافتراضي | الوصف |
 |---|---|---|
 | `MOCK_MODE` | — | `1` لتشغيل المحاكيين بلا مفاتيح |
-| `TEXT_PROVIDER` | `gemini` | `gemini` أو `anthropic` |
+| `TEXT_PROVIDER` | `gemini` | `gemini` أو `anthropic` أو `openrouter` |
 | `GEMINI_API_KEY` | — | مطلوب مع `gemini` |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | |
 | `ANTHROPIC_API_KEY` | — | مطلوب مع `anthropic` |
-| `BFL_API_KEY` | — | مفتاح FLUX لتوليد الصور |
+| `OPENROUTER_API_KEY` | — | مطلوب مع `openrouter` |
+| `OPENROUTER_MODEL` | `meta-llama/llama-3.3-70b-instruct:free` | أي معرّف نموذج على OpenRouter؛ لواحق `:free` تعمل بلا رصيد |
+| `IMAGE_PROVIDER` | `flux` | `none` يعطّل توليد الصور فلا يُطلب مفتاح FLUX |
+| `BFL_API_KEY` | — | مفتاح FLUX لتوليد الصور (غير مطلوب مع `IMAGE_PROVIDER=none`) |
 | `FLUX_MODEL` | `flux-pro-1.1` | |
-| `ALLOWED_ORIGINS` | منافذ محلية | قائمة أصول الويب مفصولة بفواصل |
+| `ALLOWED_ORIGINS` | `localhost:*` | قائمة أصول الويب مفصولة بفواصل. الافتراض يقبل أي منفذ محلي لأن `flutter run` يختار منفذاً عشوائياً؛ **اضبطه صراحةً في الإنتاج** |
 | `PORT` | `8080` | |
 
 > **تنبيه على الطبقة المجانية:** شروط الطبقة المجانية عند بعض المزوّدين تسمح
 > باستخدام بياناتك لتحسين منتجاتهم. محتوى هذا المنتج هو **صور منتجات التجّار
 > وهوياتهم** — أي بيانات عملاء. استخدم الطبقة المجانية للتجريب الداخلي فقط،
 > وانقل أي محتوى تاجر حقيقي إلى طبقة مدفوعة قبل أول عميل.
+
+### تشغيل بمفتاح OpenRouter وحده (نص بلا صور)
+
+```bash
+TEXT_PROVIDER=openrouter \
+OPENROUTER_API_KEY=sk-or-... \
+IMAGE_PROVIDER=none \
+PORT=8080 npm start
+```
+
+المعاينة تعود بنص بلا صورة، ويرسم التطبيق خلفيته المزخرفة بدلاً منها.
 
 ## النقاط
 

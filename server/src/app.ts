@@ -16,6 +16,7 @@ import { TONES } from './promptbook/tones.ts';
 import { MockImageProvider, MockTextProvider } from './providers/mock.ts';
 import { AnthropicTextProvider } from './providers/text/anthropic.ts';
 import { GeminiTextProvider } from './providers/text/gemini.ts';
+import { OpenRouterTextProvider } from './providers/text/openrouter.ts';
 import { FluxImageProvider } from './providers/image/flux.ts';
 import { ProviderError, type ImageProvider, type TextProvider } from './providers/types.ts';
 
@@ -37,7 +38,8 @@ const briefSchema = z.object({
 
 export interface AppDeps {
   textProvider: TextProvider;
-  imageProvider: ImageProvider;
+  /** null حين يُعطَّل توليد الصور (IMAGE_PROVIDER=none) — المعاينة تعود بنص بلا صورة. */
+  imageProvider: ImageProvider | null;
   usageStore?: UsageStore;
   /** أصول الويب المسموح لها بمناداة المنسّق. */
   allowedOrigins?: string[];
@@ -47,7 +49,7 @@ export interface AppDeps {
 
 export function buildProvidersFromEnv(env = process.env): {
   textProvider: TextProvider;
-  imageProvider: ImageProvider;
+  imageProvider: ImageProvider | null;
   mock: boolean;
 } {
   const mock = env.MOCK_MODE === '1' || env.MOCK_MODE === 'true';
@@ -60,13 +62,23 @@ export function buildProvidersFromEnv(env = process.env): {
   if (textChoice === 'anthropic') {
     const key = requireKey(env.ANTHROPIC_API_KEY, 'ANTHROPIC_API_KEY');
     textProvider = new AnthropicTextProvider(key, env.ANTHROPIC_MODEL);
+  } else if (textChoice === 'openrouter') {
+    const key = requireKey(env.OPENROUTER_API_KEY, 'OPENROUTER_API_KEY');
+    textProvider = new OpenRouterTextProvider(key, env.OPENROUTER_MODEL);
   } else {
     const key = requireKey(env.GEMINI_API_KEY, 'GEMINI_API_KEY');
     textProvider = new GeminiTextProvider(key, env.GEMINI_MODEL);
   }
 
-  const imageKey = requireKey(env.BFL_API_KEY, 'BFL_API_KEY');
-  const imageProvider = new FluxImageProvider(imageKey, env.FLUX_MODEL);
+  // توليد الصور يُعطَّل صراحةً بـ IMAGE_PROVIDER=none. بدون ذلك كان مفتاح
+  // FLUX إلزامياً حتى لمن يريد النص وحده، فيتعذّر تشغيل المنسّق بمفتاح
+  // نصّي واحد. حين يُعطَّل تعود المعاينة بنص بلا صورة، ويرسم التطبيق
+  // خلفيته المزخرفة بدلاً منها.
+  const imageChoice = (env.IMAGE_PROVIDER ?? 'flux').toLowerCase();
+  const imageProvider =
+    imageChoice === 'none'
+      ? null
+      : new FluxImageProvider(requireKey(env.BFL_API_KEY, 'BFL_API_KEY'), env.FLUX_MODEL);
 
   return { textProvider, imageProvider, mock: false };
 }
@@ -100,7 +112,7 @@ export function createApp(deps: AppDeps) {
     res.json({
       ok: true,
       textProvider: deps.textProvider.name,
-      imageProvider: deps.imageProvider.name,
+      imageProvider: deps.imageProvider?.name ?? 'none',
     });
   });
 
@@ -129,12 +141,14 @@ export function createApp(deps: AppDeps) {
       // الحجز قبل أي استدعاء مكلف — هذا موضع الضابط الصحيح.
       const quota = await metering.reservePreview(accountId, plan);
 
-      const wantImage = req.body?.includeImage !== false;
+      const wantImage = req.body?.includeImage !== false && deps.imageProvider !== null;
       const critique = req.body?.critique !== false;
 
       const [copy, image] = await Promise.all([
         generateCopy(deps.textProvider, brief, { critique }),
-        wantImage ? generateImage(deps.imageProvider, brief) : Promise.resolve(null),
+        wantImage && deps.imageProvider
+          ? generateImage(deps.imageProvider, brief)
+          : Promise.resolve(null),
       ]);
 
       res.json({
