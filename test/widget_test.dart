@@ -75,50 +75,51 @@ Future<void> _reachMagicResults(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// رد ناجح مطابق لشكل ما يعيده المنسّق فعلاً — الاختبارات لا تلمس الشبكة.
-String _orchestratorBody({bool withImage = true}) => jsonEncode({
-  'copy': {
-    'variants': [
-      {
-        'angle': 'المنفعة المباشرة',
-        'headline': 'قهوتك تبدأ يومك',
-        'body': 'حبوب محمّصة محلياً كل أسبوع.',
-        'cta': 'اطلبها الآن',
-        'hashtags': ['#قهوة', '#السعودية'],
-      },
-      {
-        'angle': 'الموقف اليومي',
-        'headline': 'رفيقة صباحك',
-        'body': 'نكهة تعرفها من أول رشفة.',
-        'cta': 'تعرّف أكثر',
-        'hashtags': ['#قهوة_مختصة'],
-      },
-    ],
-    'bestIndex': 1,
-    'critiqued': true,
-  },
-  'image': withImage
-      ? {
-          // نفس PNG الاختبار الصالحة المستعملة في بقية الملف — النسخة
-          // التي كانت هنا سابقاً تالفة (Invalid IDAT checksum) فتُسقط
-          // مسار الحفظ بأكمله حين تمرّ على ضاغط الصور.
-          'base64':
-              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
-          'mimeType': 'image/png',
-          'aspectRatio': '4:5',
-        }
-      : null,
-  'quota': {'used': 2, 'limit': 5},
-  'textOverlayRequired': true,
+/// رد ناجح مطابق لشكل ما تعيده دالة ad-copy في Supabase فعلاً — بما فيه
+/// درجة الوكيل الناقد وملاحظته، والصيغ مرتّبة تنازلياً بالدرجة.
+String _adCopyBody() => jsonEncode({
+  'ok': true,
+  'generation_id': 'gen-1',
+  'model': 'gemini-3.5-flash',
+  'provider': 'google',
+  'tokens': {'in': 700, 'out': 300},
+  'cost_usd': 0.0009,
+  'cost_sar': 0.0034,
+  'latency_ms': 24600,
+  'variants': [
+    {
+      'angle': 'عرض',
+      'headline': 'ربع السعر طايح بأول طلب',
+      'body': 'خصم ٢٥٪ على أول طلب من قهوة رذاذ الإثيوبية.',
+      'cta': 'اطلب الحين',
+      'hashtags': ['#قهوة_مختصة', '#خصم_رذاذ'],
+      'score_total': 9,
+      'fix_note': null,
+      'rank': 1,
+    },
+    {
+      'angle': 'منفعة',
+      'headline': 'طعم يروقك من أول رشفة',
+      'body': 'تحميص فاتح يبرز نكهات الفاكهة الطبيعية.',
+      'cta': 'اطلبها الحين',
+      'hashtags': ['#قهوة_رذاذ'],
+      'score_total': 6.4,
+      'fix_note': 'أضف عرض الخصم المذكور في الموجز.',
+      'rank': 2,
+    },
+  ],
 });
 
 AiGateway _fakeGateway() => AiGateway(
   baseUrl: 'http://test.local',
+  useSupabase: true,
+  supabaseUrl: 'http://test.local',
+  merchantId: 'merchant-test',
   // Response(String,…) يرمّز بـ Latin-1 وهو عاجز عن تمثيل العربية فيرمي
-  // عند البناء؛ نمرّر البايتات مرمّزة UTF-8 كما يفعل المنسّق الحقيقي.
+  // عند البناء؛ نمرّر البايتات مرمّزة UTF-8 كما تفعل الدالة الحقيقية.
   client: MockClient(
     (req) async => http.Response.bytes(
-      utf8.encode(_orchestratorBody()),
+      utf8.encode(_adCopyBody()),
       200,
       headers: {'content-type': 'application/json; charset=utf-8'},
     ),
@@ -200,18 +201,17 @@ void main() {
     expect(tester.widget<ElevatedButton>(button).enabled, isTrue);
   });
 
-  testWidgets('Magic screen renders the orchestrator variants by angle',
+  testWidgets('Magic screen renders Supabase variants with critic scores',
       (tester) async {
     await _pumpApp(tester);
     await _reachMagicResults(tester);
 
     expect(find.text('اختر النسخة الأنسب'), findsOneWidget);
 
-    // المنسّق يعيد زوايا نصّية ويرشّح الأفضل، ولا يمنح كل صيغة رقماً —
-    // فالعنوان صار الزاوية، وشارة الدرجة تغيب بدل اختلاق رقم لا مصدر له.
-    expect(find.text('المنفعة المباشرة'), findsOneWidget);
-    expect(find.text('الموقف اليومي'), findsOneWidget);
-    expect(find.textContaining('توافق'), findsNothing);
+    // عقل Supabase يعيد زاوية لكل صيغة ودرجة من وكيله الناقد، والصيغ
+    // تصل مرتّبة تنازلياً فالأعلى درجة أولاً.
+    expect(find.text('عرض'), findsOneWidget);
+    expect(find.textContaining('توافق'), findsWidgets);
 
     expect(find.text('حفظ ونشر'), findsOneWidget);
     expect(find.text('اطبعه وصلّه'), findsOneWidget);

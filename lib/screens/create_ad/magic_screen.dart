@@ -116,12 +116,17 @@ class _MagicScreenState extends State<MagicScreen> {
       for (final v in result.variants)
         GeneratedAd(
           brief: brief,
-          kind: result.backgroundImage != null ? AdKind.image : AdKind.copy,
+          // معاينة التصميم تُبنى على أي صورة متاحة: خلفية المنسّق إن وُجدت،
+          // وإلا صورة المنتج التي رفعها التاجر. ربطها بخلفية الذكاء
+          // الاصطناعي وحدها كان يُخفي التصميم كلياً مع عقل نصّي.
+          kind: brief.hasProductImage ? AdKind.image : AdKind.copy,
           headline: v.headline,
           body: v.body,
           hashtags: v.hashtags,
           cta: v.cta.isEmpty ? 'اطلب الآن' : v.cta,
           angle: v.angle.isEmpty ? null : v.angle,
+          // الوكيل الناقد في Supabase يمنح درجة من 10؛ الشارة تعرض من 100.
+          score: v.score == null ? null : (v.score! * 10).round().clamp(0, 100),
           createdAt: now,
         ),
     ];
