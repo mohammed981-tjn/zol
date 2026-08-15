@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - claude/global-apps-improvements-mbx7yy
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -23,11 +27,53 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # مفتاح التوقيع الثابت. بدونه يسقط البناء إلى مفتاح التنقيح، وهو
+      # يُولَّد عشوائيًا في كل مُشغّل، فتخرج كل نسخة ببصمة مغايرة وترفض
+      # أن تُثبَّت فوق سابقتها. هنا يتحدّد إن كان التحديث فوق الجهاز ممكنًا.
+      - name: تجهيز مفتاح التوقيع
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::لا ANDROID_KEYSTORE_BASE64 — سيُوقَّع بمفتاح التنقيح ولن يُحدّث النسخة المثبّتة."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > android/zol-release.jks
+          cat > android/key.properties <<PROPS
+          storeFile=zol-release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPS
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
       - run: flutter pub get
 
-      - run: flutter build apk --release
+      # رقم التشغيل يتصاعد أبدًا، فكل نسخة أحدث من سابقتها. بدونه يبقى
+      # versionCode ثابتًا على ١ ويرفض أندرويد التثبيت فوق نسخة بنفس الرقم.
+      - name: بناء النسخة
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - name: التحقق من البصمة
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "$APK" \
+            | grep -i "SHA-256\|Signer #1 certificate DN" || true
+          echo "versionCode: ${{ github.run_number }}"
+          if [ "${{ steps.signing.outputs.signed }}" != "true" ]; then
+            echo "::warning::البصمة أعلاه عابرة — تتغيّر في كل بناء حتى تُضاف أسرار المفتاح."
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: zol-apk
+          name: zol-apk-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: تنظيف المفتاح
+        if: always()
+        run: rm -f android/zol-release.jks android/key.properties
