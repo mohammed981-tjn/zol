@@ -584,28 +584,39 @@ void main() {
     await tester.tap(find.text('حفظ ونشر'));
     await tester.pumpAndSettle();
 
-    // القوالب الستة كلها معروضة، والقالب الافتراضي «جريء».
+    // القالب الافتراضي «جريء».
     expect(find.text('اختر قالب التصميم'), findsOneWidget);
-    for (final template in AdTemplate.values) {
-      expect(find.byKey(ValueKey('template-${template.name}')), findsOneWidget);
-    }
     expect(find.text(AdTemplate.bold.description), findsOneWidget);
 
-    // شريط القوالب أسفل معاينة كبيرة، و«بقعة ضوء» رابع القوالب:
-    // تمرير رأسي ليظهر الشريط، ثم أفقي للوصول إلى القالب.
+    // شريط القوالب أسفل معاينة كبيرة: تمرير رأسي ليظهر الشريط، ثم أفقي
+    // للوصول إلى القالب المطلوب.
     await tester.drag(find.byType(ListView).first, const Offset(0, -320));
     await tester.pumpAndSettle();
+
+    final strip = find.byWidgetPredicate(
+      (w) => w is Scrollable && w.axis == Axis.horizontal,
+    );
+
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('template-spotlight')),
       120,
-      scrollable: find.byWidgetPredicate(
-        (w) => w is Scrollable && w.axis == Axis.horizontal,
-      ),
+      scrollable: strip,
     );
     await tester.tap(find.byKey(const ValueKey('template-spotlight')));
     await tester.pumpAndSettle();
     expect(find.text(AdTemplate.spotlight.description), findsOneWidget);
     expect(find.text(AdTemplate.bold.description), findsNothing);
+
+    // كل قالب موجود في الشريط — بالتمرير إليه لا بافتراض حضوره.
+    //
+    // الشريط كسول: ما خرج عن الشاشة لا يُبنى. كان الاختبار يفحص الحضور
+    // دفعةً واحدة، وهو ما صحّ ما دامت القوالب ستة تسع الشاشة، وسقط حين
+    // صارت عشرة. الافتراض هو ما انكسر، لا الشيفرة.
+    for (final template in AdTemplate.values) {
+      final key = find.byKey(ValueKey('template-${template.name}'));
+      await tester.scrollUntilVisible(key, 120, scrollable: strip);
+      expect(key, findsOneWidget, reason: 'قالب ${template.name} غائب');
+    }
   });
 
   testWidgets('Print flow previews the design on the actual product',
