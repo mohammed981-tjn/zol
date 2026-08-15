@@ -371,6 +371,33 @@ class AdminApi {
         .toList();
   }
 
+  /// حسابات التجّار غير المرتبطة بشريك — تغذّي منتقي الإنشاء.
+  Future<List<({String id, String name})>> candidateMerchants() async {
+    final map = _unwrap(await _db.rpc('partner_candidate_merchants'));
+    return ((map['items'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((m) => (
+              id: m['id'] as String,
+              name: (m['name'] as String?) ?? 'تاجر',
+            ))
+        .toList();
+  }
+
+  Future<String> createPartner({
+    required String name,
+    required String slug,
+    required String merchantId,
+    int quota = 100,
+  }) async {
+    final map = _unwrap(await _db.rpc('partner_create', params: {
+      'p_name': name,
+      'p_slug': slug,
+      'p_merchant_id': merchantId,
+      'p_quota': quota,
+    }));
+    return (map['partner_id'] as String?) ?? '';
+  }
+
   Future<void> setPartnerQuota(String partnerId, int quota) async {
     _unwrap(await _db.rpc('partner_set_quota', params: {
       'p_partner_id': partnerId,

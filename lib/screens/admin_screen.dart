@@ -459,10 +459,38 @@ class _PartnersTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Loader<List<Partner>>(
-      emptyLabel: 'لا شركاء بعد.',
+      // بلا شركاء تبقى الحاجة لزرّ الإنشاء قائمة، فلا يُكتفى برسالة فراغ.
+      emptyLabel: '',
       load: api.partners,
-      builder: (context, partners, reload) => ListView.builder(
-        padding: const EdgeInsets.all(16),
+      builder: (context, partners, reload) => Scaffold(
+        backgroundColor: Colors.transparent,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _createPartner(context, reload),
+          icon: const Icon(Icons.add),
+          label: const Text('شريك جديد'),
+        ),
+        body: partners.isEmpty
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text(
+                    'لا شركاء بعد.\nأنشئ أولهم من الزرّ أدناه.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            : _partnerList(context, partners, reload),
+      ),
+    );
+  }
+
+  Widget _partnerList(
+    BuildContext context,
+    List<Partner> partners,
+    VoidCallback reload,
+  ) {
+    return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
         itemCount: partners.length,
         itemBuilder: (context, i) {
           final p = partners[i];
@@ -551,8 +579,140 @@ class _PartnersTab extends StatelessWidget {
             ),
           );
         },
+    );
+  }
+
+  /// إنشاء شريك: اسم ومُعرّف ورقمي وحساب تاجر وحصة.
+  ///
+  /// الشريك يُربط بحساب تاجر قائم لأن `generation_logs.merchant_id` إلزامي،
+  /// فتُنسب توليداته وتُسعَّر وتظهر في السجل كما هي اليوم بلا تعديل جدول.
+  Future<void> _createPartner(BuildContext context, VoidCallback reload) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    List<({String id, String name})> merchants;
+    try {
+      merchants = await api.candidateMerchants();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+      return;
+    }
+    if (!context.mounted) return;
+
+    if (merchants.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'لا حساب تاجر متاح. يسجّل الشريك حسابًا في التطبيق أولًا.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final nameCtl = TextEditingController();
+    final slugCtl = TextEditingController();
+    final quotaCtl = TextEditingController(text: '100');
+    String? merchantId = merchants.first.id;
+    String? error;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('شريك جديد'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtl,
+                  decoration: const InputDecoration(labelText: 'اسم الشريك'),
+                ),
+                TextField(
+                  controller: slugCtl,
+                  decoration: const InputDecoration(
+                    labelText: 'المُعرّف (حروف لاتينية وشرطات)',
+                    hintText: 'sudagri',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: merchantId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'حساب التاجر'),
+                  items: merchants
+                      .map((m) => DropdownMenuItem(
+                            value: m.id,
+                            child: Text(m.name, overflow: TextOverflow.ellipsis),
+                          ))
+                      .toList(),
+                  onChanged: (v) => setLocal(() => merchantId = v),
+                ),
+                TextField(
+                  controller: quotaCtl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'الحصة الشهرية',
+                    helperText: '-1 تعني بلا حد',
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    error!,
+                    style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final slug = slugCtl.text.trim();
+                final quota = int.tryParse(quotaCtl.text.trim());
+                // الفحص هنا لا في الخادم وحده: رسالة فورية أوضح من رحلة
+                // ذهاب وإياب تنتهي بخطأ عام.
+                if (nameCtl.text.trim().isEmpty) {
+                  return setLocal(() => error = 'الاسم مطلوب.');
+                }
+                if (!RegExp(r'^[a-z0-9-]{2,40}$').hasMatch(slug)) {
+                  return setLocal(
+                    () => error = 'المُعرّف: حروف لاتينية صغيرة وأرقام وشرطات.',
+                  );
+                }
+                if (quota == null || quota < -1) {
+                  return setLocal(() => error = 'حصة غير صالحة.');
+                }
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('إنشاء'),
+            ),
+          ],
+        ),
       ),
     );
+
+    if (ok != true || merchantId == null) return;
+
+    try {
+      await api.createPartner(
+        name: nameCtl.text.trim(),
+        slug: slugCtl.text.trim(),
+        merchantId: merchantId!,
+        quota: int.parse(quotaCtl.text.trim()),
+      );
+      messenger.showSnackBar(
+        SnackBar(content: Text('أُنشئ ${nameCtl.text.trim()} — أصدر له مفتاحًا')),
+      );
+      reload();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   Future<void> _editQuota(
