@@ -8,7 +8,7 @@ on:
       - claude/global-apps-improvements-mbx7yy
 
 permissions:
-  contents: read
+  contents: write  # لازم لنشر الإصدار الذي يحمل الـAPK
 
 jobs:
   build:
@@ -98,6 +98,23 @@ jobs:
         with:
           name: zol-apk-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      # الـArtifact يصل مضغوطًا ويتطلّب تسجيل دخول GitHub — وكلاهما عائق
+      # على الجوال: تنزيل ناقص ثم فشل استخراج. الإصدار يعطي رابط ‎.apk‎
+      # مباشرًا يفتحه مثبّت أندرويد بلا وسيط.
+      - name: نشر إصدارًا للتحميل المباشر
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: build-${{ github.run_number }}
+        run: |
+          APK="zol-${{ github.run_number }}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$APK"
+          gh release create "$TAG" "$APK" \
+            --title "zol — بناء ${{ github.run_number }}" \
+            --notes "versionCode ${{ github.run_number }} · من ${GITHUB_SHA:0:7}
+
+نزّل \`$APK\` وثبّته مباشرة." \
+            --latest
 
       - name: تنظيف المفتاح
         if: always()
