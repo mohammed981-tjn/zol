@@ -23,6 +23,7 @@ import 'package:zol/services/ai_gateway.dart';
 import 'package:zol/screens/create_ad/magic_screen.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/models/business_category.dart';
+import 'package:zol/services/admin_api.dart';
 import 'package:zol/models/template_category.dart';
 import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/services/background_remover.dart';
@@ -1450,4 +1451,105 @@ void main() {
     final context = tester.element(find.text('المظهر'));
     expect(Theme.of(context).brightness, Brightness.dark);
   });
+
+  // ── القوالب العشرة ────────────────────────────────────────────────
+
+  test('كل قالب له تسمية ووصف ونشاط مناسب — لا فرع منسيّ', () {
+    for (final t in AdTemplate.values) {
+      expect(t.label.trim(), isNotEmpty, reason: 'تسمية ${t.name}');
+      expect(t.description.trim(), isNotEmpty, reason: 'وصف ${t.name}');
+      expect(t.suitableFor, isNotEmpty, reason: 'أنشطة ${t.name}');
+    }
+  });
+
+  test('ترتيب الرواج فريد ومتّصل — التكرار يكسر ترتيب المعرض بصمت', () {
+    final ranks = AdTemplate.values.map((t) => t.trendingRank).toList();
+    expect(ranks.toSet().length, ranks.length, reason: 'رتبة مكرّرة');
+    expect(
+      ranks.toSet(),
+      List.generate(AdTemplate.values.length, (i) => i + 1).toSet(),
+      reason: 'الرتب يجب أن تكون ١..${AdTemplate.values.length} بلا فجوة',
+    );
+  });
+
+  test('شارة «رائج» تبقى نادرة مهما زادت القوالب', () {
+    final trending = AdTemplate.values.where((t) => t.isTrending).length;
+    expect(trending, 2, reason: 'الشارة تفقد معناها لو عمّت');
+  });
+
+  testWidgets('كل قالب يُرسم بلا استثناء ويُظهر العنوان', (tester) async {
+    final state = AppState();
+    final brief = AdBrief(
+      productName: 'قهوة مختصة',
+      description: 'حبوب إثيوبية',
+      tone: 'حماسي',
+      platform: 'إنستغرام',
+      format: 'منشور مربع',
+      category: BusinessCategory.cafe,
+    );
+    final ad =
+        AdGenerator.preview(brief).firstWhere((a) => a.kind == AdKind.image);
+
+    for (final template in AdTemplate.values) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(Brightness.light),
+          home: AppStateScope(
+            notifier: state,
+            child: Scaffold(
+              body: SizedBox(
+                width: 400,
+                child: AdDesignPreview(ad: ad, template: template),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull, reason: 'استثناء في ${t2(template)}');
+      expect(
+        find.text(ad.headline),
+        findsOneWidget,
+        reason: 'العنوان غائب في ${t2(template)}',
+      );
+    }
+  });
+
+  // ── حصة الشريك ────────────────────────────────────────────────────
+
+  test('حساب الحصة: المتبقي لا يسلب، وبلا حد لا شريط تقدّم له', () {
+    const p = Partner(
+      id: 'a', name: 'شريك', slug: 's',
+      quota: 100, used: 30, isActive: true,
+    );
+    expect(p.unlimited, isFalse);
+    expect(p.remaining, 70);
+    expect(p.usageRatio, closeTo(0.3, 1e-9));
+
+    // تجاوز الحصة — يقع فعلاً حين تُخفَّض الحصة تحت المستهلك.
+    const over = Partner(
+      id: 'b', name: 'شريك', slug: 's',
+      quota: 10, used: 25, isActive: true,
+    );
+    expect(over.remaining, 0, reason: 'المتبقي لا يكون سالبًا');
+    expect(over.usageRatio, 1.0, reason: 'الشريط لا يتجاوز الامتلاء');
+
+    const unlimited = Partner(
+      id: 'c', name: 'شريك', slug: 's',
+      quota: -1, used: 999, isActive: true,
+    );
+    expect(unlimited.unlimited, isTrue);
+    expect(unlimited.usageRatio, isNull, reason: 'بلا حد ⇒ لا نسبة لها معنى');
+
+    // حصة صفر: القسمة على صفر تعطي NaN لو لم تُعالَج.
+    const zero = Partner(
+      id: 'd', name: 'شريك', slug: 's',
+      quota: 0, used: 0, isActive: true,
+    );
+    expect(zero.usageRatio, isNull);
+  });
 }
+
+/// اسم القالب للرسائل التشخيصية.
+String t2(AdTemplate t) => '${t.name} (${t.label})';
