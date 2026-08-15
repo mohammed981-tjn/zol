@@ -9,7 +9,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
 /// محرك قوالب التصميم — الطبقة الأولى من استراتيجية الذكاء (على الجهاز
-/// 100%): يركّب صورة المنتج مع النص والهوية على أحد ستة قوالب مختلفة
+/// 100%): يركّب صورة المنتج مع النص والهوية على أحد عشرة قوالب مختلفة
 /// التركيب، بلوحة ألوان مشتقّة من العلامة أو من صورة المنتج نفسها.
 ///
 /// كل المقاسات مضروبة في عامل [_Spec.s] المشتق من عرض اللوحة، فيبدو
@@ -71,6 +71,10 @@ class AdDesignPreview extends StatelessWidget {
                     AdTemplate.spotlight => _SpotlightLayout(spec: spec),
                     AdTemplate.minimal => _MinimalLayout(spec: spec),
                     AdTemplate.offer => _OfferLayout(spec: spec),
+                    AdTemplate.testimonial => _TestimonialLayout(spec: spec),
+                    AdTemplate.frame => _FrameLayout(spec: spec),
+                    AdTemplate.urgency => _UrgencyLayout(spec: spec),
+                    AdTemplate.circular => _CircularLayout(spec: spec),
                   },
                 ),
                 // خلفية مصمَّمة اختيارية: زخرفة زاوية مستوحاة من النشاط
@@ -788,3 +792,332 @@ Widget _circle(double size, Color color) => Container(
   height: size,
   decoration: BoxDecoration(shape: BoxShape.circle, color: color),
 );
+
+// ── 7. رأي عميل ──────────────────────────────────────────────────────
+//
+// يبيع بالثقة لا بالسعر. العنوان يُعرض كاقتباس بين علامتَي تنصيص كبيرتين،
+// والنجوم تُقرأ قبل أي حرف — فتصل الرسالة قبل أن يُقرأ النص.
+
+class _TestimonialLayout extends StatelessWidget {
+  const _TestimonialLayout({required this.spec});
+  final _Spec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spec.s;
+    const ink = Color(0xFF1F2430);
+    return ColoredBox(
+      color: const Color(0xFFFAF8F5),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(24 * s, 26 * s, 24 * s, 20 * s),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.format_quote,
+              size: 40 * s,
+              color: spec.palette.primary.withValues(alpha: 0.35),
+            ),
+            SizedBox(height: 6 * s),
+            Expanded(
+              child: Center(
+                child: Text(
+                  spec.headline,
+                  textAlign: TextAlign.center,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: ink,
+                    fontSize: 17 * s,
+                    height: 1.55,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 10 * s),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                5,
+                (_) => Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 1.5 * s),
+                  child: Icon(Icons.star_rounded,
+                      size: 15 * s, color: const Color(0xFFF5A623)),
+                ),
+              ),
+            ),
+            SizedBox(height: 12 * s),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ClipOval(
+                  child: SizedBox(
+                    width: 40 * s,
+                    height: 40 * s,
+                    child: ColoredBox(
+                      color: spec.productBackdrop,
+                      child: spec.product(fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10 * s),
+                Flexible(
+                  child: Text(
+                    spec.productName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: ink.withValues(alpha: 0.75),
+                      fontSize: 13 * s,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 14 * s),
+            _Cta(
+              spec: spec,
+              background: spec.palette.primary,
+              foreground: spec.palette.onPrimary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 8. إطار ──────────────────────────────────────────────────────────
+//
+// إطاران متداخلان يوحيان بالهدية والفخامة. الفراغ هنا عنصر تصميم لا نقص
+// محتوى، فلا يُملأ.
+
+class _FrameLayout extends StatelessWidget {
+  const _FrameLayout({required this.spec});
+  final _Spec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spec.s;
+    const ink = Color(0xFF23201C);
+    final gold = spec.palette.primary;
+    return ColoredBox(
+      color: const Color(0xFFFCFAF6),
+      child: Padding(
+        padding: EdgeInsets.all(12 * s),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: gold.withValues(alpha: 0.55), width: 1.2 * s),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(5 * s),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: gold, width: 0.8 * s),
+              ),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(18 * s, 18 * s, 18 * s, 14 * s),
+                child: Column(
+                  children: [
+                    Text(
+                      spec.productName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: gold,
+                        fontSize: 12 * s,
+                        letterSpacing: 3 * s,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 10 * s),
+                    Expanded(child: spec.product()),
+                    SizedBox(height: 10 * s),
+                    Container(width: 46 * s, height: 1 * s, color: gold),
+                    SizedBox(height: 10 * s),
+                    Text(
+                      spec.headline,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: ink,
+                        fontSize: 15 * s,
+                        height: 1.45,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 12 * s),
+                    _Cta(spec: spec, background: gold,
+                        foreground: spec.palette.onPrimary),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 9. عاجل ──────────────────────────────────────────────────────────
+//
+// شريط قطري في الزاوية يقطع التصميم فيوقف التمرير. الحدّة مقصودة: هذا
+// قالب العروض المؤقتة لا الهوية الهادئة.
+
+class _UrgencyLayout extends StatelessWidget {
+  const _UrgencyLayout({required this.spec});
+  final _Spec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spec.s;
+    final accent = spec.palette.accent;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: const Color(0xFF14161C)),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20 * s, 34 * s, 20 * s, 18 * s),
+          child: Column(
+            children: [
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: spec.productBackdrop,
+                    borderRadius: BorderRadius.circular(10 * s),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10 * s),
+                    child: spec.product(fit: BoxFit.cover),
+                  ),
+                ),
+              ),
+              SizedBox(height: 14 * s),
+              Text(
+                spec.headline,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 19 * s,
+                  height: 1.3,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              _Cta(spec: spec, background: accent, foreground: Colors.white),
+            ],
+          ),
+        ),
+        // الشريط آخر ما يُرسم ليعلو كل شيء، ومقصوص بحدود الإطار.
+        Positioned.fill(
+          child: ClipRect(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Transform.translate(
+                offset: Offset(38 * s, 26 * s),
+                child: Transform.rotate(
+                  angle: 0.785398, // ٤٥ درجة
+                  child: Container(
+                    width: 170 * s,
+                    padding: EdgeInsets.symmetric(vertical: 5 * s),
+                    color: accent,
+                    child: Text(
+                      'لفترة محدودة',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11 * s,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2 * s,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── 10. دائري ────────────────────────────────────────────────────────
+//
+// قرص المنتج يحتلّ المركز وحلقة تحيطه، وهو أشيع تكوين في إعلانات
+// المأكولات والمشروبات: العين تستقرّ في الدائرة قبل أن تقرأ.
+
+class _CircularLayout extends StatelessWidget {
+  const _CircularLayout({required this.spec});
+  final _Spec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spec.s;
+    final primary = spec.palette.primary;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.lerp(primary, Colors.white, 0.82)!,
+            Color.lerp(primary, Colors.white, 0.62)!,
+          ],
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20 * s, 24 * s, 20 * s, 18 * s),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Container(
+                    padding: EdgeInsets.all(7 * s),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: primary, width: 2 * s),
+                    ),
+                    child: ClipOval(
+                      child: ColoredBox(
+                        color: Colors.white,
+                        child: spec.product(fit: BoxFit.cover),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 14 * s),
+            Text(
+              spec.headline,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: const Color(0xFF1A1A2E),
+                fontSize: 17 * s,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 10 * s),
+            _Cta(
+              spec: spec,
+              background: primary,
+              foreground: spec.palette.onPrimary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
