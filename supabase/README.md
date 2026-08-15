@@ -43,10 +43,16 @@ supabase functions deploy ad-copy --project-ref <ref>
 
 طبقتان مستقلتان تحرسانه:
 
-| الطبقة | الملف | الوتيرة | تعمل من |
+| الطبقة | الملف | الوتيرة | الحالة |
 |---|---|---|---|
-| `pg_cron` داخل القاعدة | `migrations/20260815000000_keepalive.sql` | كل ٨ ساعات | لحظة تطبيق الترحيل |
-| GitHub Actions | `.github/workflows/supabase-keepalive.yml` | يوميًا | بعد الدمج في `main` فقط |
+| `pg_cron` داخل القاعدة | `migrations/20260815000000_keepalive.sql` | كل ٨ ساعات | **مطبَّقة وتعمل** على `zol-adcraft` |
+| GitHub Actions | `.github/workflows/supabase-keepalive.yml` | يوميًا | نائمة حتى تُدمج في `main` |
+
+الطبقة الأولى مُختبَرة من طرف إلى طرف على القاعدة الحقيقية: نبضة يدوية
+أعادت **HTTP 200** وجسمها الطابع الزمني، والمهمة `adcraft-keepalive` نشطة
+بجدول `23 3,11,19 * * *`. طُبِّقت في ثلاثة ترحيلات
+(`keepalive_extensions` · `keepalive_objects` · `keepalive_schedule`)
+لعزل الأعطال، ومحتواها مجتمعًا هو هذا الملف.
 
 كلتاهما تستدعي `public.keepalive()` — دالة تعيد الوقت ولا تلمس أي جدول.
 الطلب يمرّ عبر واجهة REST العامة ليُحتسب طلب مستخدم حقيقيًا، لا استعلامًا
