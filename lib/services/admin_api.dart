@@ -193,6 +193,72 @@ class PrintShop {
       );
 }
 
+class Partner {
+  const Partner({
+    required this.id,
+    required this.name,
+    required this.slug,
+    required this.quota,
+    required this.used,
+    required this.isActive,
+    this.costSar,
+    this.keys = const [],
+  });
+
+  final String id;
+  final String name;
+  final String slug;
+
+  /// ‎-1‎ تعني بلا حد.
+  final int quota;
+  final int used;
+  final bool isActive;
+  final num? costSar;
+  final List<PartnerKey> keys;
+
+  bool get unlimited => quota < 0;
+  int get remaining => unlimited ? -1 : (quota - used).clamp(0, quota);
+
+  /// نسبة الاستهلاك للعرض. بلا حد ⇒ لا شريط تقدّم له معنى.
+  double? get usageRatio =>
+      unlimited || quota == 0 ? null : (used / quota).clamp(0.0, 1.0);
+
+  factory Partner.fromJson(Map<String, dynamic> j) => Partner(
+        id: j['id'] as String,
+        name: (j['name'] as String?) ?? 'شريك',
+        slug: (j['slug'] as String?) ?? '',
+        quota: (j['quota'] as num?)?.toInt() ?? 0,
+        used: (j['used'] as num?)?.toInt() ?? 0,
+        isActive: (j['is_active'] as bool?) ?? true,
+        costSar: j['cost_sar'] as num?,
+        keys: ((j['keys'] as List?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(PartnerKey.fromJson)
+            .toList(),
+      );
+}
+
+class PartnerKey {
+  const PartnerKey({
+    required this.id,
+    required this.prefix,
+    required this.revoked,
+    this.lastUsedAt,
+  });
+
+  final String id;
+  final String prefix;
+  final bool revoked;
+  final DateTime? lastUsedAt;
+
+  factory PartnerKey.fromJson(Map<String, dynamic> j) => PartnerKey(
+        id: j['id'] as String,
+        prefix: (j['prefix'] as String?) ?? '',
+        revoked: (j['revoked'] as bool?) ?? false,
+        lastUsedAt: DateTime.tryParse((j['last_used_at'] as String?) ?? ''),
+      );
+}
+
 class AdminApi {
   AdminApi({SupabaseClient? client})
       : _db = client ?? Supabase.instance.client;
@@ -274,6 +340,41 @@ class AdminApi {
       'p_shop_id': shopId,
       if (courierId != null) 'p_courier_id': courierId,
     }));
+  }
+
+  Future<List<Partner>> partners() async {
+    final map = _unwrap(await _db.rpc('partner_list'));
+    return ((map['items'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(Partner.fromJson)
+        .toList();
+  }
+
+  Future<void> setPartnerQuota(String partnerId, int quota) async {
+    _unwrap(await _db.rpc('partner_set_quota', params: {
+      'p_partner_id': partnerId,
+      'p_quota': quota,
+    }));
+  }
+
+  Future<void> setPartnerActive(String partnerId, bool active) async {
+    _unwrap(await _db.rpc('partner_set_active', params: {
+      'p_partner_id': partnerId,
+      'p_active': active,
+    }));
+  }
+
+  /// يعيد المفتاح نصًّا **مرة واحدة**. لا سبيل لعرضه ثانيةً بعد إغلاق
+  /// الحوار، فالمخزَّن تجزئته لا نصّه.
+  Future<String> issuePartnerKey(String partnerId) async {
+    final map = _unwrap(await _db.rpc('partner_issue_key', params: {
+      'p_partner_id': partnerId,
+    }));
+    return (map['key'] as String?) ?? '';
+  }
+
+  Future<void> revokePartnerKey(String keyId) async {
+    _unwrap(await _db.rpc('partner_revoke_key', params: {'p_key_id': keyId}));
   }
 
   Future<void> transitionOrder(String orderId, String to, {String? note}) async {

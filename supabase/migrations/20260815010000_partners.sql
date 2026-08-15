@@ -200,6 +200,65 @@ begin
 end;
 $fn$;
 
+/*
+ * تعديل الحصة من لوحة الإدارة.
+ *
+ * الحصة قرار تجاري يتغيّر كثيرًا — شريك يطلب زيادة، أو تجربة تُفتح ثم
+ * تُضبط. حصرها في `update` يدوي على القاعدة يجعل كل تغيير يمرّ بمن يملك
+ * وصولًا للقاعدة، وهذا ما لا يجب أن يكون.
+ */
+create or replace function public.partner_set_quota(
+  p_partner_id uuid,
+  p_quota      integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+begin
+  if not public.is_platform_admin() then
+    return jsonb_build_object('ok', false, 'error', 'admin_only');
+  end if;
+
+  -- ‎-1‎ تعني بلا حد؛ ما دونها خطأ إدخال لا نية.
+  if p_quota < -1 then
+    return jsonb_build_object('ok', false, 'error', 'invalid_quota');
+  end if;
+
+  update public.partners set monthly_quota = p_quota where id = p_partner_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'partner_not_found');
+  end if;
+
+  return jsonb_build_object('ok', true, 'quota', p_quota);
+end;
+$fn$;
+
+/** إيقاف شريك أو إعادته. الإيقاف فوري: كل نداء بعده يُردّ بـ403. */
+create or replace function public.partner_set_active(
+  p_partner_id uuid,
+  p_active     boolean
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+begin
+  if not public.is_platform_admin() then
+    return jsonb_build_object('ok', false, 'error', 'admin_only');
+  end if;
+
+  update public.partners set is_active = p_active where id = p_partner_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'partner_not_found');
+  end if;
+
+  return jsonb_build_object('ok', true, 'is_active', p_active);
+end;
+$fn$;
+
 /** قائمة الشركاء باستهلاك الشهر — تغذّي تبويب الشركاء في لوحة الإدارة. */
 create or replace function public.partner_list()
 returns jsonb
@@ -238,6 +297,8 @@ end;
 $fn$;
 
 grant execute on function public.partner_create(text, text, uuid, integer) to authenticated;
+grant execute on function public.partner_set_quota(uuid, integer)   to authenticated;
+grant execute on function public.partner_set_active(uuid, boolean)  to authenticated;
 grant execute on function public.partner_issue_key(uuid)  to authenticated;
 grant execute on function public.partner_revoke_key(uuid) to authenticated;
 grant execute on function public.partner_list()           to authenticated;

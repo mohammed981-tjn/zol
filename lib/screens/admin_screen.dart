@@ -24,15 +24,17 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('لوحة الإدارة'),
           bottom: const TabBar(
+            isScrollable: true,
             tabs: [
               Tab(text: 'القيادة'),
               Tab(text: 'الطلبات'),
               Tab(text: 'التوليد'),
+              Tab(text: 'الشركاء'),
             ],
           ),
         ),
@@ -41,6 +43,7 @@ class _AdminScreenState extends State<AdminScreen> {
             _DashboardTab(api: _api),
             _OrdersTab(api: _api),
             _GenerationsTab(api: _api),
+            _PartnersTab(api: _api),
           ],
         ),
       ),
@@ -445,5 +448,244 @@ class _GenerationsTab extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class _PartnersTab extends StatelessWidget {
+  const _PartnersTab({required this.api});
+
+  final AdminApi api;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Loader<List<Partner>>(
+      emptyLabel: 'لا شركاء بعد.',
+      load: api.partners,
+      builder: (context, partners, reload) => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: partners.length,
+        itemBuilder: (context, i) {
+          final p = partners[i];
+          final theme = Theme.of(context);
+          final ratio = p.usageRatio;
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(p.name, style: theme.textTheme.titleMedium),
+                      ),
+                      Switch(
+                        value: p.isActive,
+                        onChanged: (v) => _setActive(context, p, v, reload),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    p.slug,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          p.unlimited
+                              ? 'الاستهلاك: ${p.used} — بلا حد'
+                              : 'الاستهلاك: ${p.used} من ${p.quota}'
+                                  ' · متبقٍ ${p.remaining}',
+                        ),
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.tune, size: 18),
+                        label: const Text('الحصة'),
+                        onPressed: () => _editQuota(context, p, reload),
+                      ),
+                    ],
+                  ),
+                  if (ratio != null) ...[
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: ratio,
+                      // الأحمر عند النفاد: الشريك يُردّ بـ429 عند هذا الحد.
+                      color: ratio >= 1.0 ? theme.colorScheme.error : null,
+                    ),
+                  ],
+                  if (p.costSar != null && p.costSar! > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        'كلفة الشهر: ${p.costSar!.toStringAsFixed(2)} ر.س',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  const Divider(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          p.keys.where((k) => !k.revoked).isEmpty
+                              ? 'لا مفتاح فعّال'
+                              : p.keys
+                                  .where((k) => !k.revoked)
+                                  .map((k) => '${k.prefix}…')
+                                  .join(' · '),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.key, size: 18),
+                        label: const Text('مفتاح جديد'),
+                        onPressed: () => _issueKey(context, p, reload),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _editQuota(
+    BuildContext context,
+    Partner p,
+    VoidCallback reload,
+  ) async {
+    final controller = TextEditingController(
+      text: p.unlimited ? '' : '${p.quota}',
+    );
+    var unlimited = p.unlimited;
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text('حصة ${p.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('بلا حد'),
+                value: unlimited,
+                onChanged: (v) => setLocal(() => unlimited = v),
+              ),
+              TextField(
+                controller: controller,
+                enabled: !unlimited,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'توليدة في الشهر',
+                  helperText: 'تُصفَّر مع بداية كل شهر ميلادي',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (unlimited) return Navigator.pop(ctx, -1);
+                final v = int.tryParse(controller.text.trim());
+                if (v == null || v < 0) return;
+                Navigator.pop(ctx, v);
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await api.setPartnerQuota(p.id, result);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result < 0
+                ? 'صارت حصة ${p.name} بلا حد'
+                : 'صارت حصة ${p.name} $result شهريًا',
+          ),
+        ),
+      );
+      reload();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _setActive(
+    BuildContext context,
+    Partner p,
+    bool active,
+    VoidCallback reload,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await api.setPartnerActive(p.id, active);
+      messenger.showSnackBar(
+        SnackBar(content: Text(active ? 'أُعيد ${p.name}' : 'أُوقف ${p.name}')),
+      );
+      reload();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _issueKey(
+    BuildContext context,
+    Partner p,
+    VoidCallback reload,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    String key;
+    try {
+      key = await api.issuePartnerKey(p.id);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+      return;
+    }
+    if (!context.mounted) return;
+
+    // يُعرض مرة واحدة: المخزَّن تجزئته لا نصّه، فإغلاق الحوار يفقده أبداً.
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('انسخه الآن'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('لن يُعرض هذا المفتاح مرة أخرى.'),
+            const SizedBox(height: 12),
+            SelectableText(
+              key,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('نسختُه'),
+          ),
+        ],
+      ),
+    );
+    reload();
   }
 }
