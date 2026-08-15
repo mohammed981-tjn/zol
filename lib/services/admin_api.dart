@@ -260,17 +260,38 @@ class PartnerKey {
 }
 
 class AdminApi {
-  AdminApi({SupabaseClient? client})
-      : _db = client ?? Supabase.instance.client;
+  AdminApi({SupabaseClient? client}) : _injected = client;
 
-  final SupabaseClient _db;
+  final SupabaseClient? _injected;
+
+  /// لا يُلمس `Supabase.instance` في المُنشئ.
+  ///
+  /// لمسه هناك يرمي متى لم تُهيَّأ الحزمة — في الاختبارات، وفي الإنتاج
+  /// أيضًا لو فشل الإقلاع لانقطاع شبكة أو إعداد ناقص — فتنهار شاشة
+  /// الإعدادات كلها لأجل مدخل إداري لا يعني أكثر المستخدمين.
+  SupabaseClient? get _clientOrNull {
+    if (_injected != null) return _injected;
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  SupabaseClient get _db =>
+      _clientOrNull ??
+      (throw const AdminException('تعذّر الاتصال بالخادم. أعد فتح التطبيق.'));
 
   /// يُقرأ من القاعدة لا من دور محفوظ محليًا — الصلاحية قد تُسحب في أي وقت.
   Future<bool> isAdmin() async {
+    // بلا خادم لا إشراف. لا ترمِ هنا: هذه الدالة تُنادى من شجرة الواجهة
+    // وأي رمية منها تُسقط الشاشة الحاضنة.
+    final db = _clientOrNull;
+    if (db == null) return false;
     try {
-      final res = await _db.rpc('is_platform_admin');
+      final res = await db.rpc('is_platform_admin');
       return res == true;
-    } on PostgrestException {
+    } catch (_) {
       return false;
     }
   }
