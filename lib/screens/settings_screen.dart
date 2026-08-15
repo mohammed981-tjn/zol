@@ -7,7 +7,9 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/payment_config.dart';
 import '../widgets/icon_circle.dart';
+import '../services/admin_api.dart';
 import '../widgets/section_header.dart';
+import 'admin_screen.dart';
 import 'auth_screen.dart';
 import 'payment/payment_flow.dart';
 
@@ -42,6 +44,7 @@ class SettingsScreen extends StatelessWidget {
             const SectionHeader(kicker: 'التفضيلات', title: 'إعدادات التطبيق'),
             const SizedBox(height: 20),
             _buildAccountSection(context, state),
+            const _AdminEntry(),
             const SizedBox(height: 28),
             _buildBusinessSection(context, state),
             const SizedBox(height: 28),
@@ -531,6 +534,46 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// مدخل لوحة الإدارة. يظهر للمشرفين وحدهم، والصلاحية تُقرأ من القاعدة
+/// في كل مرة لا من قيمة محفوظة — قد تُسحب بين جلسة وأخرى. وإخفاؤه هنا
+/// تحسينُ تجربةٍ لا حاجز أمني: كل دالة إدارية تفحص الصلاحية في الخادم.
+class _AdminEntry extends StatefulWidget {
+  const _AdminEntry();
+
+  @override
+  State<_AdminEntry> createState() => _AdminEntryState();
+}
+
+class _AdminEntryState extends State<_AdminEntry> {
+  late final Future<bool> _isAdmin = AdminApi().isAdmin();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _isAdmin,
+      builder: (context, snap) {
+        if (snap.data != true) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Card(
+            child: ListTile(
+              leading: const Icon(Icons.admin_panel_settings_outlined),
+              title: const Text('لوحة الإدارة'),
+              subtitle: const Text('الطلبات والمطابع وسجل التوليد'),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AdminScreen(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
