@@ -111,9 +111,7 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk "$APK"
           gh release create "$TAG" "$APK" \
             --title "zol — بناء ${{ github.run_number }}" \
-            --notes "versionCode ${{ github.run_number }} · من ${GITHUB_SHA:0:7}
-
-نزّل \`$APK\` وثبّته مباشرة." \
+            --notes "versionCode ${{ github.run_number }} · من ${GITHUB_SHA:0:7} — نزّل $APK وثبّته مباشرة." \
             --latest
 
       - name: تنظيف المفتاح
