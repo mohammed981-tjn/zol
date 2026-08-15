@@ -91,6 +91,15 @@ class _MagicScreenState extends State<MagicScreen> {
       await ticker;
       if (!mounted) return;
       setState(() => _error = e);
+    } catch (e) {
+      // كل ما سوى GatewayException كان يفلت غير ملتقَط، فلا يعمل setState
+      // وتبقى الشاشة على حالة التحميل أبدًا بلا رسالة — عطل صامت لا يملك
+      // المستخدم منه إلا إغلاق التطبيق. خطأ معروض أهون من انتظار بلا نهاية.
+      await ticker;
+      if (!mounted) return;
+      setState(
+        () => _error = GatewayException('تعذّر إكمال التوليد. حاول مجددًا.'),
+      );
     }
   }
 
