@@ -5,6 +5,8 @@
 ///
 /// لا يوجد ولن يوجد أي مفتاح مزوّد هنا: التطبيق لا يعرف اسم النموذج
 /// المستخدم ولا يملك صلاحية استدعائه مباشرة.
+import '../services/supabase_config.dart';
+
 class AppConfig {
   AppConfig._();
 
@@ -29,12 +31,21 @@ class AppConfig {
   static bool get useSupabase => backend != 'orchestrator';
 
   /// عنوان مشروع Supabase، بلا شرطة مائلة في آخره.
-  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  ///
+  /// يسقط إلى [SupabaseConfig.url] حين لا يُمرَّر وقت البناء. بلا هذا
+  /// السقوط كان التطبيق يحمل العنوان في SupabaseConfig ولا يستعمله، فيفشل
+  /// التوليد برسالة تطلب من التاجر تمرير ‎--dart-define‎ — وهي تعليمة
+  /// مطوِّر لا يملكها ولا يفهمها.
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: SupabaseConfig.url,
+  );
 
   /// المفتاح العلني (publishable/anon) — مصمَّم للمتصفح والتطبيق، وليس سرّاً.
   /// المفاتيح السرّية تبقى في بيئة الدوال وحدها.
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
+    defaultValue: SupabaseConfig.publishableKey,
   );
 
   /// معرّف التاجر. مؤقت حتى تُبنى المصادقة: دالة ad-copy تشترطه لتنسب

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 
 import '../config/app_config.dart';
 import '../models/ad_brief.dart';
@@ -54,6 +55,22 @@ class AiGateway {
   final String supabaseUrl;
   final String supabaseAnonKey;
   final String merchantId;
+
+  /// معرّف التاجر: المحقون إن وُجد، وإلا صاحب الجلسة المسجَّلة.
+  ///
+  /// كان يُقرأ من ‎--dart-define‎ وحده — وهو إعداد وقت بناء لا يعرف من
+  /// يستعمل التطبيق، فكان كل تاجر يُنسب إليه معرّف واحد أو لا يُنسب أصلًا.
+  /// وبعد أن قامت المصادقة صار صاحب الجلسة هو التاجر: `merchants.id` يشير
+  /// إلى `auth.users.id` فالمعرّفان واحد.
+  String get resolvedMerchantId {
+    if (merchantId.isNotEmpty) return merchantId;
+    try {
+      return supa.Supabase.instance.client.auth.currentUser?.id ?? '';
+    } catch (_) {
+      // الحزمة غير مهيّأة (اختبارات، أو إقلاع فاشل) — لا معرّف، ولا رمي.
+      return '';
+    }
+  }
 
   /// عنوان المنسّق. في التطوير المحلي: http://10.0.2.2:8899 لمحاكي أندرويد،
   /// أو http://localhost:8899 للويب وسطح المكتب.
@@ -115,17 +132,16 @@ class AiGateway {
   /// نصّ فقط: الصورة تأتي من دالة `ad-image` المنفصلة، فلا تُطلب هنا.
   /// الصيغ تصل مرتّبة بدرجة الوكيل الناقد، ولكل واحدة درجتها وملاحظتها.
   Future<PreviewResult> _previewViaSupabase(AdBrief brief) async {
+    // رسائل موجَّهة للتاجر لا للمطوِّر: من يقرأها على جهازه لا يملك إعادة
+    // البناء بـ‎--dart-define‎ ولا يعنيه أن يعرف ما هي.
     if (supabaseUrl.isEmpty) {
       throw GatewayException(
-        'عنوان Supabase غير مضبوط. مرّره وقت البناء بـ '
-        '--dart-define=SUPABASE_URL=...',
+        'تعذّر الوصول إلى الخادم. حدّث التطبيق إلى آخر إصدار.',
       );
     }
-    if (merchantId.isEmpty) {
-      throw GatewayException(
-        'معرّف التاجر غير مضبوط. مرّره وقت البناء بـ '
-        '--dart-define=MERCHANT_ID=... حتى يُنسب التوليد لصاحبه.',
-      );
+    final merchant = resolvedMerchantId;
+    if (merchant.isEmpty) {
+      throw GatewayException('سجّل الدخول أولًا حتى تُحفظ إعلاناتك باسمك.');
     }
 
     final uri = Uri.parse(
@@ -152,7 +168,7 @@ class AiGateway {
               },
             },
             body: jsonEncode({
-              'merchant_id': merchantId,
+              'merchant_id': merchant,
               'product': product,
               'platform': brief.platform,
               'tone': brief.tone,
