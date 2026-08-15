@@ -1,0 +1,65 @@
+# طبقة ثانية مستقلة لإبقاء مشروع Supabase نشطًا.
+#
+# الطبقة الأولى هي مهمة pg_cron داخل القاعدة نفسها
+# (supabase/migrations/20260815000000_keepalive.sql). هذه الطبقة تحرسها:
+# لو تعطّل pg_net أو حُذفت المهمة، يبقى هناك طلب خارجي حقيقي كل يوم.
+#
+# مهم: GitHub لا يشغّل `schedule` إلا من الفرع الافتراضي (main).
+# هذا الملف لا يعمل قبل دمجه في main.
+
+name: Supabase keepalive
+
+on:
+  schedule:
+    # ٠٧:١٩ بتوقيت UTC يوميًا — بين نبضتي pg_cron لا فوقهما.
+    - cron: '19 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: نبضة zol-adcraft
+        env:
+          PROJECT_REF: fbbrkwragezhztffbvxf
+          # مفتاح publishable — مصمَّم للمتصفح، وهو نفسه المستخدم في
+          # vercel-adcraft/. لا يمنح أي صلاحية تتجاوز RLS.
+          SUPABASE_KEY: sb_publishable_l6cZctfpZSOquWbRdxg6hw_ulgI1kbM
+        run: |
+          set -uo pipefail
+          url="https://${PROJECT_REF}.supabase.co/rest/v1/rpc/keepalive"
+
+          for attempt in 1 2 3; do
+            code=$(curl -sS --max-time 30 -o /tmp/body -w '%{http_code}' \
+              -X POST "$url" \
+              -H 'Content-Type: application/json' \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -d '{}') || code=000
+
+            echo "محاولة ${attempt}: HTTP ${code}"
+            cat /tmp/body 2>/dev/null; echo
+
+            if [ "$code" = "200" ]; then
+              echo "::notice::نبضة ناجحة لمشروع ${PROJECT_REF}"
+              exit 0
+            fi
+
+            # 404 يعني أن الترحيل لم يُطبَّق بعد — إعادة المحاولة لن تفيد.
+            if [ "$code" = "404" ]; then
+              echo "::error::الدالة keepalive غير موجودة. طبّق supabase/migrations/20260815000000_keepalive.sql أولًا."
+              exit 1
+            fi
+
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 5))
+          done
+
+          echo "::error::فشلت نبضة ${PROJECT_REF} بعد ٣ محاولات (آخر رمز: ${code})"
+          exit 1

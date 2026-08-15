@@ -35,3 +35,24 @@
 ```bash
 supabase functions deploy ad-copy --project-ref <ref>
 ```
+
+## إبقاء المشروع حيًّا
+
+الخطة المجانية توقف المشروع إذا قلّ نشاط القاعدة على مدى **٧ أيام** — لا
+شهرين. بعد الإيقاف تبقى مهلة ٩٠ يومًا لاستعادته يدويًا من اللوحة.
+
+طبقتان مستقلتان تحرسانه:
+
+| الطبقة | الملف | الوتيرة | تعمل من |
+|---|---|---|---|
+| `pg_cron` داخل القاعدة | `migrations/20260815000000_keepalive.sql` | كل ٨ ساعات | لحظة تطبيق الترحيل |
+| GitHub Actions | `.github/workflows/supabase-keepalive.yml` | يوميًا | بعد الدمج في `main` فقط |
+
+كلتاهما تستدعي `public.keepalive()` — دالة تعيد الوقت ولا تلمس أي جدول.
+الطلب يمرّ عبر واجهة REST العامة ليُحتسب طلب مستخدم حقيقيًا، لا استعلامًا
+داخليًا. السجل في `keepalive_log` (محميّ بـRLS بلا سياسات، فلا يُقرأ من
+الواجهة العامة):
+
+```sql
+select ran_at, request_id from public.keepalive_log order by ran_at desc limit 10;
+```
