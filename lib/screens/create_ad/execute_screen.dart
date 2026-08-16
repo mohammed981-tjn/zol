@@ -17,6 +17,7 @@ import '../../widgets/icon_circle.dart';
 import '../../widgets/print_cost_calculator.dart';
 import '../../widgets/print_mockup.dart';
 import '../order_map_screen.dart';
+import 'design_editor_screen.dart';
 import '../payment/payment_flow.dart';
 import '../pick_location_screen.dart';
 
@@ -48,6 +49,10 @@ class ExecuteScreen extends StatefulWidget {
 
 class _ExecuteScreenState extends State<ExecuteScreen> {
   final GlobalKey _designKey = GlobalKey();
+
+  /// الإعلان المعروض — يبدأ بالوارد ويُستبدل بمخرَج المحرر، فيسري
+  /// التعديل على التصدير والحفظ والطباعة معًا لا على المعاينة وحدها.
+  late GeneratedAd _ad = widget.ad;
 
   late PrintProduct _product = widget.initialProduct ?? printCatalog.first;
   late int _sizeIndex = widget.initialSizeIndex ?? 0;
@@ -90,19 +95,25 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
             child: RepaintBoundary(
               key: _designKey,
               child: AdDesignPreview(
-                ad: widget.ad,
+                ad: _ad,
                 template: _template,
                 showWatermark: !AppStateScope.of(context).isPro,
               ),
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _openEditor,
+          icon: const Icon(Icons.tune),
+          label: const Text('تحرير التصميم (نص وموضع المنتج)'),
+        ),
         const SizedBox(height: 16),
         _buildTemplatePicker(),
         const SizedBox(height: 8),
         Text(
-          '${widget.ad.kind.label} بأسلوب ${widget.ad.brief.tone} — '
-          'مهيأة لمنصة ${widget.ad.brief.platform}',
+          '${_ad.kind.label} بأسلوب ${_ad.brief.tone} — '
+          'مهيأة لمنصة ${_ad.brief.platform}',
           textAlign: TextAlign.center,
           style: TextStyle(color: context.textMuted, fontSize: 12.5),
         ),
@@ -124,7 +135,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: () {
-            AppStateScope.of(context).saveAd(widget.ad);
+            AppStateScope.of(context).saveAd(_ad);
             _showConfirmation('تم الحفظ في «إعلاناتي»');
           },
           icon: const Icon(Icons.bookmark_add_outlined),
@@ -136,7 +147,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
             'النشر المباشر سيتوفر مع ربط واجهات المنصات',
           ),
           icon: const Icon(Icons.ios_share),
-          label: Text('نشر مباشر على ${widget.ad.brief.platform}'),
+          label: Text('نشر مباشر على ${_ad.brief.platform}'),
         ),
         const SizedBox(height: 16),
         // إغلاق الحلقة: حاسبة تكلفة تُظهر السعر فورًا وتنتقل لطلب الطباعة
@@ -146,7 +157,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => ExecuteScreen(
-                  ad: widget.ad,
+                  ad: _ad,
                   isDigital: false,
                   initialTemplate: _template,
                   initialProduct: product,
@@ -162,6 +173,15 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   }
 
   /// شريط اختيار القالب — معاينة مصغّرة حيّة لكل قالب على المنتج نفسه.
+  Future<void> _openEditor() async {
+    final edited = await Navigator.of(context).push<GeneratedAd>(
+      MaterialPageRoute(
+        builder: (_) => DesignEditorScreen(ad: _ad, template: _template),
+      ),
+    );
+    if (edited != null && mounted) setState(() => _ad = edited);
+  }
+
   Widget _buildTemplatePicker() {
     final isPro = AppStateScope.of(context).isPro;
     return Column(
@@ -204,7 +224,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                         height: 96,
                         // معاينة حيّة بالقالب الفعلي على منتج التاجر.
                         child: AdDesignPreview(
-                          ad: widget.ad,
+                          ad: _ad,
                           template: template,
                           showWatermark: !isPro,
                         ),
@@ -251,10 +271,10 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           XFile.fromData(
             data!.buffer.asUint8List(),
             mimeType: 'image/png',
-            name: 'zol_${widget.ad.brief.productName}.png',
+            name: 'zol_${_ad.brief.productName}.png',
           ),
         ],
-        text: widget.ad.shareText,
+        text: _ad.shareText,
       );
     } catch (_) {
       if (mounted) {
@@ -278,7 +298,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
       children: [
         // معاينة التصميم على المطبوع قبل الشراء.
         PrintMockupPreview(
-          ad: widget.ad,
+          ad: _ad,
           template: _template,
           mockup: _product.mockup,
           sizeLabel: _product.sizes[_sizeIndex].label,

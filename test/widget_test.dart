@@ -22,6 +22,7 @@ import 'package:zol/screens/create_ad/upload_details_screen.dart';
 import 'package:zol/services/ad_generator.dart';
 import 'package:zol/services/ai_gateway.dart';
 import 'package:zol/screens/create_ad/magic_screen.dart';
+import 'package:zol/screens/create_ad/design_editor_screen.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/models/business_category.dart';
 import 'package:zol/services/admin_api.dart';
@@ -1921,6 +1922,155 @@ void main() {
     );
     expect(back.brandName, 'محمصة الفجر');
     expect(back.brandColor, 0xFF0B3D2E);
+  });
+
+  // ── محرر التصميم ──────────────────────────────────────────────────
+
+  testWidgets('سحب المنتج في المحرر يزيحه ويعود التعديل مع الإعلان', (
+    tester,
+  ) async {
+    final state = AppState();
+    final ad = GeneratedAd(
+      brief: AdBrief(
+        productName: 'قهوة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'سناب شات',
+        format: 'ستوري',
+        imageBytes: _fakeImage,
+      ),
+      kind: AdKind.image,
+      headline: 'عنوان أصلي',
+      body: 'نص',
+      hashtags: const [],
+      createdAt: DateTime(2026),
+    );
+
+    GeneratedAd? returned;
+    // النطاق فوق MaterialApp كما في main.dart — المسارات المدفوعة تُبنى
+    // من سياق Navigator، فنطاقٌ داخل home لا تراه شاشة مدفوعة.
+    await tester.pumpWidget(
+      AppStateScope(
+        notifier: state,
+        child: MaterialApp(
+          theme: buildAppTheme(Brightness.light),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () async {
+                  returned = await Navigator.of(context).push<GeneratedAd>(
+                    MaterialPageRoute(
+                      builder: (_) => DesignEditorScreen(
+                        ad: ad,
+                        template: AdTemplate.bold,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('افتح المحرر'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('افتح المحرر'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('تحرير التصميم'), findsOneWidget);
+    await tester.drag(
+      find.byKey(const ValueKey('editor-canvas')),
+      const Offset(30, 40),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('حفظ التعديلات'));
+    await tester.pumpAndSettle();
+
+    // التعديل يعود مع الإعلان لا يبقى حبيس الشاشة.
+    expect(returned, isNotNull);
+    expect(returned!.brief.productDx, greaterThan(0));
+    expect(returned!.brief.productDy, greaterThan(0));
+    expect(returned!.brief.hasProductTransform, isTrue);
+    // الأصل لا يُمَسّ — التحرير ينتج نسخة.
+    expect(ad.brief.hasProductTransform, isFalse);
+  });
+
+  testWidgets('تحرير النص في المحرر يغيّر العنوان بلا إعادة توليد', (
+    tester,
+  ) async {
+    final state = AppState();
+    final ad = GeneratedAd(
+      brief: AdBrief(
+        productName: 'قهوة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'سناب شات',
+        format: 'ستوري',
+        imageBytes: _fakeImage,
+      ),
+      kind: AdKind.image,
+      headline: 'عنوان أصلي',
+      body: 'نص',
+      hashtags: const [],
+      createdAt: DateTime(2026),
+    );
+
+    await tester.pumpWidget(
+      AppStateScope(
+        notifier: state,
+        child: MaterialApp(
+          theme: buildAppTheme(Brightness.light),
+          home: DesignEditorScreen(ad: ad, template: AdTemplate.bold),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('تحرير النص'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'العنوان'),
+      'عنوان مُصحَّح',
+    );
+    await tester.tap(find.text('تطبيق'));
+    await tester.pumpAndSettle();
+
+    // النص الجديد يُرسم على التصميم فورًا.
+    expect(find.text('عنوان مُصحَّح'), findsWidgets);
+    expect(find.text('عنوان أصلي'), findsNothing);
+  });
+
+  test('حدود تحويل المنتج ونجاته من الحفظ والاسترجاع', () {
+    final moved = AdBrief(
+      productName: 'قهوة',
+      description: '',
+      tone: 'حماسي',
+      platform: 'سناب شات',
+      format: 'ستوري',
+      productScale: 1.8,
+      productDx: 0.25,
+      productDy: -0.1,
+    );
+    final back = AdBrief.fromJson(
+      jsonDecode(jsonEncode(moved.toJson())) as Map<String, dynamic>,
+    );
+    expect(back.productScale, 1.8);
+    expect(back.productDx, 0.25);
+    expect(back.productDy, -0.1);
+
+    // بلا تعديل لا تتضخم البيانات المحفوظة بمفاتيح افتراضية.
+    final plain = AdBrief(
+      productName: 'قهوة',
+      description: '',
+      tone: 'حماسي',
+      platform: 'سناب شات',
+      format: 'ستوري',
+    );
+    expect(plain.hasProductTransform, isFalse);
+    expect(plain.toJson().containsKey('productScale'), isFalse);
+    // والاسترجاع من بيانات قديمة (قبل وجود الحقول) يعطي الوضع الافتراضي.
+    expect(AdBrief.fromJson(plain.toJson()).productScale, 1);
   });
 
   // ── مكتبة الشارات الترويجية ───────────────────────────────────────

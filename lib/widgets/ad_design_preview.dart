@@ -192,7 +192,21 @@ class _Spec {
         ),
       );
     }
-    return Image.memory(bytes, fit: fit);
+    final img = Image.memory(bytes, fit: fit);
+    if (!ad.brief.hasProductTransform) return img;
+    // تحويل التاجر من المحرر: الإزاحة كسور من الإطار لا بكسلات، فيبقى
+    // ما ضبطه في المعاينة مطابقًا له في التصدير عالي الدقة.
+    return LayoutBuilder(
+      builder: (context, c) => ClipRect(
+        child: Transform.translate(
+          offset: Offset(
+            ad.brief.productDx * c.maxWidth,
+            ad.brief.productDy * c.maxHeight,
+          ),
+          child: Transform.scale(scale: ad.brief.productScale, child: img),
+        ),
+      ),
+    );
   }
 }
 
