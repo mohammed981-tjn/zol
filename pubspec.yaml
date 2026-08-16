@@ -73,6 +73,14 @@ dependencies:
   # مفتاح service_role السرّي لا يوضع في التطبيق مطلقًا.
   supabase_flutter: ^2.8.0
 
+  # قصّ الخلفية بنموذج تجزئة على الجهاز. النموذج يُحمّل عبر خدمات Play
+  # فلا يضخّم حجم الـAPK، ولا يغادر الصورة الجهاز. أندرويد وiOS فقط —
+  # وعلى غيرهما يسقط BackgroundRemover إلى خوارزمية الألوان.
+  google_mlkit_subject_segmentation: ^0.1.0
+
+  # لكتابة الصورة ملفًا مؤقتًا: ML Kit يقرأ من مسار لا من بايتات.
+  path_provider: ^2.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

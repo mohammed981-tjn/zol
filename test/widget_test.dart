@@ -27,6 +27,7 @@ import 'package:zol/services/admin_api.dart';
 import 'package:zol/models/template_category.dart';
 import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/services/background_remover.dart';
+import 'package:zol/services/subject_cutout.dart';
 import 'package:zol/services/image_store.dart';
 import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
@@ -1533,7 +1534,13 @@ void main() {
 
   test('القصّ الممزّق يُرفض والنظيف يُقبل', () async {
     BackgroundRemover.debugRunSynchronously = true;
-    addTearDown(() => BackgroundRemover.debugRunSynchronously = false);
+    // النموذج غير متاح في بيئة الاختبار أصلًا، لكن تعطيله صراحةً يجعل
+    // الاختبار يقيس خوارزمية الألوان وحدها لا مصادفة غياب قناة المنصة.
+    SubjectCutout.debugDisabled = true;
+    addTearDown(() {
+      BackgroundRemover.debugRunSynchronously = false;
+      SubjectCutout.debugDisabled = false;
+    });
 
     // خلفية بيضاء موحّدة وقرص داكن في الوسط: أوضح حالة نجاح.
     img.Image build({required bool shred}) {

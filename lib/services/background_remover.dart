@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
+import 'subject_cutout.dart';
+
 /// عزل خلفية صورة المنتج **على الجهاز بالكامل** — الجزء الثاني من الطبقة 1
 /// في استراتيجية الذكاء الاصطناعي.
 ///
@@ -12,9 +14,10 @@ import 'package:image/image.dart' as img;
 ///    من الخلفية ومتصل بها يُعد خلفية.
 /// 3. تُجعل الخلفية شفافة مع تنعيم بسيط للحواف، وتُعاد الصورة PNG.
 ///
-/// تعمل ممتازًا مع صور المنتجات ذات الخلفيات شبه الموحدة (أغلب صور
-/// المتاجر). للخلفيات المعقدة يُستبدل التنفيذ بنموذج تجزئة
-/// (ML Kit Subject Segmentation / TFLite) عبر نفس الواجهة.
+/// **هذه الخوارزمية صارت الخطة الثانية.** [SubjectCutout] يُجرَّب أولًا
+/// بنموذج تجزئة على الجهاز يفهم الشيء لا لونه. وتبقى هذه شبكة أمان
+/// للويب وسطح المكتب ولأي جهاز يعجز عنه النموذج — لا تُحذف لأنها صارت
+/// ثانية، فالسقوط إليها أفضل من ألّا يُقصّ شيء.
 class BackgroundRemover {
   BackgroundRemover._();
 
@@ -25,7 +28,14 @@ class BackgroundRemover {
 
   /// يعيد PNG بخلفية شفافة، أو null إذا تعذر العزل (صورة غير صالحة،
   /// أو الخلفية غير موحدة بما يكفي فيفشل العزل بأمان بدل إتلاف الصورة).
-  static Future<Uint8List?> removeBackground(Uint8List bytes) {
+  static Future<Uint8List?> removeBackground(Uint8List bytes) async {
+    // نموذج التجزئة أولًا: يفهم **ما هو الشيء** لا ما هو لونه، فيقصّ
+    // منتجًا على طاولة مزدحمة كما يقصّه على خلفية بيضاء. وخوارزمية
+    // الألوان تبقى شبكة أمان للويب وسطح المكتب ولأي جهاز يعجز عنه
+    // النموذج — لا تُحذف لأنها صارت ثانية.
+    final modelCut = await SubjectCutout.cut(bytes);
+    if (modelCut != null) return modelCut;
+
     if (debugRunSynchronously) {
       return Future.sync(() => _removeBackgroundSync(bytes));
     }
