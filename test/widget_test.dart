@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -1629,6 +1630,102 @@ void main() {
     // يفقد صورته بعد إعادة فتح التطبيق.
     expect(back.imageUrl, ad.imageUrl);
     expect(back.imageVerified, isTrue);
+  });
+
+  // ── تمرير هوية العلامة إلى العقل المنشور ──────────────────────────
+
+  test('اشتقاق لوني الخادم من لون العلامة: داكن يمرّ وفاتح يُظلم', () {
+    double lightness(String hex) {
+      final v = int.parse(hex.substring(1), radix: 16);
+      final r = ((v >> 16) & 0xFF) / 255.0;
+      final g = ((v >> 8) & 0xFF) / 255.0;
+      final b = (v & 0xFF) / 255.0;
+      return ([r, g, b].reduce(math.max) + [r, g, b].reduce(math.min)) / 2;
+    }
+
+    // داكن ⇒ يمرّ حرفيًا: هو نفسه هوية التاجر.
+    expect(primaryFromBrand(0xFF0B3D2E), '#0b3d2e');
+    // فاتح ⇒ يُظلم: نص الزرّ فاتح، وفاتح فوق فاتح لا يُقرأ.
+    expect(lightness(primaryFromBrand(0xFFF2E4C8)), lessThan(0.45));
+    // المرافق فاتح دومًا مهما كان الأصل — يُرسم فوق تظليل أسود.
+    expect(lightness(accentFromBrand(0xFF0B3D2E)), greaterThan(0.7));
+    expect(lightness(accentFromBrand(0xFFF2E4C8)), greaterThan(0.7));
+    // ومن عائلة العلامة نفسها: مرافق الأخضر تغلب خضرته حمرته.
+    final a = int.parse(accentFromBrand(0xFF0B3D2E).substring(1), radix: 16);
+    expect((a >> 8) & 0xFF, greaterThan((a >> 16) & 0xFF));
+  });
+
+  test('لون العلامة واسمها يسافران في جسد طلب ad-magic', () async {
+    Map<String, dynamic>? sent;
+    final gateway = AiGateway(
+      baseUrl: 'http://test.local',
+      useSupabase: true,
+      supabaseUrl: 'http://test.local',
+      merchantId: 'merchant-test',
+      client: MockClient((req) async {
+        sent = jsonDecode(req.body) as Map<String, dynamic>;
+        return http.Response.bytes(
+          utf8.encode(_adCopyBody()),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    AdBrief brief({String? brandName, int? brandColor, int? paletteColor}) =>
+        AdBrief(
+          productName: 'قهوة',
+          description: '',
+          tone: 'حماسي',
+          platform: 'سناب شات',
+          format: 'ستوري',
+          brandName: brandName,
+          brandColor: brandColor,
+          paletteColor: paletteColor,
+        );
+
+    await gateway.generatePreview(
+      brief(
+        brandName: 'محمصة الفجر',
+        brandColor: 0xFF0B3D2E,
+        paletteColor: 0xFF123456,
+      ),
+    );
+    expect(sent!['brand_name'], 'محمصة الفجر');
+    // اختيار التاجر الصريح يغلب المستخرَج من صورة المنتج.
+    expect(sent!['primary'], '#0b3d2e');
+    expect(sent!['accent'], accentFromBrand(0xFF0B3D2E));
+
+    // بلا لون علامة يسقط الطلب على لوحة صورة المنتج بدل افتراضيات الخادم.
+    await gateway.generatePreview(brief(paletteColor: 0xFF123456));
+    expect(sent!['primary'], primaryFromBrand(0xFF123456));
+
+    // زائر بلا هوية ⇒ لا مفاتيح أصلًا، فيقرّر الخادم افتراضياته بنفسه.
+    await gateway.generatePreview(brief());
+    expect(sent!.containsKey('brand_name'), isFalse);
+    expect(sent!.containsKey('primary'), isFalse);
+    expect(sent!.containsKey('accent'), isFalse);
+  });
+
+  test('هوية العلامة في الموجز تنجو من الحفظ والاسترجاع', () {
+    final back = AdBrief.fromJson(
+      jsonDecode(
+            jsonEncode(
+              AdBrief(
+                productName: 'قهوة',
+                description: '',
+                tone: 'حماسي',
+                platform: 'سناب شات',
+                format: 'ستوري',
+                brandName: 'محمصة الفجر',
+                brandColor: 0xFF0B3D2E,
+              ).toJson(),
+            ),
+          )
+          as Map<String, dynamic>,
+    );
+    expect(back.brandName, 'محمصة الفجر');
+    expect(back.brandColor, 0xFF0B3D2E);
   });
 
   // ── مزامنة هوية العلامة ───────────────────────────────────────────

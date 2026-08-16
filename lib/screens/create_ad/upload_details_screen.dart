@@ -209,6 +209,14 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                               season: _season,
                               useDecorativeBackground:
                                   _useDecorativeBackground,
+                              // هوية العلامة تركب الموجز هنا لأن هذه آخر
+                              // نقطة تملك AppState قبل أن يسافر الطلب.
+                              brandName: AppStateScope.of(
+                                context,
+                              ).account?.storeName,
+                              brandColor: AppStateScope.of(
+                                context,
+                              ).brandColorValue,
                             ),
                           ),
                         ),

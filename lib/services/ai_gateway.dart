@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
@@ -8,6 +9,69 @@ import '../config/app_config.dart';
 import '../models/ad_brief.dart';
 import '../models/generation.dart';
 import '../models/seasonal_theme.dart';
+
+/// لون العلامة كما يُرسل للخادم في `primary` — لون زرّ الدعوة وميزان
+/// الانسجام عند الناقد البصري.
+///
+/// لون فاتح جدًّا يُظلم إلى نفس الدرجة اللونية: نص الزر يُرسم بلون
+/// [accentFromBrand] الفاتح، وفاتح على فاتح لا يُقرأ — أما داكن من عائلة
+/// العلامة نفسها فيبقى هويةً وتُقرأ حروفه.
+String primaryFromBrand(int rgb) {
+  final hsl = _rgbToHsl(rgb);
+  if (hsl.l <= 0.55) {
+    return '#${(rgb & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  }
+  return _hslToHex(hsl.h, hsl.s, 0.32);
+}
+
+/// مرافق فاتح للون العلامة — حروف العنوان تُرسم فوق تظليل أسود في أعلى
+/// الصورة، فتحتاج لونًا فاتحًا من عائلة العلامة نفسها لا ذهبيًا عامًّا.
+///
+/// نحفظ درجة اللون ونرفع الإضاءة إلى ٠٫٨ ونكبح التشبّع كي لا يصرخ اللون
+/// فوق الصورة الفوتوغرافية.
+String accentFromBrand(int rgb) {
+  final hsl = _rgbToHsl(rgb);
+  return _hslToHex(hsl.h, math.min(hsl.s, 0.60), 0.80);
+}
+
+({double h, double s, double l}) _rgbToHsl(int rgb) {
+  final r = ((rgb >> 16) & 0xFF) / 255.0;
+  final g = ((rgb >> 8) & 0xFF) / 255.0;
+  final b = (rgb & 0xFF) / 255.0;
+  final maxC = math.max(r, math.max(g, b));
+  final minC = math.min(r, math.min(g, b));
+  final l = (maxC + minC) / 2;
+  final d = maxC - minC;
+  if (d == 0) return (h: 0, s: 0, l: l);
+  final s = d / (1 - (2 * l - 1).abs());
+  double h;
+  if (maxC == r) {
+    h = 60 * (((g - b) / d) % 6);
+  } else if (maxC == g) {
+    h = 60 * ((b - r) / d + 2);
+  } else {
+    h = 60 * ((r - g) / d + 4);
+  }
+  if (h < 0) h += 360;
+  return (h: h, s: s, l: l);
+}
+
+String _hslToHex(double h, double s, double l) {
+  final c = (1 - (2 * l - 1).abs()) * s;
+  final x = c * (1 - ((h / 60) % 2 - 1).abs());
+  final m = l - c / 2;
+  final (r, g, b) = switch (h) {
+    < 60 => (c, x, 0.0),
+    < 120 => (x, c, 0.0),
+    < 180 => (0.0, c, x),
+    < 240 => (0.0, x, c),
+    < 300 => (x, 0.0, c),
+    _ => (c, 0.0, x),
+  };
+  int ch(double v) => ((v + m) * 255).round().clamp(0, 255);
+  final val = (ch(r) << 16) | (ch(g) << 8) | ch(b);
+  return '#${val.toRadixString(16).padLeft(6, '0')}';
+}
 
 /// خطأ يحمل رسالة عربية جاهزة للعرض على المستخدم.
 class GatewayException implements Exception {
@@ -159,6 +223,11 @@ class AiGateway {
         ? brief.productName
         : '${brief.productName} — ${brief.description.trim()}';
 
+    // هوية العلامة تسافر مع الطلب: لون التاجر الصريح يغلب المستخرَج من
+    // صورة المنتج، وكلاهما خير من افتراضيات خادمٍ يجهل صاحب الإعلان.
+    final brandRgb = brief.brandColor ?? brief.paletteColor;
+    final brandName = brief.brandName?.trim() ?? '';
+
     late http.Response res;
     try {
       res = await _client
@@ -177,6 +246,11 @@ class AiGateway {
               'platform': brief.platform,
               'tone': brief.tone,
               if (brief.season != null) 'season': brief.season!.label,
+              if (brandName.isNotEmpty) 'brand_name': brandName,
+              if (brandRgb != null) ...{
+                'primary': primaryFromBrand(brandRgb),
+                'accent': accentFromBrand(brandRgb),
+              },
             }),
           )
           .timeout(timeout);

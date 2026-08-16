@@ -462,7 +462,7 @@ class _AdPreviewCard extends StatelessWidget {
                                 : const Center(
                                     child: CircularProgressIndicator(),
                                   ),
-                        errorBuilder: (context, _, __) => AdDesignPreview(
+                        errorBuilder: (context, _, _) => AdDesignPreview(
                           ad: ad,
                           showWatermark: !AppStateScope.of(context).isPro,
                         ),

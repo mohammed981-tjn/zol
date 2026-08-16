@@ -16,6 +16,8 @@ class AdBrief {
     this.paletteColor,
     this.season,
     this.useDecorativeBackground = false,
+    this.brandName,
+    this.brandColor,
   });
 
   final String productName;
@@ -42,6 +44,15 @@ class AdBrief {
   /// خيار بصري بديل، لا يُغيّر ألوان اللوحة (العلامة/الموسم/المنتج).
   final bool useDecorativeBackground;
 
+  /// اسم المتجر من حساب التاجر — يذهب إلى كاتب الإعلان في الخادم فيذكر
+  /// العلامة باسمها بدل «متجرنا».
+  final String? brandName;
+
+  /// لون العلامة من Brand Kit (عدد فلاتر معتم). يختلف عن [paletteColor]:
+  /// هذا اختيار التاجر الصريح، وذاك مستخرج آليًا من صورة المنتج —
+  /// والصريح يغلب المستخرَج عند الإرسال للخادم.
+  final int? brandColor;
+
   bool get hasProductImage => imageBytes != null;
 
   Map<String, dynamic> toJson() => {
@@ -54,6 +65,8 @@ class AdBrief {
     'paletteColor': paletteColor,
     if (season != null) 'season': season!.name,
     'useDecorativeBackground': useDecorativeBackground,
+    if (brandName != null) 'brandName': brandName,
+    if (brandColor != null) 'brandColor': brandColor,
     // تُحفظ الصورة (مضغوطة مسبقًا عبر ImageStore) حتى يمكن فتح الإعلان
     // من المكتبة وإعادة تصديره أو طباعته بعد إغلاق التطبيق.
     if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
@@ -70,6 +83,8 @@ class AdBrief {
     paletteColor: paletteColor,
     season: season,
     useDecorativeBackground: useDecorativeBackground,
+    brandName: brandName,
+    brandColor: brandColor,
   );
 
   factory AdBrief.fromJson(Map<String, dynamic> json) => AdBrief(
@@ -87,6 +102,8 @@ class AdBrief {
         .cast<SeasonalTheme?>()
         .firstWhere((s) => s?.name == json['season'], orElse: () => null),
     useDecorativeBackground: json['useDecorativeBackground'] as bool? ?? false,
+    brandName: json['brandName'] as String?,
+    brandColor: json['brandColor'] as int?,
     imageBytes: switch (json['imageBytes']) {
       final String encoded when encoded.isNotEmpty => _tryDecode(encoded),
       _ => null,
