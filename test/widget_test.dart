@@ -35,6 +35,7 @@ import 'package:zol/state/app_state.dart';
 import 'package:zol/models/trashed_ad.dart';
 import 'package:zol/models/brand_font.dart';
 import 'package:zol/models/generated_ad.dart';
+import 'package:zol/models/generation.dart';
 import 'package:zol/models/seasonal_theme.dart';
 import 'package:zol/theme/app_theme.dart';
 import 'package:zol/widgets/print_cost_calculator.dart';
@@ -99,6 +100,8 @@ String _adCopyBody() => jsonEncode({
       'score_total': 9,
       'fix_note': null,
       'rank': 1,
+      'image_url': 'https://x.test/storage/ads/magic-1-0.png',
+      'image_verified': true,
     },
     {
       'angle': 'منفعة',
@@ -1591,6 +1594,41 @@ void main() {
       isNull,
       reason: 'مقدّمة مبعثرة إلى شظايا تفسد كل قالب — يجب أن تُرفض لا أن تُعرض',
     );
+  });
+
+  test('صيغة ad-magic تحمل رابط الصورة وتدقيقها حتى الحفظ والاسترجاع', () {
+    final parsed = PreviewResult.fromAdCopyJson(
+      jsonDecode(_adCopyBody()) as Map<String, dynamic>,
+    );
+    expect(parsed.variants.first.imageUrl, contains('magic-1-0.png'));
+    expect(parsed.variants.first.imageVerified, isTrue);
+    // الصيغة الثانية بلا صورة — غيابها لا يكسر التحليل ولا العرض.
+    expect(parsed.variants[1].imageUrl, isNull);
+
+    final ad = GeneratedAd(
+      brief: AdBrief(
+        productName: 'قهوة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'إنستغرام',
+        format: 'ستوري',
+        category: BusinessCategory.cafe,
+      ),
+      kind: AdKind.copy,
+      headline: 'ع',
+      body: 'ن',
+      hashtags: const [],
+      createdAt: DateTime(2026),
+      imageUrl: 'https://x.test/ads/a.png',
+      imageVerified: true,
+    );
+    final back = GeneratedAd.fromJson(
+      jsonDecode(jsonEncode(ad.toJson())) as Map<String, dynamic>,
+    );
+    // الحفظ في المكتبة يمرّ بـtoJson: إسقاط الرابط هناك يعني إعلاناً
+    // يفقد صورته بعد إعادة فتح التطبيق.
+    expect(back.imageUrl, ad.imageUrl);
+    expect(back.imageVerified, isTrue);
   });
 
   // ── مزامنة هوية العلامة ───────────────────────────────────────────

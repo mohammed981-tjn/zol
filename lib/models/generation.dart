@@ -11,6 +11,8 @@ class CopyVariant {
     required this.hashtags,
     this.score,
     this.fixNote,
+    this.imageUrl,
+    this.imageVerified,
   });
 
   final String angle;
@@ -26,6 +28,12 @@ class CopyVariant {
   /// ملاحظة المراجع: ما الذي يرفع هذه الصيغة لو عُدِّلت.
   final String? fixNote;
 
+  /// الإعلان المولَّد صورةً كاملة (مشهد + حروف عربية مرسومة) من ad-magic.
+  final String? imageUrl;
+
+  /// حكم مدقّق الحروف: هل قُرئت النصوص من الصورة كما كُتبت؟
+  final bool? imageVerified;
+
   factory CopyVariant.fromJson(Map<String, dynamic> json) {
     return CopyVariant(
       angle: (json['angle'] as String?) ?? '',
@@ -37,6 +45,8 @@ class CopyVariant {
           .toList(growable: false),
       score: (json['score_total'] as num?)?.toDouble(),
       fixNote: json['fix_note'] as String?,
+      imageUrl: json['image_url'] as String?,
+      imageVerified: json['image_verified'] as bool?,
     );
   }
 
@@ -49,6 +59,8 @@ class CopyVariant {
       hashtags: hashtags,
       score: score,
       fixNote: fixNote,
+      imageUrl: imageUrl,
+      imageVerified: imageVerified,
     );
   }
 }

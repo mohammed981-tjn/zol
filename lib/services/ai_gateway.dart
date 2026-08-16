@@ -36,7 +36,8 @@ class AiGateway {
     http.Client? client,
     this.accountId = 'demo',
     this.plan = 'free',
-    this.timeout = const Duration(seconds: 90),
+    // توليد ثلاث صور بالتوازي يضاعف الزمن؛ ٩٠ ثانية كانت تكفي النص وحده.
+    this.timeout = const Duration(seconds: 150),
     // الإعداد يُحقن ولا يُقرأ من الثوابت العامة داخل الدوال: ثابت
     // String.fromEnvironment لا يمكن ضبطه وقت الاختبار، فقراءته في العمق
     // تجعل المسار غير قابل للاختبار أصلاً.
@@ -144,9 +145,12 @@ class AiGateway {
       throw GatewayException('سجّل الدخول أولًا حتى تُحفظ إعلاناتك باسمك.');
     }
 
+    // ad-magic لا ad-copy: السلسلة الكاملة في نداء واحد — كاتب ← ناقد ←
+    // ثلاث صور بالتوازي بحروف عربية مرسومة ومدقَّقة ← السجل. النصّ وحده
+    // كان يترك التصميم كله على عاتق الجهاز.
     final uri = Uri.parse(
       '${supabaseUrl.replaceAll(RegExp(r'/+$'), '')}'
-      '/functions/v1/ad-copy',
+      '/functions/v1/ad-magic',
     );
 
     // وصف المنتج يُدمج في اسمه: دالة ad-copy تأخذ حقل منتج واحداً، وإسقاط

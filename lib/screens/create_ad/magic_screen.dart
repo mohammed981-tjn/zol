@@ -134,6 +134,8 @@ class _MagicScreenState extends State<MagicScreen> {
           hashtags: v.hashtags,
           cta: v.cta.isEmpty ? 'اطلب الآن' : v.cta,
           angle: v.angle.isEmpty ? null : v.angle,
+          imageUrl: v.imageUrl,
+          imageVerified: v.imageVerified,
           // الوكيل الناقد في Supabase يمنح درجة من 10؛ الشارة تعرض من 100.
           score: v.score == null ? null : (v.score! * 10).round().clamp(0, 100),
           createdAt: now,
@@ -439,7 +441,37 @@ class _AdPreviewCard extends StatelessWidget {
                 if (ad.score != null) _ScoreBadge(score: ad.score!),
               ],
             ),
-            if (ad.kind == AdKind.image) ...[
+            if (ad.imageUrl != null) ...[
+              const SizedBox(height: 14),
+              // الإعلان المولَّد صورةً كاملة من السحابة: مشهد لكل زاوية
+              // وحروف عربية مرسومة ومدقَّقة. وعند تعذّر التحميل نسقط
+              // لمحرك القوالب المحلي بدل مربّع مكسور.
+              Center(
+                child: SizedBox(
+                  height: 250,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: AspectRatio(
+                      aspectRatio: 9 / 16,
+                      child: Image.network(
+                        ad.imageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null
+                                ? child
+                                : const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                        errorBuilder: (context, _, __) => AdDesignPreview(
+                          ad: ad,
+                          showWatermark: !AppStateScope.of(context).isPro,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ] else if (ad.kind == AdKind.image) ...[
               const SizedBox(height: 14),
               // معاينة التصميم الحقيقي من محرك القوالب (صورة المنتج مركّبة
               // على القالب) — وليست أيقونة رمزية.

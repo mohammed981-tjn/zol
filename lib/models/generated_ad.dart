@@ -28,6 +28,8 @@ class GeneratedAd {
     this.score,
     this.angle,
     this.cta = 'اطلب الآن',
+    this.imageUrl,
+    this.imageVerified,
   });
 
   final AdBrief brief;
@@ -51,6 +53,13 @@ class GeneratedAd {
   /// دعوة الإجراء المشتقة من نشاط التاجر (تظهر على زر التصميم).
   final String cta;
 
+  /// إعلان مولَّد صورةً كاملة من السحابة — حين يتوفّر يتقدّم على تركيب
+  /// محرك القوالب المحلي في العرض، ويبقى المحلي احتياطاً لفشل التحميل.
+  final String? imageUrl;
+
+  /// هل دقّق القارئ الآلي حروف الصورة ووجدها سليمة؟
+  final bool? imageVerified;
+
   String get shareText => '$headline\n$body\n${hashtags.join(' ')}';
 
   GeneratedAd copyWith({AdBrief? brief}) => GeneratedAd(
@@ -63,6 +72,8 @@ class GeneratedAd {
     angle: angle,
     createdAt: createdAt,
     cta: cta,
+    imageUrl: imageUrl,
+    imageVerified: imageVerified,
   );
 
   Map<String, dynamic> toJson() => {
@@ -74,6 +85,8 @@ class GeneratedAd {
     if (score != null) 'score': score,
     if (angle != null) 'angle': angle,
     'cta': cta,
+    if (imageUrl != null) 'imageUrl': imageUrl,
+    if (imageVerified != null) 'imageVerified': imageVerified,
     'createdAt': createdAt.toIso8601String(),
   };
 
@@ -86,6 +99,8 @@ class GeneratedAd {
     score: json['score'] as int?,
     angle: json['angle'] as String?,
     cta: json['cta'] as String? ?? 'اطلب الآن',
+    imageUrl: json['imageUrl'] as String?,
+    imageVerified: json['imageVerified'] as bool?,
     createdAt:
         DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
   );
