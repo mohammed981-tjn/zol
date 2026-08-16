@@ -18,8 +18,29 @@ const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const G = "https://generativelanguage.googleapis.com/v1beta/models";
 const TEXT_MODEL = Deno.env.get("AI_TEXT_MODEL") ?? "gemini-3.5-flash";
+// حصة النص عشرون نداءً في الدقيقة «لكل نموذج» — والتوليدة الواحدة تستهلك
+// نحو عشرة. نموذجان يعني حصتين مستقلتين: حين يزدحم الأساسي يكمل الوكيل
+// على الخفيف بدل أن يسقط دوره كله (شوهد حيًّا: مدير وناقد سقطا معًا).
+const TEXT_FALLBACK = Deno.env.get("AI_TEXT_MODEL_FALLBACK") ?? "gemini-3.1-flash-lite";
 const IMG_FAST = Deno.env.get("AI_IMAGE_MODEL_FAST") ?? "gemini-3.1-flash-image";
 const IMG_BEST = Deno.env.get("AI_IMAGE_MODEL_BEST") ?? "gemini-3-pro-image";
+
+/** نداء نصي بحصتين: الأساسي ثم الخفيف على 429/503 — لكلٍّ دقيقته. */
+async function genText(key: string, payload: Record<string, unknown>) {
+  let lastErr = "";
+  for (const m of [TEXT_MODEL, TEXT_FALLBACK]) {
+    const r = await fetch(`${G}/${m}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const j = await r.json();
+    if (r.ok) return j;
+    lastErr = `text_${r.status}:${(j?.error?.message ?? "").slice(0, 120)}`;
+    if (r.status !== 429 && r.status !== 503) break;
+  }
+  throw new Error(lastErr);
+}
 
 type Body = {
   headline: string; subline?: string; cta?: string;
@@ -42,17 +63,11 @@ function b64(buf: Uint8Array): string {
 }
 
 async function textJson(key: string, system: string, user: string): Promise<Record<string, unknown>> {
-  const r = await fetch(`${G}/${TEXT_MODEL}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.9 },
-    }),
+  const j = await genText(key, {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: user }] }],
+    generationConfig: { responseMimeType: "application/json", temperature: 0.9 },
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error(`text_${r.status}:${j?.error?.message ?? ""}`);
   const raw = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("") ?? "";
   // النموذج قد يلفّ JSON بنص أو يذيّله — نقتطع أول قوس إلى آخره.
   const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
@@ -125,31 +140,25 @@ async function judge(key: string, primary: string, a: string, bImg: string) {
     },
     required: ["clean_zones", "harmony", "appeal", "defects"],
   };
-  const r = await fetch(`${G}/${TEXT_MODEL}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [
-        { text: rubric },
-        { text: "الصورة أ:" }, { inlineData: { mimeType: "image/png", data: a } },
-        { text: "الصورة ب:" }, { inlineData: { mimeType: "image/png", data: bImg } },
-      ] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            a: scoreSchema, b: scoreSchema,
-            winner: { type: "STRING", enum: ["a", "b"] },
-            fix: { type: "STRING" },
-          },
-          required: ["a", "b", "winner"],
+  const j = await genText(key, {
+    contents: [{ role: "user", parts: [
+      { text: rubric },
+      { text: "الصورة أ:" }, { inlineData: { mimeType: "image/png", data: a } },
+      { text: "الصورة ب:" }, { inlineData: { mimeType: "image/png", data: bImg } },
+    ] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          a: scoreSchema, b: scoreSchema,
+          winner: { type: "STRING", enum: ["a", "b"] },
+          fix: { type: "STRING" },
         },
+        required: ["a", "b", "winner"],
       },
-    }),
+    },
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error(`judge_${r.status}:${j?.error?.message ?? ""}`);
   const raw = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("") ?? "";
   const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("judge_no_json");
