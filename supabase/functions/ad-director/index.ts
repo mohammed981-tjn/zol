@@ -42,17 +42,26 @@ async function textJson(key: string, system: string, user: string): Promise<Reco
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 1.1 },
+      generationConfig: { responseMimeType: "application/json", temperature: 0.9 },
     }),
   });
   const j = await r.json();
   if (!r.ok) throw new Error(`text_${r.status}:${j?.error?.message ?? ""}`);
   const raw = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("") ?? "";
-  return JSON.parse(raw);
+  // النموذج قد يلفّ JSON بنص أو يذيّله — نقتطع أول قوس إلى آخره.
+  const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
+  if (start < 0 || end <= start) throw new Error("no_json");
+  return JSON.parse(raw.slice(start, end + 1));
 }
 
 /** توليد صورة (نفس نمط ad-image المجرَّب) مع سقوط إلى pollinations المجاني. */
-async function genImage(key: string, prompt: string, model: string): Promise<string> {
+async function genImage(
+  key: string, prompt: string, model: string,
+  tag: string, trail: Record<string, unknown>, delayMs = 0,
+): Promise<string> {
+  // تفريق النداءين المتوازيين: مزوّد السقوط المجاني يحدّ بالطلب/الثانية،
+  // ونداءان في اللحظة نفسها أسقطا كليهما بـ429 في أول تشغيل حيّ.
+  if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
   try {
     const r = await fetch(`${G}/${model}:generateContent`, {
       method: "POST",
@@ -68,14 +77,22 @@ async function genImage(key: string, prompt: string, model: string): Promise<str
       .find((p: { inlineData?: { data: string } }) => p.inlineData)?.inlineData;
     if (!inline?.data) throw new Error("no_image");
     return inline.data as string;
-  } catch (_) {
+  } catch (e) {
+    trail[`gen_${tag}_gemini`] = String((e as Error).message);
     const u = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}` +
       `?width=1080&height=1920&nologo=true&model=flux&safe=true`;
-    const r = await fetch(u, { headers: { "User-Agent": "AdCraft/1.0" } });
-    if (!r.ok) throw new Error(`pollinations_${r.status}`);
-    const buf = new Uint8Array(await r.arrayBuffer());
-    if (buf.length < 2000) throw new Error("pollinations_tiny");
-    return b64(buf);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const r = await fetch(u, { headers: { "User-Agent": "AdCraft/1.0" } });
+      if (r.status === 429 && attempt === 0) {
+        await new Promise((res) => setTimeout(res, 1500));
+        continue;
+      }
+      if (!r.ok) throw new Error(`pollinations_${r.status}`);
+      const buf = new Uint8Array(await r.arrayBuffer());
+      if (buf.length < 2000) throw new Error("pollinations_tiny");
+      return b64(buf);
+    }
+    throw new Error("pollinations_429");
   }
 }
 
@@ -200,22 +217,33 @@ Deno.serve(async (req: Request) => {
 
     // ٢) المصوّران بالتوازي — وفي وضع best ينفّذ الثاني بالنموذج الأقوى.
     const tImg = Date.now();
-    const [candA, candB] = await Promise.all([
-      genImage(key, promptA, IMG_FAST),
-      genImage(key, promptB, quality === "best" ? IMG_BEST : IMG_FAST),
+    const settled = await Promise.allSettled([
+      genImage(key, promptA, IMG_FAST, "a", trail, 0),
+      genImage(key, promptB, quality === "best" ? IMG_BEST : IMG_FAST, "b", trail, 1200),
     ]);
     trail.candidates_ms = Date.now() - tImg;
+    const alive = settled
+      .filter((s): s is PromiseFulfilledResult<string> => s.status === "fulfilled")
+      .map((s) => s.value);
+    if (!alive.length) {
+      throw new Error(String((settled[0] as PromiseRejectedResult).reason));
+    }
 
-    // ٣) الناقد البصري يحكم. تعادلٌ أو فشلٌ ⇒ الأولى، فلا يقف الإنتاج على حكم.
-    let winner = candA, loser = candB, fix = "";
-    try {
-      const v = await judge(key, primary, candA, candB);
-      trail.scores = { a: v.a, b: v.b, winner: v.winner };
-      if (v.winner === "b" || sum(v.b) > sum(v.a)) { winner = candB; loser = candA; }
-      fix = String(v.fix ?? "");
-      trail.winner_total = sum(v.winner === "b" ? v.b : v.a);
-    } catch (e) {
-      trail.judge = `skipped: ${String((e as Error).message)}`;
+    // ٣) الناقد البصري يحكم — إن كان ثمة اثنان أصلًا. مرشّح واحد ناجٍ
+    // يمضي بلا حكم: صورة بلا منافسة خير من لا صورة.
+    let winner = alive[0], loser = alive[alive.length - 1], fix = "";
+    if (alive.length === 2) {
+      try {
+        const v = await judge(key, primary, alive[0], alive[1]);
+        trail.scores = { a: v.a, b: v.b, winner: v.winner };
+        if (v.winner === "b" || sum(v.b) > sum(v.a)) { winner = alive[1]; loser = alive[0]; }
+        fix = String(v.fix ?? "");
+        trail.winner_total = sum(v.winner === "b" ? v.b : v.a);
+      } catch (e) {
+        trail.judge = `skipped: ${String((e as Error).message)}`;
+      }
+    } else {
+      trail.single_candidate = true;
     }
 
     // ٤) الجرّاح — فقط في وضع best وحين رأى الناقد ما يُصلَح.
