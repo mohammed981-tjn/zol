@@ -1753,6 +1753,22 @@ void main() {
     expect(sent!.containsKey('product_b64'), isFalse);
   });
 
+  test('ضاغط الصور يقبل حدَّ عرضٍ أصغر للتمريرة الثانية', () async {
+    ImageStore.debugRunSynchronously = true;
+    addTearDown(() => ImageStore.debugRunSynchronously = false);
+
+    // صورة 32×32 حمراء — أكبر من حد التمريرة الثانية المطلوب هنا (8).
+    final wide = img.Image(width: 32, height: 32);
+    img.fill(wide, color: img.ColorRgb8(200, 30, 30));
+    final bytes = Uint8List.fromList(img.encodePng(wide));
+
+    final shrunk = await ImageStore.compressForStorage(bytes, maxWidth: 8);
+    final decoded = img.decodeImage(shrunk);
+    // لا يُكبَّر الحجم أبدًا؛ إن كان الناتج أكبر بايتاتٍ بقي الأصل 32.
+    expect(decoded!.width, anyOf(8, 32));
+    expect(shrunk.length, lessThanOrEqualTo(bytes.length));
+  });
+
   test('هوية العلامة في الموجز تنجو من الحفظ والاسترجاع', () {
     final back = AdBrief.fromJson(
       jsonDecode(

@@ -14,14 +14,20 @@ class ImageStore {
 
   static const _maxWidth = 1000;
 
-  static Future<Uint8List> compressForStorage(Uint8List bytes) {
+  /// [maxWidth] لمن يحتاج أصغر من حدّ المكتبة — كقصاصة منتج فوتوغرافية
+  /// مفصّلة يتجاوز ترميزها حدَّ الإرسال للخادم فتحتاج تمريرة تصغير ثانية.
+  static Future<Uint8List> compressForStorage(
+    Uint8List bytes, {
+    int maxWidth = _maxWidth,
+  }) {
     if (debugRunSynchronously) {
-      return Future.sync(() => _compressSync(bytes));
+      return Future.sync(() => _compressSync((bytes, maxWidth)));
     }
-    return compute(_compressSync, bytes);
+    return compute(_compressSync, (bytes, maxWidth));
   }
 
-  static Uint8List _compressSync(Uint8List bytes) {
+  static Uint8List _compressSync((Uint8List, int) job) {
+    final (bytes, maxWidth) = job;
     // decodeImage لا يكتفي بإرجاع null على البيانات التالفة، بل يرمي
     // (ImageException: Invalid IDAT checksum مثلاً). ذلك الاستثناء كان
     // يعبر saveAd فيموت الحفظ صامتاً ويظن التاجر أن إعلانه حُفظ.
@@ -34,8 +40,8 @@ class ImageStore {
     // صورة غير مقروءة: تُحفظ كما هي بدل فقدانها.
     if (decoded == null) return bytes;
 
-    final resized = decoded.width > _maxWidth
-        ? img.copyResize(decoded, width: _maxWidth)
+    final resized = decoded.width > maxWidth
+        ? img.copyResize(decoded, width: maxWidth)
         : decoded;
 
     final hasAlpha = resized.numChannels == 4 && _containsTransparency(resized);

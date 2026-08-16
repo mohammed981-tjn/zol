@@ -180,7 +180,9 @@ Deno.serve(async (req: Request) => {
         const kill = setTimeout(() => ctrl.abort(), imgBudget);
         try {
           const scene = String(v.scene ?? "") ||
-            `Professional vertical product photograph related to: ${b.product}, warm lighting, clean space at top and bottom, no text, no letters, no logos`;
+            `Professional vertical product photograph related to: ${b.product}, ` +
+            `rich moody backdrop with depth and warm color, dramatic lighting, ` +
+            `not a plain white studio, clean space at top and bottom, no text, no letters, no logos`;
           const r = await fetch(`${SB_URL}/functions/v1/ad-director`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-gemini-key": key },

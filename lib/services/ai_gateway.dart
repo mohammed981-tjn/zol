@@ -231,15 +231,22 @@ class AiGateway {
 
     // صورة المنتج الحقيقية تسافر أيضًا — فيظهر في الإعلان منتجُ التاجر
     // لا تخيّل النموذج عنه. تُضغط بنفس ضاغط المكتبة (≤١٠٠٠ بكسل، PNG
-    // للقصاصة الشفافة)، وجسد أضخم من الحد يُسقطها: صورة غائبة أهون من
-    // طلب يموت بمهلة الشبكة على اتصال تاجرٍ ضعيف.
+    // للقصاصة الشفافة). قصاصة فوتوغرافية مفصّلة قد تتجاوز حدَّ الإرسال
+    // فكانت تُسقَط بصمت ويخرج الإعلان بلا منتج — الآن تُصغَّر تمريرةً
+    // ثانية (٦٤٠ بكسل تكفي لثلث الإعلان الأوسط)، والإسقاط آخر الدواء:
+    // طلب يموت بمهلة الشبكة على اتصالٍ ضعيف أسوأ من صورة أصغر.
+    const maxProductB64 = 2000000;
     String? productB64;
     final productBytes = brief.imageBytes;
     if (productBytes != null && productBytes.isNotEmpty) {
       try {
-        final compact = await ImageStore.compressForStorage(productBytes);
-        final encoded = base64Encode(compact);
-        if (encoded.length <= 2000000) productB64 = encoded;
+        var compact = await ImageStore.compressForStorage(productBytes);
+        var encoded = base64Encode(compact);
+        if (encoded.length > maxProductB64) {
+          compact = await ImageStore.compressForStorage(compact, maxWidth: 640);
+          encoded = base64Encode(compact);
+        }
+        if (encoded.length <= maxProductB64) productB64 = encoded;
       } catch (_) {
         // الصورة إثراء لا شرط — تعذّر ضغطها لا يمنع التوليد.
       }
