@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
@@ -119,6 +121,33 @@ class BackgroundRemover {
     final bgCount = isBg.where((v) => v == 1).length;
     final ratio = bgCount / (w * h);
     if (ratio < 0.05 || ratio > 0.97) return null;
+
+    // بوابة التمزّق.
+    //
+    // نسبة المساحة وحدها لا تكفي: قصّ ممزّق تمامًا — ثقوب وبقايا وحواف
+    // مسنّنة — يزيل نسبة معقولة فيمرّ منها، ثم يفسد كل قالب يُوضع فيه.
+    //
+    // الفارق أن الشكل السليم **مضغوط**: محيطه قصير نسبةً إلى مساحته.
+    // فمقارنة المحيط الفعلي بمحيط قرص له المساحة نفسها تفضح التمزّق:
+    // صورة نظيفة تعطي ٢–٤ (لأن للأشكال الحقيقية تفاصيل)، والممزّقة تتجاوز
+    // العشرة لأن كل ثقب وكل سنّ يضيف محيطًا بلا مساحة.
+    var fgArea = 0;
+    var boundary = 0;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (isBg[y * w + x] == 1) continue;
+        fgArea++;
+        final touchesBg = (x + 1 < w && isBg[y * w + x + 1] == 1) ||
+            (x > 0 && isBg[y * w + x - 1] == 1) ||
+            (y + 1 < h && isBg[(y + 1) * w + x] == 1) ||
+            (y > 0 && isBg[(y - 1) * w + x] == 1);
+        if (touchesBg) boundary++;
+      }
+    }
+    if (fgArea == 0) return null;
+
+    final raggedness = boundary / (4 * math.sqrt(fgArea));
+    if (raggedness > 6.0) return null;
 
     // 3) تفريغ الخلفية وتنعيم الحواف بصف انتقالي نصف شفاف.
     for (var y = 0; y < h; y++) {

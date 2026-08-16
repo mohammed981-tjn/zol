@@ -1529,6 +1529,47 @@ void main() {
     expect(await AdminApi().isAdmin(), isFalse);
   });
 
+  // ── بوابة جودة القصّ ──────────────────────────────────────────────
+
+  test('القصّ الممزّق يُرفض والنظيف يُقبل', () async {
+    BackgroundRemover.debugRunSynchronously = true;
+    addTearDown(() => BackgroundRemover.debugRunSynchronously = false);
+
+    // خلفية بيضاء موحّدة وقرص داكن في الوسط: أوضح حالة نجاح.
+    img.Image build({required bool shred}) {
+      final im = img.Image(width: 240, height: 240, numChannels: 4);
+      img.fill(im, color: img.ColorRgba8(250, 250, 250, 255));
+      var seed = 7;
+      for (var y = 0; y < 240; y++) {
+        for (var x = 0; x < 240; x++) {
+          final dx = x - 120, dy = y - 120;
+          if (dx * dx + dy * dy >= 70 * 70) continue;
+          if (shred) {
+            // مولّد خطّي بسيط: تمزيق ثابت لا عشوائي، فالاختبار لا يتذبذب.
+            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+            if (seed % 100 < 40) continue; // ٤٠٪ ثقوبًا
+          }
+          im.setPixelRgba(x, y, 20, 20, 30, 255);
+        }
+      }
+      return im;
+    }
+
+    final clean = await BackgroundRemover.removeBackground(
+      Uint8List.fromList(img.encodePng(build(shred: false))),
+    );
+    expect(clean, isNotNull, reason: 'قرص مصمت على خلفية موحّدة يجب أن يمرّ');
+
+    final shredded = await BackgroundRemover.removeBackground(
+      Uint8List.fromList(img.encodePng(build(shred: true))),
+    );
+    expect(
+      shredded,
+      isNull,
+      reason: 'قصّ منخور بالثقوب يفسد كل قالب — يجب أن يُرفض لا أن يُعرض',
+    );
+  });
+
   // ── حصة الشريك ────────────────────────────────────────────────────
 
   test('حساب الحصة: المتبقي لا يسلب، وبلا حد لا شريط تقدّم له', () {
