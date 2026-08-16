@@ -1969,6 +1969,35 @@ void main() {
     expect(back.brandColor, 0xFF0B3D2E);
   });
 
+  // ── نظام الثيم ────────────────────────────────────────────────────
+
+  test('الثيم يغطي المكوّنات ويحفظ تباين الذهبي في الوضعين', () {
+    for (final b in Brightness.values) {
+      final t = buildAppTheme(b);
+      // مكوّنات كانت بلا ثيم فتظهر بأنماط ماتيريال الافتراضية وسط
+      // واجهة عربية مصمَّمة — كل واحد منها سطح يراه التاجر.
+      expect(t.inputDecorationTheme.filled, isTrue);
+      expect(t.cardTheme.shape, isNotNull);
+      expect(t.chipTheme.shape, isA<StadiumBorder>());
+      expect(t.snackBarTheme.behavior, SnackBarBehavior.floating);
+      expect(t.dialogTheme.shape, isNotNull);
+      expect(t.bottomSheetTheme.shape, isNotNull);
+      expect(t.textTheme.bodyMedium!.fontFamily, kFontFamily);
+      // ارتفاع سطر عربي مريح: ١٫٢ اللاتيني يجعل الحروف متلاصقة.
+      expect(t.textTheme.bodyMedium!.height, greaterThanOrEqualTo(1.5));
+    }
+
+    double luminance(Color c) => c.computeLuminance();
+    // الذهبي الفاتح للنص فوق الكحلي، والغامق فوق الأبيض — عكسهما
+    // يجعل النص غير مقروء، وقد كان الفاتح مستعملًا على الأبيض.
+    expect(luminance(AppColors.gold), greaterThan(0.6));
+    expect(luminance(AppColors.goldDeep), lessThan(0.45));
+    // تباين الغامق على الأبيض يجتاز حدّ WCAG AA للنص العادي (٤٫٥:١) —
+    // لا حدّ النص الكبير وحده: الذهبي يُستعمل في شارات صغيرة أيضًا.
+    final contrast = (1.05) / (luminance(AppColors.goldDeep) + 0.05);
+    expect(contrast, greaterThanOrEqualTo(4.5));
+  });
+
   // ── محرر التصميم ──────────────────────────────────────────────────
 
   testWidgets('سحب المنتج في المحرر يزيحه ويعود التعديل مع الإعلان', (

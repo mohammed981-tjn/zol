@@ -212,41 +212,67 @@ class _MagicScreenState extends State<MagicScreen> {
 
   Widget _buildError(GatewayException e) {
     final quotaHit = e.isQuota;
-    return Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconCircle(
-            icon: quotaHit
-                ? Icons.hourglass_disabled_outlined
-                : Icons.cloud_off_outlined,
-            background: quotaHit ? AppColors.gold : context.scheme.error,
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        // بطاقة محتواة لا نصّ عائم وسط الفراغ: الخطأ يبدو حالةً يعالجها
+        // التطبيق، لا انهيارًا تركه وحده في منتصف شاشة بيضاء.
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.xxl,
           ),
-          const SizedBox(height: 18),
-          Text(
-            quotaHit ? 'انتهت حصتك لهذا الشهر' : 'تعذّر التوليد',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: context.scheme.onSurface,
-            ),
+          decoration: BoxDecoration(
+            color: context.cardBg,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: context.hairline),
           ),
-          const SizedBox(height: 8),
-          Text(
-            e.message,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: context.scheme.onSurfaceVariant),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconCircle(
+                icon: quotaHit
+                    ? Icons.hourglass_disabled_outlined
+                    : Icons.cloud_off_outlined,
+                background: quotaHit
+                    ? context.goldOnSurface
+                    : context.scheme.error,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                quotaHit ? 'انتهت حصتك لهذا الشهر' : 'تعذّر التوليد',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                e.message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.textMuted,
+                ),
+              ),
+              if (!quotaHit) ...[
+                const SizedBox(height: AppSpacing.xl),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _generate,
+                    icon: const Icon(Icons.refresh, size: 20),
+                    label: const Text('إعادة المحاولة'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // مخرج ثانٍ: من فشل توليده مرتين يحتاج بابًا غير زرّ
+                // يعيده إلى نفس الجدار.
+                TextButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: const Text('العودة وتعديل الوصف'),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 22),
-          if (!quotaHit)
-            FilledButton.icon(
-              onPressed: _generate,
-              icon: const Icon(Icons.refresh),
-              label: const Text('إعادة المحاولة'),
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -273,7 +299,22 @@ class _MagicScreenState extends State<MagicScreen> {
               color: context.scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppSpacing.lg),
+          // شريط تقدّم حقيقي: انتظارٌ بلا مقياس يبدو تعليقًا، وحركةُ
+          // الشريط وحدها تقول «ما زال يعمل» في ثوانٍ الصمت الطويلة.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            child: LinearProgressIndicator(
+              value: AdGenerator.generationStages.isEmpty
+                  ? null
+                  : (_stage / AdGenerator.generationStages.length).clamp(
+                      0.04,
+                      1.0,
+                    ),
+              backgroundColor: context.hairline,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
           for (var i = 0; i < AdGenerator.generationStages.length; i++)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
