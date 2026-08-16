@@ -104,8 +104,14 @@ Deno.serve(async (req) => {
 
   const out = await genRes.json().catch(() => null);
   if (!genRes.ok || !out?.ok) {
+    // تفصيلٌ يفيد الشريك: «generation_failed» وحدها لا تخبره أهو عطل
+    // نموذج أم قاعدة، فيراسلنا ليكتشف ما كان يمكن أن يقرأه بنفسه.
     return json(
-      { ok: false, error: "generation_failed", detail: out?.error ?? null },
+      {
+        ok: false,
+        error: "generation_failed",
+        detail: out?.error ?? (out?.step ? `step:${out.step}` : null),
+      },
       502,
     );
   }

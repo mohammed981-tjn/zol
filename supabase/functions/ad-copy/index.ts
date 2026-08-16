@@ -8,6 +8,9 @@ const OR = "https://openrouter.ai/api/v1/chat/completions";
 /** `google` (الافتراضي) أو `openrouter`. تبديله لا يحتاج نشراً. */
 const PROVIDER = (Deno.env.get("AI_PROVIDER") ?? "google").toLowerCase();
 const MODEL = Deno.env.get("AI_TEXT_MODEL") ?? "gemini-3.5-flash";
+/** حصة جيميناي عشرون نداءً في الدقيقة لكل نموذج — ونموذج واحد بلا
+ *  إعادة محاولة يعني أن أول ازدحام يُسقط توليد الشريك كاملًا. */
+const FALLBACK_MODEL = Deno.env.get("AI_TEXT_MODEL_FALLBACK") ?? "gemini-3.1-flash-lite";
 
 /**
  * سلسلة نماذج OpenRouter تُجرَّب بالترتيب حتى ينجح واحد.
@@ -59,25 +62,36 @@ interface Completion {
 
 async function gemini(key: string, system: string, user: string): Promise<Completion> {
   const t0 = Date.now();
-  const r = await fetch(`${G}/${MODEL}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 1.0 },
-    }),
-  });
-  const j = await r.json();
-  const ms = Date.now() - t0;
-  if (!r.ok) throw new Error(`gemini_${r.status}:${j?.error?.message ?? "unknown"}`);
-  const text = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("") ?? "";
-  const u = j?.usageMetadata ?? {};
-  return {
-    text, ms, model: MODEL,
-    tin:  u.promptTokenCount ?? 0,
-    tout: (u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0),
-  };
+  // محاولتان على الأساسي ثم الخفيف: للخفيف حصة دقيقة مستقلة، فازدحام
+  // الأول لم يعد يعني سقوط التوليد بل تأخّره ثوانيَ.
+  const models = [MODEL, MODEL, FALLBACK_MODEL];
+  let lastErr = "";
+  for (let attempt = 0; attempt < models.length; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 1500 * attempt));
+    const m = models[attempt];
+    const r = await fetch(`${G}/${m}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 1.0 },
+      }),
+    });
+    const j = await r.json();
+    if (r.ok) {
+      const text = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("") ?? "";
+      const u = j?.usageMetadata ?? {};
+      return {
+        text, ms: Date.now() - t0, model: m,
+        tin:  u.promptTokenCount ?? 0,
+        tout: (u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0),
+      };
+    }
+    lastErr = `gemini_${r.status}:${j?.error?.message ?? "unknown"}`;
+    if (r.status !== 429 && r.status !== 503) break;   // خطأ دائم — لا تكرر
+  }
+  throw new Error(lastErr);
 }
 
 /**
@@ -154,6 +168,38 @@ function parseJson(text: string): Record<string, unknown> {
   return {};
 }
 
+/**
+ * استخراج المصفوفة مهما خان النموذج شكلَ الغلاف.
+ *
+ * شوهد حيًّا: النموذج تحت ازدحام الحصة يعيد `[{...}]` عارية بدل
+ * `{"variants":[...]}` — فترتدّ صيغ سليمة المضمون تمامًا برمز
+ * `generation_failed` في وجه الشريك. نقبل الشكلين، ملفوفين بنص أو
+ * صريحين.
+ */
+function extractArray(raw: string, key: string): Array<Record<string, unknown>> {
+  const as = raw.indexOf("["), ae = raw.lastIndexOf("]");
+  const os = raw.indexOf("{");
+  if (as >= 0 && ae > as && (os < 0 || as < os)) {
+    try {
+      const arr = JSON.parse(raw.slice(as, ae + 1));
+      if (Array.isArray(arr)) return arr as Array<Record<string, unknown>>;
+    } catch { /* جرّب الكائن */ }
+  }
+  const obj = parseJson(raw);
+  return Array.isArray(obj?.[key])
+    ? obj[key] as Array<Record<string, unknown>>
+    : [];
+}
+
+/** أسماء المنصات كما يرسلها الشركاء (إنجليزية) ← كما يفهمها البرومبت. */
+const PLATFORM_AR: Record<string, string> = {
+  instagram: "إنستغرام",
+  tiktok: "تيك توك",
+  x: "إكس (تويتر)",
+  twitter: "إكس (تويتر)",
+  snapchat: "سناب شات",
+};
+
 const ANGLES = ["منفعة", "فضول", "عرض"];
 
 Deno.serve(async (req: Request) => {
@@ -166,11 +212,15 @@ Deno.serve(async (req: Request) => {
     merchant_id: string; product: string; platform?: string;
     audience?: string; offer?: string; season?: string; dialect?: string;
     brand_name?: string; tone?: string;
+    /** موجز حر من الشريك: {الفئة، الجمهور، العرض، النبرة} — الوثيقة
+     *  تَعِد باستعماله، وكان يُستقبَل ثم يُهمَل بلا أثر في النص. */
+    brief?: Record<string, unknown>;
   };
   try { b = await req.json(); } catch { return json({ ok: false, error: "bad_json" }, 400); }
   if (!b?.merchant_id || !b?.product) return json({ ok: false, error: "merchant_id_and_product_required" }, 400);
 
-  const platform = b.platform ?? "سناب شات";
+  const rawPlatform = b.platform ?? "سناب شات";
+  const platform = PLATFORM_AR[rawPlatform.toLowerCase()] ?? rawPlatform;
   const t0 = Date.now();
 
   try {
@@ -187,22 +237,32 @@ Deno.serve(async (req: Request) => {
       اللهجة: b.dialect ?? "فصحى مبسّطة",
       النبرة: b.tone ?? null,
     };
-    const briefText = Object.entries(brief)
-      .filter(([, v]) => v !== null && v !== "")
-      .map(([k, v]) => `${k}: ${v}`).join("\n");
+    // موجز الشريك الحر يُضمّ إلى الموجز القياسي: مفاتيحه عربية أصلًا
+    // (الفئة، الجمهور، العرض) فتقرؤها البرومبتات كما تقرأ حقولنا.
+    const partnerBrief = (b.brief && typeof b.brief === "object")
+      ? Object.entries(b.brief)
+          .filter(([, v]) => v !== null && v !== "" && typeof v !== "object")
+          .map(([k, v]) => `${k}: ${v}`)
+      : [];
+    const briefText = [
+      ...Object.entries(brief)
+        .filter(([, v]) => v !== null && v !== "")
+        .map(([k, v]) => `${k}: ${v}`),
+      ...partnerBrief,
+    ].join("\n");
 
     // ١) الكاتب
     const w = await complete(key, writer.content, briefText);
-    let variants: Array<Record<string, unknown>> =
-      (parseJson(w.text).variants as Array<Record<string, unknown>>) ?? [];
+    let variants = extractArray(w.text, "variants");
     if (!variants.length) return json({ ok: false, step: "writer", model: w.model, raw: w.text.slice(0, 400) }, 502);
     variants = variants.slice(0, 3);
 
     // ٢) الناقد
     const c = await complete(key, critic.content,
       `المنصة: ${platform}\nالموجز:\n${briefText}\n\nالاتجاهات:\n${JSON.stringify(variants, null, 1)}`);
-    const scores: Array<Record<string, number | string>> =
-      (parseJson(c.text).scores as Array<Record<string, number | string>>) ?? [];
+    const scores = extractArray(c.text, "scores") as Array<
+      Record<string, number | string>
+    >;
 
     const tin  = w.tin + c.tin;
     const tout = w.tout + c.tout;
