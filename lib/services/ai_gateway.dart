@@ -9,6 +9,7 @@ import '../config/app_config.dart';
 import '../models/ad_brief.dart';
 import '../models/generation.dart';
 import '../models/seasonal_theme.dart';
+import 'image_store.dart';
 
 /// لون العلامة كما يُرسل للخادم في `primary` — لون زرّ الدعوة وميزان
 /// الانسجام عند الناقد البصري.
@@ -228,6 +229,22 @@ class AiGateway {
     final brandRgb = brief.brandColor ?? brief.paletteColor;
     final brandName = brief.brandName?.trim() ?? '';
 
+    // صورة المنتج الحقيقية تسافر أيضًا — فيظهر في الإعلان منتجُ التاجر
+    // لا تخيّل النموذج عنه. تُضغط بنفس ضاغط المكتبة (≤١٠٠٠ بكسل، PNG
+    // للقصاصة الشفافة)، وجسد أضخم من الحد يُسقطها: صورة غائبة أهون من
+    // طلب يموت بمهلة الشبكة على اتصال تاجرٍ ضعيف.
+    String? productB64;
+    final productBytes = brief.imageBytes;
+    if (productBytes != null && productBytes.isNotEmpty) {
+      try {
+        final compact = await ImageStore.compressForStorage(productBytes);
+        final encoded = base64Encode(compact);
+        if (encoded.length <= 2000000) productB64 = encoded;
+      } catch (_) {
+        // الصورة إثراء لا شرط — تعذّر ضغطها لا يمنع التوليد.
+      }
+    }
+
     late http.Response res;
     try {
       res = await _client
@@ -251,6 +268,7 @@ class AiGateway {
                 'primary': primaryFromBrand(brandRgb),
                 'accent': accentFromBrand(brandRgb),
               },
+              'product_b64': ?productB64,
             }),
           )
           .timeout(timeout);

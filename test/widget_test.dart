@@ -1707,6 +1707,52 @@ void main() {
     expect(sent!.containsKey('accent'), isFalse);
   });
 
+  test('صورة المنتج تسافر مضغوطة في product_b64 وغيابها لا يرسل المفتاح', () async {
+    ImageStore.debugRunSynchronously = true;
+    addTearDown(() => ImageStore.debugRunSynchronously = false);
+
+    Map<String, dynamic>? sent;
+    final gateway = AiGateway(
+      baseUrl: 'http://test.local',
+      useSupabase: true,
+      supabaseUrl: 'http://test.local',
+      merchantId: 'merchant-test',
+      client: MockClient((req) async {
+        sent = jsonDecode(req.body) as Map<String, dynamic>;
+        return http.Response.bytes(
+          utf8.encode(_adCopyBody()),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    await gateway.generatePreview(
+      AdBrief(
+        productName: 'قهوة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'سناب شات',
+        format: 'ستوري',
+        imageBytes: _fakeImage,
+      ),
+    );
+    // بايتات صالحة تصل الخادم صالحة: ترميز ثم فك بلا رمي.
+    final travelled = base64Decode(sent!['product_b64'] as String);
+    expect(travelled, isNotEmpty);
+
+    await gateway.generatePreview(
+      AdBrief(
+        productName: 'قهوة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'سناب شات',
+        format: 'ستوري',
+      ),
+    );
+    expect(sent!.containsKey('product_b64'), isFalse);
+  });
+
   test('هوية العلامة في الموجز تنجو من الحفظ والاسترجاع', () {
     final back = AdBrief.fromJson(
       jsonDecode(

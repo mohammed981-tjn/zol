@@ -57,6 +57,14 @@ async function gemini(key: string, system: string, user: string) {
 
 const ANGLES = ["منفعة", "فضول", "عرض"];
 
+// نموذج الاحتياط يلفّ JSON بنص أحيانًا فيسقط JSON.parse على ردٍّ سليم
+// المضمون — نقتطع أول قوس إلى آخره قبل التحليل (نفس درس المدير الفني).
+function sliceJson(raw: string): Record<string, unknown> {
+  const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
+  if (start < 0 || end <= start) throw new Error("no_json");
+  return JSON.parse(raw.slice(start, end + 1));
+}
+
 Deno.serve(async (req: Request) => {
   const key = req.headers.get("x-gemini-key") ?? Deno.env.get("GEMINI_API_KEY") ?? "";
   if (!key) return json({ ok: false, error: "no_api_key" }, 400);
@@ -66,6 +74,9 @@ Deno.serve(async (req: Request) => {
     audience?: string; offer?: string; season?: string; dialect?: string;
     brand_name?: string; tone?: string; primary?: string; accent?: string;
     images?: boolean;
+    /** صورة منتج التاجر الحقيقي (قصاصة القص الذكي غالبًا) — تُرفع مرة
+     *  واحدة وتسافر رابطًا إلى المخرج الفني فيضع المنتج في كل مشهد. */
+    product_b64?: string;
   };
   try { b = await req.json(); } catch { return json({ ok: false, error: "bad_json" }, 400); }
   if (!b?.merchant_id || !b?.product) return json({ ok: false, error: "merchant_id_and_product_required" }, 400);
@@ -90,7 +101,7 @@ Deno.serve(async (req: Request) => {
     // ١) الكاتب
     const w = await gemini(key, writer.content, briefText);
     let variants: Array<Record<string, unknown>> = [];
-    try { variants = JSON.parse(w.text).variants ?? []; } catch { /* below */ }
+    try { variants = (sliceJson(w.text).variants as typeof variants) ?? []; } catch { /* below */ }
     if (!variants.length) return json({ ok: false, step: "writer", raw: w.text.slice(0, 300) }, 502);
     variants = variants.slice(0, 3);
 
@@ -98,7 +109,7 @@ Deno.serve(async (req: Request) => {
     const c = await gemini(key, critic.content,
       `المنصة: ${platform}\nالموجز:\n${briefText}\n\nالاتجاهات:\n${JSON.stringify(variants.map(v => ({angle: v.angle, headline: v.headline, body: v.body, cta: v.cta})), null, 1)}`);
     let scores: Array<Record<string, number | string>> = [];
-    try { scores = JSON.parse(c.text).scores ?? []; } catch { /* tolerate */ }
+    try { scores = (sliceJson(c.text).scores as typeof scores) ?? []; } catch { /* tolerate */ }
 
     const tin = w.tin + c.tin, tout = w.tout + c.tout;
     const cost = +(tin / 1e6 * IN_PER_M + tout / 1e6 * OUT_PER_M).toFixed(6);
@@ -125,8 +136,37 @@ Deno.serve(async (req: Request) => {
     const makeImages = b.images !== false;
     let images: Array<{ url: string | null; verified: boolean | null }> =
       variants.map(() => ({ url: null, verified: null }));
+
+    // صورة المنتج تُرفع مرة واحدة لا ثلاثًا: الرابط أخف من إعادة إرسال
+    // القصاصة كاملة مع كل نداء للمخرج. تعذّر الرفع لا يوقف التوليد.
+    let productUrl: string | null = null;
+    if (makeImages && b.product_b64) {
+      try {
+        const buf = Uint8Array.from(atob(b.product_b64), (c) => c.charCodeAt(0));
+        if (buf.length > 500) {
+          const mime = buf[0] === 0x89 ? "image/png" : "image/jpeg";
+          const up = await fetch(`${SB_URL}/storage/v1/object/ads/product-${genId}.png`, {
+            method: "POST",
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`,
+                       "Content-Type": mime, "x-upsert": "true" },
+            body: buf,
+          });
+          if (up.ok) {
+            productUrl = `${SB_URL}/storage/v1/object/public/ads/product-${genId}.png`;
+          }
+        }
+      } catch { /* الإعلان يمضي بلا منتج */ }
+    }
+
     if (makeImages) {
+      // ميزانية زمنية صارمة: عامل الدالة يموت قرابة ١٥٠ ثانية، وكاتبٌ
+      // أبطأه ازدحام الحصة (٦٣ ثانية سُجّلت حيًّا) + ثلاث صور بطيئة
+      // قتلا طلبًا كاملًا في منتصفه. صورة تتأخر تُقطع ويمضي الإعلان
+      // نصًّا — إعلان بلا صورة خير من طلب مقتول بلا أي شيء.
+      const imgBudget = Math.max(30_000, 125_000 - (Date.now() - t0));
       images = await Promise.all(variants.map(async (v, i) => {
+        const ctrl = new AbortController();
+        const kill = setTimeout(() => ctrl.abort(), imgBudget);
         try {
           const scene = String(v.scene ?? "") ||
             `Professional vertical product photograph related to: ${b.product}, warm lighting, clean space at top and bottom, no text, no letters, no logos`;
@@ -137,13 +177,16 @@ Deno.serve(async (req: Request) => {
               name: `magic-${genId.slice(0, 8)}-${i}`,
               headline: v.headline, subline: v.body, cta: v.cta,
               primary, accent, bg_prompt: scene, verify: true,
-              quality: "fast",
+              quality: "fast", storyboard: false,
+              ...(productUrl ? { product_url: productUrl } : {}),
             }),
+            signal: ctrl.signal,
           });
           const j = await r.json();
           if (!j.ok) return { url: null, verified: null };
           return { url: j.url as string, verified: j.verify?.all_present ?? null };
         } catch { return { url: null, verified: null }; }
+        finally { clearTimeout(kill); }
       }));
     }
 

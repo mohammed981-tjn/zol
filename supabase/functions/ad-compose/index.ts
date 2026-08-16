@@ -81,6 +81,8 @@ type Body = {
   bg_url?: string; bg_prompt?: string;
   primary?: string; accent?: string;
   name?: string; width?: number; height?: number; verify?: boolean;
+  /** صورة منتج التاجر الحقيقي (قصاصة شفافة غالبًا) تُركَّب وسط الإعلان. */
+  product_url?: string; product_b64?: string;
 };
 
 Deno.serve(async (req: Request) => {
@@ -111,6 +113,29 @@ Deno.serve(async (req: Request) => {
       if (bgBytes.length < 2000) throw new Error("pollinations_tiny");
     } else throw new Error("bg_url_or_bg_prompt_required");
     const bgMs = Date.now() - t0;
+
+    // منتج التاجر الحقيقي — قصاصته تُركَّب فوق الخلفية في الثلث الأوسط،
+    // فيظهر منتجه هو لا تخيّل النموذج عنه. غيابه أو تعذّره لا يمنع
+    // الإعلان: المنتج إثراء والفشل هنا يكمل بلا تركيب.
+    let productTag = "";
+    if (b.product_url || b.product_b64) {
+      try {
+        let pBytes: Uint8Array | null = null;
+        if (b.product_b64) {
+          pBytes = Uint8Array.from(atob(b.product_b64), (c) => c.charCodeAt(0));
+        } else if (b.product_url) {
+          const pr = await fetch(b.product_url, { headers: { "User-Agent": "AdCraft/1.0" } });
+          if (pr.ok) pBytes = new Uint8Array(await pr.arrayBuffer());
+        }
+        if (pBytes && pBytes.length > 500) {
+          const pMime = pBytes[0] === 0x89 ? "image/png" : "image/jpeg";
+          productTag = `<image href="data:${pMime};base64,${b64(pBytes)}"
+    x="${Math.round(W * 0.10)}" y="${Math.round(H * 0.38)}"
+    width="${Math.round(W * 0.80)}" height="${Math.round(H * 0.32)}"
+    preserveAspectRatio="xMidYMid meet"/>`;
+        }
+      } catch { /* يكمل بلا تركيب */ }
+    }
 
     await ensureWasm();
     if (!fontBold) fontBold = await fetchFirst(FONT_URLS);
@@ -178,6 +203,7 @@ Deno.serve(async (req: Request) => {
   <image href="data:${bgMime};base64,${b64(bgBytes)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/>
   <rect x="0" y="0" width="${W}" height="${topShade}" fill="url(#top)"/>
   <rect x="0" y="${Math.round(H * 0.72)}" width="${W}" height="${Math.round(H * 0.28)}" fill="url(#bot)"/>
+  ${productTag}
   ${parts.join("\n")}
   ${ctaSvg}
 </svg>`;
@@ -233,6 +259,9 @@ Deno.serve(async (req: Request) => {
       bytes: png.length, headline_size: hSize, headline_lines: hLines.length,
       upload: up.ok ? "stored" : upTxt.slice(0, 200),
       url: `${SB_URL}/storage/v1/object/public/ads/${name}`,
+      ...(b.product_url || b.product_b64
+        ? { product: productTag ? "overlaid" : "failed" }
+        : {}),
       verify,
     });
   } catch (e) {

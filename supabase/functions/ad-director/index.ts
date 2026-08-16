@@ -27,6 +27,12 @@ type Body = {
   name?: string; verify?: boolean;
   /** fast: مرشّحان سريعان. best: الثاني بالنموذج الأقوى + جولة تحسين. */
   quality?: "fast" | "best";
+  /** صورة منتج التاجر الحقيقي: تُوضَع في المشهد توليديًا، وإن تعذّر
+   *  ركّبها الخطاط حتميًا فوق الخلفية — المنتج يظهر في الحالتين. */
+  product_url?: string;
+  /** لوحة إخراج الفيديو نداء نصي كامل؛ من لا يستهلكها (ad-magic) يطفئها
+   *  فيوفّر ثلاثة نداءات وثواني ثمينة من ميزانية عمر العامل. */
+  storyboard?: boolean;
 };
 
 function b64(buf: Uint8Array): string {
@@ -155,6 +161,36 @@ async function judge(key: string, primary: string, a: string, bImg: string) {
 const sum = (s: Record<string, number>) =>
   (s.clean_zones ?? 0) + (s.harmony ?? 0) + (s.appeal ?? 0) + (s.defects ?? 0);
 
+/** وضع المنتج الحقيقي داخل المشهد توليديًا — شكله وملصقاته تُحفظ حرفيًا. */
+async function placeProduct(
+  key: string, prompt: string, pB64: string, pMime: string, model: string,
+): Promise<string | null> {
+  try {
+    const r = await fetch(`${G}/${model}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [
+          { text: `Create a professional vertical advertising photograph: ${prompt}. ` +
+                  `Place this exact product as the hero object in the middle third of the frame, ` +
+                  `preserving its exact shape, colors, materials and label. ` +
+                  `Keep the top and bottom thirds clean and calm for text overlays. ` +
+                  `No text, no letters, no logos besides the product's own label.` },
+          { inlineData: { mimeType: pMime, data: pB64 } },
+        ] }],
+        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "9:16" } },
+      }),
+    });
+    const j = await r.json();
+    if (!r.ok) return null;
+    const inline = (j?.candidates?.[0]?.content?.parts ?? [])
+      .find((p: { inlineData?: { data: string } }) => p.inlineData)?.inlineData;
+    return (inline?.data as string) ?? null;
+  } catch (_) {
+    return null;
+  }
+}
+
 /** جرّاح التحسين: تعديل صورة←صورة يحفظ التكوين ويعالج ما رصده الناقد. */
 async function refine(key: string, img: string, fix: string): Promise<string | null> {
   try {
@@ -192,7 +228,9 @@ async function upload(name: string, png: Uint8Array): Promise<string> {
 }
 
 /** الخطاط: نفس ad-compose القائمة — لا نعيد اختراع رسم الحروف. */
-async function compose(key: string, b: Body, bgUrl: string | null) {
+async function compose(
+  key: string, b: Body, bgUrl: string | null, productUrl: string | null = null,
+) {
   const r = await fetch(`${SB_URL}/functions/v1/ad-compose`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-gemini-key": key },
@@ -200,6 +238,7 @@ async function compose(key: string, b: Body, bgUrl: string | null) {
       name: b.name, headline: b.headline, subline: b.subline, cta: b.cta,
       primary: b.primary, accent: b.accent, verify: b.verify,
       ...(bgUrl ? { bg_url: bgUrl } : { bg_prompt: b.bg_prompt }),
+      ...(productUrl ? { product_url: productUrl } : {}),
     }),
   });
   return await r.json();
@@ -239,15 +278,46 @@ Deno.serve(async (req: Request) => {
       trail.art_director = `skipped: ${String((e as Error).message)}`;
     }
 
+    // ١.٥) صورة المنتج الحقيقي إن وُجدت — تُجلب مرة واحدة للمصوّرَين معًا.
+    let pB64: string | null = null;
+    let pMime = "image/png";
+    if (b.product_url) {
+      try {
+        const pr = await fetch(b.product_url, { headers: { "User-Agent": "AdCraft/1.0" } });
+        if (pr.ok) {
+          const buf = new Uint8Array(await pr.arrayBuffer());
+          if (buf.length > 500) {
+            pB64 = b64(buf);
+            pMime = buf[0] === 0x89 ? "image/png" : "image/jpeg";
+          }
+        }
+      } catch { /* بلا منتج */ }
+      if (!pB64) trail.product = "fetch_failed";
+    }
+
     // ٢) المصوّران بالتوازي — وفي وضع best ينفّذ الثاني بالنموذج الأقوى.
+    // مع منتج حقيقي يُجرَّب وضعه توليديًا أولًا؛ إن تعذّر وُلدت خلفية
+    // فقط وتكفّل الخطاط بتركيب القصاصة حتميًا — المنتج يظهر في الحالتين.
+    const makeCandidate = async (
+      prompt: string, model: string, tag: string, delayMs: number,
+    ): Promise<{ img: string; placed: boolean }> => {
+      if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
+      if (pB64) {
+        const placedImg = await placeProduct(key, prompt, pB64, pMime, model);
+        if (placedImg) return { img: placedImg, placed: true };
+        trail[`place_${tag}`] = "failed";
+      }
+      return { img: await genImage(key, prompt, model, tag, trail, 0), placed: false };
+    };
     const tImg = Date.now();
     const settled = await Promise.allSettled([
-      genImage(key, promptA, IMG_FAST, "a", trail, 0),
-      genImage(key, promptB, quality === "best" ? IMG_BEST : IMG_FAST, "b", trail, 1200),
+      makeCandidate(promptA, IMG_FAST, "a", 0),
+      makeCandidate(promptB, quality === "best" ? IMG_BEST : IMG_FAST, "b", 1200),
     ]);
     trail.candidates_ms = Date.now() - tImg;
     const alive = settled
-      .filter((s): s is PromiseFulfilledResult<string> => s.status === "fulfilled")
+      .filter((s): s is PromiseFulfilledResult<{ img: string; placed: boolean }> =>
+        s.status === "fulfilled")
       .map((s) => s.value);
     if (!alive.length) {
       throw new Error(String((settled[0] as PromiseRejectedResult).reason));
@@ -258,7 +328,7 @@ Deno.serve(async (req: Request) => {
     let winner = alive[0], loser = alive[alive.length - 1], fix = "";
     if (alive.length === 2) {
       try {
-        const v = await judge(key, primary, alive[0], alive[1]);
+        const v = await judge(key, primary, alive[0].img, alive[1].img);
         trail.scores = { a: v.a, b: v.b, winner: v.winner };
         if (v.winner === "b" || sum(v.b) > sum(v.a)) { winner = alive[1]; loser = alive[0]; }
         fix = String(v.fix ?? "");
@@ -269,28 +339,32 @@ Deno.serve(async (req: Request) => {
     } else {
       trail.single_candidate = true;
     }
+    if (pB64) trail.winner_placed = winner.placed;
 
     // ٤) الجرّاح — فقط في وضع best وحين رأى الناقد ما يُصلَح.
     if (quality === "best" && fix) {
-      const better = await refine(key, winner, fix);
-      if (better) { winner = better; trail.refined = true; }
+      const better = await refine(key, winner.img, fix);
+      if (better) { winner = { img: better, placed: winner.placed }; trail.refined = true; }
     }
 
-    // ٥) الخطاط على الفائزة، ٦) وإن انكسرت الحروف أعاد الرسم على الوصيفة.
-    const bgUrl = await upload(`${name}-bg.png`, Uint8Array.from(atob(winner), (c) => c.charCodeAt(0)));
-    let composed = await compose(key, b, bgUrl);
+    // ٥) الخطاط على الفائزة — ومعها المنتج إن لم يوضَع توليديًا،
+    // ٦) وإن انكسرت الحروف أعاد الرسم على الوصيفة.
+    const bgUrl = await upload(`${name}-bg.png`, Uint8Array.from(atob(winner.img), (c) => c.charCodeAt(0)));
+    let composed = await compose(key, b, bgUrl,
+      pB64 && !winner.placed ? b.product_url! : null);
     const broken = composed?.verify?.looks_broken === true ||
                    composed?.verify?.all_present === false;
     if (!composed?.ok || broken) {
       trail.retry_on_runner_up = true;
-      const altUrl = await upload(`${name}-bg2.png`, Uint8Array.from(atob(loser), (c) => c.charCodeAt(0)));
-      const second = await compose(key, b, altUrl);
+      const altUrl = await upload(`${name}-bg2.png`, Uint8Array.from(atob(loser.img), (c) => c.charCodeAt(0)));
+      const second = await compose(key, b, altUrl,
+        pB64 && !loser.placed ? b.product_url! : null);
       if (second?.ok && second?.verify?.looks_broken !== true) composed = second;
     }
 
     // ٧) لوحة الإخراج للفيديو — تُعاد للمستهلك ولا تُخزَّن: العمود غير
     // موجود بعد، والتصيير MP4 مرحلة قادمة (Veo غير متاح على هذا المفتاح).
-    try {
+    if (b.storyboard !== false) try {
       const sb = await textJson(key,
         "أنت مخرج إعلانات قصيرة. أعد JSON فقط.",
         `إعلان قصة عمودي. العنوان: ${b.headline}. الزر: ${b.cta ?? ""}. المشهد: ${b.bg_prompt}.\n` +
@@ -307,7 +381,8 @@ Deno.serve(async (req: Request) => {
     // آخر الدرج: السلوك القديم حرفياً — العقل الجديد لا يكون أسوأ من سابقه.
     trail.fallback = String((e as Error).message);
     try {
-      const plain = await compose(key, b, null);
+      // قاع السلّم يحمل المنتج أيضًا: الخطاط يركّبه فوق خلفيته البسيطة.
+      const plain = await compose(key, b, null, b.product_url ?? null);
       return json({ ...plain, director: { degraded: true, ...trail } });
     } catch (e2) {
       return json({ ok: false, error: String((e2 as Error).message), director: trail }, 502);
