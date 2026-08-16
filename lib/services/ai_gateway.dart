@@ -74,6 +74,16 @@ String _hslToHex(double h, double s, double l) {
   return '#${val.toRadixString(16).padLeft(6, '0')}';
 }
 
+/// نتيجة مشهد مولَّد عند الطلب لصيغة اختارها التاجر.
+class SceneResult {
+  const SceneResult({required this.url, this.verified});
+
+  final String url;
+
+  /// هل قرأ المدقّق كل الحروف من الصورة النهائية؟ null = تعذّر التدقيق.
+  final bool? verified;
+}
+
 /// خطأ يحمل رسالة عربية جاهزة للعرض على المستخدم.
 class GatewayException implements Exception {
   GatewayException(this.message, {this.isQuota = false, this.retryable = false});
@@ -229,28 +239,7 @@ class AiGateway {
     final brandRgb = brief.brandColor ?? brief.paletteColor;
     final brandName = brief.brandName?.trim() ?? '';
 
-    // صورة المنتج الحقيقية تسافر أيضًا — فيظهر في الإعلان منتجُ التاجر
-    // لا تخيّل النموذج عنه. تُضغط بنفس ضاغط المكتبة (≤١٠٠٠ بكسل، PNG
-    // للقصاصة الشفافة). قصاصة فوتوغرافية مفصّلة قد تتجاوز حدَّ الإرسال
-    // فكانت تُسقَط بصمت ويخرج الإعلان بلا منتج — الآن تُصغَّر تمريرةً
-    // ثانية (٦٤٠ بكسل تكفي لثلث الإعلان الأوسط)، والإسقاط آخر الدواء:
-    // طلب يموت بمهلة الشبكة على اتصالٍ ضعيف أسوأ من صورة أصغر.
-    const maxProductB64 = 2000000;
-    String? productB64;
-    final productBytes = brief.imageBytes;
-    if (productBytes != null && productBytes.isNotEmpty) {
-      try {
-        var compact = await ImageStore.compressForStorage(productBytes);
-        var encoded = base64Encode(compact);
-        if (encoded.length > maxProductB64) {
-          compact = await ImageStore.compressForStorage(compact, maxWidth: 640);
-          encoded = base64Encode(compact);
-        }
-        if (encoded.length <= maxProductB64) productB64 = encoded;
-      } catch (_) {
-        // الصورة إثراء لا شرط — تعذّر ضغطها لا يمنع التوليد.
-      }
-    }
+    final productB64 = await _productB64(brief);
 
     late http.Response res;
     try {
@@ -276,6 +265,11 @@ class AiGateway {
                 'accent': accentFromBrand(brandRgb),
               },
               'product_b64': ?productB64,
+              // نصّ أولًا: البطاقات تُعرض فورًا بالقوالب المحلية وصورة
+              // المنتج المحسَّنة على الجهاز، والمشهد السحابي يُولَّد عند
+              // الطلب لصيغةٍ اختارها التاجر — نداءان بدل عشرة، و١٥ ثانية
+              // بدل ٧٥، والمفتاح يُصرف على ما سيُنشر فعلًا لا على الكل.
+              'images': false,
             }),
           )
           .timeout(timeout);
@@ -312,6 +306,113 @@ class AiGateway {
     return result;
   }
 
+  /// صورة المنتج مضغوطة للإرسال — تمريرة ثانية أصغر بدل الإسقاط الصامت:
+  /// قصاصة فوتوغرافية مفصّلة تتجاوز الحدّ كانت تسافر «لا شيء» ويخرج
+  /// الإعلان بلا منتج. ٦٤٠ بكسل تكفي لثلث الإعلان الأوسط، والإسقاط آخر
+  /// الدواء لأن طلبًا يموت بمهلة الشبكة أسوأ من صورة أصغر.
+  Future<String?> _productB64(AdBrief brief) async {
+    const maxLen = 2000000;
+    final bytes = brief.imageBytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    try {
+      var compact = await ImageStore.compressForStorage(bytes);
+      var encoded = base64Encode(compact);
+      if (encoded.length > maxLen) {
+        compact = await ImageStore.compressForStorage(compact, maxWidth: 640);
+        encoded = base64Encode(compact);
+      }
+      return encoded.length <= maxLen ? encoded : null;
+    } catch (_) {
+      // الصورة إثراء لا شرط — تعذّر ضغطها لا يمنع التوليد.
+      return null;
+    }
+  }
+
+  /// مشهد بالذكاء لصيغة واحدة اختارها التاجر — جوهر «المفتاح عند الضرورة»:
+  /// نداء مخرجٍ واحد لما سيُنشر فعلًا بدل ستة نداءات لصور لم يُطلب أكثرها.
+  Future<SceneResult> generateScene(
+    AdBrief brief, {
+    required String headline,
+    String? body,
+    String? cta,
+  }) async {
+    if (supabaseUrl.isEmpty) {
+      throw GatewayException(
+        'تعذّر الوصول إلى الخادم. حدّث التطبيق إلى آخر إصدار.',
+      );
+    }
+    final uri = Uri.parse(
+      '${supabaseUrl.replaceAll(RegExp(r'/+$'), '')}'
+      '/functions/v1/ad-director',
+    );
+    final brandRgb = brief.brandColor ?? brief.paletteColor;
+    final productB64 = await _productB64(brief);
+
+    late http.Response res;
+    try {
+      res = await _client
+          .post(
+            uri,
+            headers: {
+              'content-type': 'application/json',
+              if (supabaseAnonKey.isNotEmpty) ...{
+                'apikey': supabaseAnonKey,
+                'authorization': 'Bearer $supabaseAnonKey',
+              },
+            },
+            body: jsonEncode({
+              'name': 'scene-${DateTime.now().millisecondsSinceEpoch}',
+              'headline': headline,
+              if (body != null && body.trim().isNotEmpty) 'subline': body,
+              if (cta != null && cta.trim().isNotEmpty) 'cta': cta,
+              'bg_prompt':
+                  'Professional vertical product photograph related to: '
+                  '${brief.productName}, rich moody backdrop with depth and '
+                  'warm color, dramatic lighting, not a plain white studio, '
+                  'clean space at top and bottom, no text, no letters, no logos',
+              'verify': true,
+              'quality': 'fast',
+              'storyboard': false,
+              if (brandRgb != null) ...{
+                'primary': primaryFromBrand(brandRgb),
+                'accent': accentFromBrand(brandRgb),
+              },
+              'product_b64': ?productB64,
+            }),
+          )
+          .timeout(timeout);
+    } on TimeoutException {
+      throw GatewayException(
+        'استغرق توليد المشهد وقتاً أطول من المعتاد. حاول مرة أخرى.',
+        retryable: true,
+      );
+    } catch (_) {
+      throw GatewayException(
+        'تعذّر الوصول إلى الخدمة. تحقّق من اتصالك ثم أعد المحاولة.',
+        retryable: true,
+      );
+    }
+
+    Map<String, dynamic> json;
+    try {
+      json = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } catch (_) {
+      throw GatewayException('وصل رد غير مفهوم من الخدمة.');
+    }
+    final url = json['url'];
+    if (res.statusCode != 200 || json['ok'] != true || url is! String) {
+      throw GatewayException(
+        _arabicError(json),
+        retryable: res.statusCode >= 500,
+      );
+    }
+    return SceneResult(
+      url: url,
+      verified:
+          (json['verify'] as Map<String, dynamic>?)?['all_present'] as bool?,
+    );
+  }
+
   /// رسائل دالة ad-copy رموز تقنية؛ نترجم المعروف منها ونمرّر الباقي.
   String _arabicError(Map<String, dynamic> json) {
     final code = (json['error'] ?? json['step'] ?? '').toString();
@@ -320,6 +421,9 @@ class AiGateway {
     }
     if (code.startsWith('openrouter_all_failed')) {
       return 'كل النماذج المجانية مزدحمة الآن. أعد المحاولة بعد قليل.';
+    }
+    if (code == 'daily_quota') {
+      return 'وصلت حدّ توليدات اليوم لحسابك — يتجدد تلقائيًا خلال ساعات.';
     }
     if (code.contains('_429') || code.contains('quota')) {
       return 'تجاوزت حصة المزوّد. أعد المحاولة لاحقاً.';

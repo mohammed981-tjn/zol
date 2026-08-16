@@ -8,6 +8,7 @@ import '../../models/ad_template.dart';
 import '../../models/seasonal_theme.dart';
 import '../../services/background_remover.dart';
 import '../../services/palette_extractor.dart';
+import '../../services/photo_enhancer.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/choice_chip_group.dart';
@@ -89,14 +90,18 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
               _pickFromGallery)();
       if (!mounted) return;
       if (bytes != null) {
+        // استوديو منزلي على الجهاز: إضاءة وتباين وتشبع تلقائي قبل كل
+        // شيء — فيستفيد قاطع الخلفية والقوالب والخادم من الصورة الأنظف.
+        final enhanced = await PhotoEnhancer.enhance(bytes);
+        if (!mounted) return;
         setState(() {
-          _imageBytes = bytes;
+          _imageBytes = enhanced;
           _cutoutBytes = null;
           _paletteColor = null;
           _useCutout = false;
         });
-        _isolateBackground(bytes);
-        _extractPalette(bytes);
+        _isolateBackground(enhanced);
+        _extractPalette(enhanced);
       }
     } catch (_) {
       if (!mounted) return;
@@ -111,7 +116,12 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   /// عزل خلفية الصورة على الجهاز (الطبقة 1 من استراتيجية الذكاء).
   Future<void> _isolateBackground(Uint8List bytes) async {
     setState(() => _isolating = true);
-    final cutout = await BackgroundRemover.removeBackground(bytes);
+    var cutout = await BackgroundRemover.removeBackground(bytes);
+    if (cutout != null) {
+      // القص الآلي يترك هالة بيضاء وحوافّ مسنّنة تفضح اللصق — تنعيمها
+      // على الجهاز يرفع كل قالب يعرض القصاصة.
+      cutout = await PhotoEnhancer.polishCutout(cutout);
+    }
     if (!mounted || !identical(bytes, _imageBytes)) return;
     setState(() {
       _isolating = false;

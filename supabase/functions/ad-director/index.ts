@@ -51,6 +51,9 @@ type Body = {
   /** صورة منتج التاجر الحقيقي: تُوضَع في المشهد توليديًا، وإن تعذّر
    *  ركّبها الخطاط حتميًا فوق الخلفية — المنتج يظهر في الحالتين. */
   product_url?: string;
+  /** بديل الرابط: القصاصة نفسها من التطبيق مباشرة — مشهدٌ عند الطلب
+   *  لصيغة واحدة لا يستحق رحلة رفعٍ وسيطة. */
+  product_b64?: string;
   /** لوحة إخراج الفيديو نداء نصي كامل؛ من لا يستهلكها (ad-magic) يطفئها
    *  فيوفّر ثلاثة نداءات وثواني ثمينة من ميزانية عمر العامل. */
   storyboard?: boolean;
@@ -237,9 +240,10 @@ async function upload(name: string, png: Uint8Array): Promise<string> {
   return `${SB_URL}/storage/v1/object/public/ads/${name}`;
 }
 
-/** الخطاط: نفس ad-compose القائمة — لا نعيد اختراع رسم الحروف. */
+/** الخطاط: نفس ad-compose القائمة — لا نعيد اختراع رسم الحروف.
+ *  [withProduct] يمرّر المنتج بأي صيغة وصل بها (رابط أو بايتات مباشرة). */
 async function compose(
-  key: string, b: Body, bgUrl: string | null, productUrl: string | null = null,
+  key: string, b: Body, bgUrl: string | null, withProduct = false,
 ) {
   const r = await fetch(`${SB_URL}/functions/v1/ad-compose`, {
     method: "POST",
@@ -248,7 +252,13 @@ async function compose(
       name: b.name, headline: b.headline, subline: b.subline, cta: b.cta,
       primary: b.primary, accent: b.accent, verify: b.verify,
       ...(bgUrl ? { bg_url: bgUrl } : { bg_prompt: b.bg_prompt }),
-      ...(productUrl ? { product_url: productUrl } : {}),
+      ...(withProduct
+        ? (b.product_url
+            ? { product_url: b.product_url }
+            : b.product_b64
+              ? { product_b64: b.product_b64 }
+              : {})
+        : {}),
     }),
   });
   return await r.json();
@@ -295,7 +305,16 @@ Deno.serve(async (req: Request) => {
     // ١.٥) صورة المنتج الحقيقي إن وُجدت — تُجلب مرة واحدة للمصوّرَين معًا.
     let pB64: string | null = null;
     let pMime = "image/png";
-    if (b.product_url) {
+    if (b.product_b64) {
+      try {
+        const buf = Uint8Array.from(atob(b.product_b64), (c) => c.charCodeAt(0));
+        if (buf.length > 500) {
+          pB64 = b.product_b64;
+          pMime = buf[0] === 0x89 ? "image/png" : "image/jpeg";
+        }
+      } catch { /* بلا منتج */ }
+      if (!pB64) trail.product = "bad_b64";
+    } else if (b.product_url) {
       try {
         const pr = await fetch(b.product_url, { headers: { "User-Agent": "AdCraft/1.0" } });
         if (pr.ok) {
@@ -364,15 +383,13 @@ Deno.serve(async (req: Request) => {
     // ٥) الخطاط على الفائزة — ومعها المنتج إن لم يوضَع توليديًا،
     // ٦) وإن انكسرت الحروف أعاد الرسم على الوصيفة.
     const bgUrl = await upload(`${name}-bg.png`, Uint8Array.from(atob(winner.img), (c) => c.charCodeAt(0)));
-    let composed = await compose(key, b, bgUrl,
-      pB64 && !winner.placed ? b.product_url! : null);
+    let composed = await compose(key, b, bgUrl, !!pB64 && !winner.placed);
     const broken = composed?.verify?.looks_broken === true ||
                    composed?.verify?.all_present === false;
     if (!composed?.ok || broken) {
       trail.retry_on_runner_up = true;
       const altUrl = await upload(`${name}-bg2.png`, Uint8Array.from(atob(loser.img), (c) => c.charCodeAt(0)));
-      const second = await compose(key, b, altUrl,
-        pB64 && !loser.placed ? b.product_url! : null);
+      const second = await compose(key, b, altUrl, !!pB64 && !loser.placed);
       if (second?.ok && second?.verify?.looks_broken !== true) composed = second;
     }
 
@@ -396,7 +413,7 @@ Deno.serve(async (req: Request) => {
     trail.fallback = String((e as Error).message);
     try {
       // قاع السلّم يحمل المنتج أيضًا: الخطاط يركّبه فوق خلفيته البسيطة.
-      const plain = await compose(key, b, null, b.product_url ?? null);
+      const plain = await compose(key, b, null, true);
       return json({ ...plain, director: { degraded: true, ...trail } });
     } catch (e2) {
       return json({ ok: false, error: String((e2 as Error).message), director: trail }, 502);

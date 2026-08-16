@@ -31,6 +31,7 @@ import 'package:zol/services/background_remover.dart';
 import 'package:zol/services/subject_cutout.dart';
 import 'package:zol/services/brand_sync.dart';
 import 'package:zol/services/image_store.dart';
+import 'package:zol/services/photo_enhancer.dart';
 import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
 import 'package:zol/models/trashed_ad.dart';
@@ -140,6 +141,9 @@ void main() {
     BackgroundRemover.debugRunSynchronously = true;
     PaletteExtractor.debugRunSynchronously = true;
     ImageStore.debugRunSynchronously = true;
+    // compute() في اختبارات الودجت لا يكتمل تحت الزمن الوهمي — كل خدمات
+    // الصور تعمل متزامنة هنا.
+    PhotoEnhancer.debugRunSynchronously = true;
   });
 
   testWidgets('Onboarding shows on first run and only once', (tester) async {
@@ -1767,6 +1771,134 @@ void main() {
     // لا يُكبَّر الحجم أبدًا؛ إن كان الناتج أكبر بايتاتٍ بقي الأصل 32.
     expect(decoded!.width, anyOf(8, 32));
     expect(shrunk.length, lessThanOrEqualTo(bytes.length));
+  });
+
+  // ── الاستوديو المنزلي: تحسين بصري على الجهاز بلا أي نداء سحابي ────
+
+  test('المحسِّن يضيء صورة باهتة ويحفظ الشفافية ولا يرمي على التالف', () async {
+    PhotoEnhancer.debugRunSynchronously = true;
+    addTearDown(() => PhotoEnhancer.debugRunSynchronously = false);
+
+    // صورة رمادية باهتة (المدى 90..150) — كصور المستودعات الحقيقية.
+    final dull = img.Image(width: 24, height: 24);
+    for (var y = 0; y < 24; y++) {
+      for (var x = 0; x < 24; x++) {
+        final v = 90 + ((x + y) * 60 ~/ 46);
+        dull.setPixelRgb(x, y, v, v, v);
+      }
+    }
+    final out = await PhotoEnhancer.enhance(
+      Uint8List.fromList(img.encodePng(dull)),
+    );
+    final decoded = img.decodeImage(out)!;
+    var lo = 255, hi = 0;
+    for (final p in decoded) {
+      final l = p.r.toInt();
+      if (l < lo) lo = l;
+      if (l > hi) hi = l;
+    }
+    // شدّ التباين يوسّع المدى الضيق قرابة المدى الكامل.
+    expect(hi - lo, greaterThan(180), reason: 'المدى 60 يجب أن يتمدد');
+
+    // قصاصة شفافة الزوايا تبقى شفافة — التحسين لا يفسد العزل.
+    final cut = img.Image(width: 8, height: 8, numChannels: 4);
+    for (var y = 0; y < 8; y++) {
+      for (var x = 0; x < 8; x++) {
+        final inside = x > 1 && x < 6 && y > 1 && y < 6;
+        cut.setPixelRgba(x, y, 120, 80, 60, inside ? 255 : 0);
+      }
+    }
+    final cutOut = img.decodeImage(
+      await PhotoEnhancer.enhance(Uint8List.fromList(img.encodePng(cut))),
+    )!;
+    expect(cutOut.getPixel(0, 0).a, 0, reason: 'الزاوية تبقى شفافة');
+
+    // بايتات تالفة تعود كما هي لا استثناءً يقتل الاختيار.
+    final junk = Uint8List.fromList([1, 2, 3]);
+    expect(await PhotoEnhancer.enhance(junk), junk);
+  });
+
+  test('تنعيم القصاصة يذيب الحافة الحادة إلى تدرّج', () async {
+    PhotoEnhancer.debugRunSynchronously = true;
+    addTearDown(() => PhotoEnhancer.debugRunSynchronously = false);
+
+    // مربع معتم وسط شفاف — حافته ألفا 0/255 حادة.
+    final hard = img.Image(width: 16, height: 16, numChannels: 4);
+    for (var y = 0; y < 16; y++) {
+      for (var x = 0; x < 16; x++) {
+        final inside = x >= 4 && x < 12 && y >= 4 && y < 12;
+        hard.setPixelRgba(x, y, 200, 60, 40, inside ? 255 : 0);
+      }
+    }
+    final polished = img.decodeImage(
+      await PhotoEnhancer.polishCutout(Uint8List.fromList(img.encodePng(hard))),
+    )!;
+    var mids = 0;
+    for (final p in polished) {
+      final a = p.a.toInt();
+      if (a > 20 && a < 235) mids++;
+    }
+    expect(mids, greaterThan(0), reason: 'حافة ناعمة = قيم ألفا وسيطة');
+  });
+
+  test('التوليد نصّ أولًا والمشهد السحابي نداء منفصل عند الطلب', () async {
+    ImageStore.debugRunSynchronously = true;
+    addTearDown(() => ImageStore.debugRunSynchronously = false);
+
+    final calls = <Uri>[];
+    Map<String, dynamic>? lastBody;
+    final gateway = AiGateway(
+      baseUrl: 'http://test.local',
+      useSupabase: true,
+      supabaseUrl: 'http://test.local',
+      merchantId: 'merchant-test',
+      client: MockClient((req) async {
+        calls.add(req.url);
+        lastBody = jsonDecode(req.body) as Map<String, dynamic>;
+        final isScene = req.url.path.contains('ad-director');
+        return http.Response.bytes(
+          utf8.encode(
+            isScene
+                ? jsonEncode({
+                    'ok': true,
+                    'url': 'https://x.test/ads/scene-1.png',
+                    'verify': {'all_present': true},
+                  })
+                : _adCopyBody(),
+          ),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    final brief = AdBrief(
+      productName: 'قهوة',
+      description: '',
+      tone: 'حماسي',
+      platform: 'سناب شات',
+      format: 'ستوري',
+      imageBytes: _fakeImage,
+      brandColor: 0xFF0B3D2E,
+    );
+
+    await gateway.generatePreview(brief);
+    // المعاينة لا تطلب صورًا — نداءان نصيان بدل عشرة.
+    expect(lastBody!['images'], isFalse);
+
+    final scene = await gateway.generateScene(
+      brief,
+      headline: 'عنوان',
+      body: 'نص',
+      cta: 'اطلب',
+    );
+    expect(calls.last.path, contains('ad-director'));
+    expect(scene.url, contains('scene-1.png'));
+    expect(scene.verified, isTrue);
+    // المشهد يحمل القصاصة والهوية — لا يسافر أعمى.
+    expect(lastBody!['product_b64'], isNotNull);
+    expect(lastBody!['primary'], '#0b3d2e');
+    expect(lastBody!['storyboard'], isFalse);
   });
 
   test('هوية العلامة في الموجز تنجو من الحفظ والاسترجاع', () {

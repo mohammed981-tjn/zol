@@ -62,7 +62,11 @@ class GeneratedAd {
 
   String get shareText => '$headline\n$body\n${hashtags.join(' ')}';
 
-  GeneratedAd copyWith({AdBrief? brief}) => GeneratedAd(
+  GeneratedAd copyWith({
+    AdBrief? brief,
+    String? imageUrl,
+    bool? imageVerified,
+  }) => GeneratedAd(
     brief: brief ?? this.brief,
     kind: kind,
     headline: headline,
@@ -72,8 +76,8 @@ class GeneratedAd {
     angle: angle,
     createdAt: createdAt,
     cta: cta,
-    imageUrl: imageUrl,
-    imageVerified: imageVerified,
+    imageUrl: imageUrl ?? this.imageUrl,
+    imageVerified: imageVerified ?? this.imageVerified,
   );
 
   Map<String, dynamic> toJson() => {

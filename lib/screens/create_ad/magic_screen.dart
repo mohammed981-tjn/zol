@@ -51,6 +51,9 @@ class _MagicScreenState extends State<MagicScreen> {
   int _stage = 0;
   int _selectedCard = 0;
 
+  /// فهارس البطاقات التي يجري توليد مشهدها السحابي الآن.
+  final Set<int> _sceneLoading = {};
+
   @override
   void initState() {
     super.initState();
@@ -144,6 +147,42 @@ class _MagicScreenState extends State<MagicScreen> {
   }
 
   void _regenerate() => _generate();
+
+  /// توليد مشهد سحابي للصيغة المختارة وحدها — نداء واحد عند الضرورة،
+  /// وفشله لا يمس البطاقة: القالب المحلي يبقى معروضًا كما هو.
+  Future<void> _generateScene(int index) async {
+    if (_sceneLoading.contains(index)) return;
+    final ad = _ads![index];
+    setState(() => _sceneLoading.add(index));
+    try {
+      final scene = await _gateway.generateScene(
+        widget.brief,
+        headline: ad.headline,
+        body: ad.body,
+        cta: ad.cta,
+      );
+      if (!mounted) return;
+      setState(() {
+        _ads![index] = ad.copyWith(
+          imageUrl: scene.url,
+          imageVerified: scene.verified,
+        );
+        _sceneLoading.remove(index);
+      });
+    } on GatewayException catch (e) {
+      if (!mounted) return;
+      setState(() => _sceneLoading.remove(index));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _sceneLoading.remove(index));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذّر توليد المشهد. حاول مجددًا.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -299,6 +338,12 @@ class _MagicScreenState extends State<MagicScreen> {
                 ad: ads[i],
                 onSave: () => _saveAd(ads[i]),
                 onCopy: () => _copyAd(ads[i]),
+                // المشهد السحابي عند الطلب — للصيغة التي أعجبت التاجر
+                // وحدها، لا للثلاث جزافًا.
+                onScene: ads[i].imageUrl == null && widget.brief.hasProductImage
+                    ? () => _generateScene(i)
+                    : null,
+                sceneLoading: _sceneLoading.contains(i),
               ),
             ),
           ),
@@ -395,11 +440,17 @@ class _AdPreviewCard extends StatelessWidget {
     required this.ad,
     required this.onSave,
     required this.onCopy,
+    this.onScene,
+    this.sceneLoading = false,
   });
 
   final GeneratedAd ad;
   final VoidCallback onSave;
   final VoidCallback onCopy;
+
+  /// طلب مشهد سحابي لهذه الصيغة (null = غير متاح: صورة موجودة أو لا منتج).
+  final VoidCallback? onScene;
+  final bool sceneLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -484,6 +535,28 @@ class _AdPreviewCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onScene != null || sceneLoading) ...[
+                const SizedBox(height: 10),
+                // المشهد السحابي اختيار لا فرض: القالب المحلي جاهز فورًا
+                // وبلا حصة، ومن أراد مشهدًا واقعيًا ضغط — فيُصرف المفتاح
+                // على ما سيُنشر فعلًا.
+                Center(
+                  child: sceneLoading
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          ),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: onScene,
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          label: const Text('مشهد واقعي بالذكاء'),
+                        ),
+                ),
+              ],
             ],
             const SizedBox(height: 16),
             Text(

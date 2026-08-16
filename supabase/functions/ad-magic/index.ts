@@ -100,6 +100,20 @@ Deno.serve(async (req: Request) => {
   const t0 = Date.now();
 
   try {
+    // حصة يومية لكل تاجر — عميل شره لا يلتهم حصة المنصة كلها. نافذة
+    // منزلقة ٢٤ ساعة تُحسب من السجل نفسه: لا جدول جديد ولا عدّاد يتوه،
+    // والحد من البيئة فيرتفع مع الخطط المدفوعة بلا نشر.
+    const DAILY_LIMIT = Number(Deno.env.get("DAILY_GEN_LIMIT") ?? "30");
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const qr = await rest(
+      `generation_logs?merchant_id=eq.${b.merchant_id}&created_at=gte.${since}&select=id`,
+      { headers: { Prefer: "count=exact", Range: "0-0" } },
+    );
+    const used = Number((qr.headers.get("content-range") ?? "/0").split("/")[1] || "0");
+    if (used >= DAILY_LIMIT) {
+      return json({ ok: false, error: "daily_quota", limit: DAILY_LIMIT, used }, 429);
+    }
+
     const writer = await getPrompt("ad_copy_system");
     const critic = await getPrompt("ad_critic_system");
 
