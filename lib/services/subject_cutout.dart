@@ -51,11 +51,17 @@ class SubjectCutout {
 
       segmenter = SubjectSegmenter(
         options: SubjectSegmenterOptions(
-          // موضوع واحد: المنتج. تعدّد المواضيع يعيد قصاصات متفرّقة
-          // لا صورةً واحدة صالحة للتصميم.
-          enableMultipleSubjects: false,
+          // نطلب صورة المقدّمة كاملةً وحدها.
           enableForegroundBitmap: true,
           enableForegroundConfidenceMask: false,
+          // اسم مضلّل في الحزمة: ليس مفتاحًا منطقيًا بل إعداداتُ ما
+          // يُخرَج **لكل موضوع** على حدة. نعطّل الاثنين لأننا نريد صورةً
+          // واحدة مركَّبة لا قصاصات متفرّقة، وكل ناتج إضافي ذاكرةٌ
+          // ووقتٌ بلا مقابل.
+          enableMultipleSubjects: SubjectResultOptions(
+            enableConfidenceMask: false,
+            enableSubjectBitmap: false,
+          ),
         ),
       );
 
