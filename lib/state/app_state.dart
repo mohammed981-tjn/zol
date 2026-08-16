@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../models/generated_ad.dart';
 import '../models/business_category.dart';
 import '../models/brand_font.dart';
+import '../services/brand_sync.dart';
 import '../models/merchant_account.dart';
 import '../models/print_order.dart';
 import '../models/trashed_ad.dart';
@@ -178,6 +179,9 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       // لا اتصال إنترنت الآن — نتابع بلا حساب مُحمَّل ونحاول لاحقًا.
     }
+    // بعد استعادة الجلسة لا قبلها: المزامنة تحتاج مستخدمًا معروفًا.
+    // ومنفصلة عن try أعلاه لأنها تفشل بصمت أصلًا، فلا تُخفي فشل الحساب.
+    await syncBrandIdentityFromCloud();
   }
 
   Future<MerchantAccount> _fetchMerchantProfile(supa.User user) async {
@@ -311,6 +315,7 @@ class AppState extends ChangeNotifier {
       _prefs?.setInt(_brandColorKey, value);
     }
     notifyListeners();
+    _pushBrandIdentity();
   }
 
   void setBrandFont(BrandFont? font) {
@@ -321,6 +326,7 @@ class AppState extends ChangeNotifier {
       _prefs?.setString(_brandFontKey, font.name);
     }
     notifyListeners();
+    _pushBrandIdentity();
   }
 
   void setBrandLogo(Uint8List? bytes) {
@@ -331,6 +337,72 @@ class AppState extends ChangeNotifier {
       _prefs?.setString(_brandLogoKey, base64Encode(bytes));
     }
     notifyListeners();
+    _pushBrandIdentity();
+  }
+
+  // ── مزامنة هوية العلامة ──────────────────────────────────────────
+
+  final BrandSync _brandSync = BrandSync();
+
+  /// في الاختبارات: حقن مزامنة صورية بدل الشبكة.
+  @visibleForTesting
+  static BrandSync? debugBrandSyncOverride;
+
+  BrandSync get _sync => debugBrandSyncOverride ?? _brandSync;
+
+  /// يدفع الهوية إلى السحابة بلا انتظار.
+  ///
+  /// لا يُنتظر عمدًا: الحفظ المحلي تمّ قبله، فإبطاء الواجهة لأجل رحلة
+  /// شبكة يعاقب المستخدم على ميزة لا يراها. وفشلها لا يُبلَّغ عنه —
+  /// المزامنة طبقة لا شرط، والمحاولة التالية تلحق ما فات.
+  void _pushBrandIdentity() {
+    if (!_sync.isReady) return;
+    unawaited(
+      _sync.push(
+        colorValue: brandColorValue,
+        fontName: brandFont?.name,
+        logoBytes: brandLogoBytes,
+      ),
+    );
+  }
+
+  /// يسحب الهوية بعد تسجيل الدخول ويطبّقها إن كان الجهاز خاليًا منها.
+  ///
+  /// **لا يدهس هوية موجودة على الجهاز**: من ضبط لونه للتوّ ثم سجّل دخوله
+  /// لا يتوقّع أن يُمحى اختياره. فالسحب يملأ الفراغ فقط، والدفع يتكفّل
+  /// بالعكس — أي أن جهازًا مضبوطًا يصدّر هويته لا يستوردها.
+  Future<void> syncBrandIdentityFromCloud() async {
+    if (!_sync.isReady) return;
+    final remote = await _sync.fetch();
+    if (remote == null || remote.isEmpty) {
+      // لا شيء في السحابة: ارفع ما على الجهاز ليجده الجهاز التالي.
+      _pushBrandIdentity();
+      return;
+    }
+
+    var changed = false;
+    if (brandColorValue == null && remote.colorValue != null) {
+      brandColorValue = remote.colorValue;
+      _prefs?.setInt(_brandColorKey, remote.colorValue!);
+      changed = true;
+    }
+    if (brandFont == null && remote.fontName != null) {
+      final font = BrandFont.values
+          .cast<BrandFont?>()
+          .firstWhere((f) => f?.name == remote.fontName, orElse: () => null);
+      if (font != null) {
+        brandFont = font;
+        _prefs?.setString(_brandFontKey, font.name);
+        changed = true;
+      }
+    }
+    if (brandLogoBytes == null && remote.logoBytes != null) {
+      brandLogoBytes = remote.logoBytes;
+      _prefs?.setString(_brandLogoKey, base64Encode(remote.logoBytes!));
+      changed = true;
+    }
+
+    if (changed) notifyListeners();
   }
 
   /// تفعيل الخطة الاحترافية بعد تأكيد الدفع من البوابة.

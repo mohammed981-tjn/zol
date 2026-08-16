@@ -28,6 +28,7 @@ import 'package:zol/models/template_category.dart';
 import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/services/background_remover.dart';
 import 'package:zol/services/subject_cutout.dart';
+import 'package:zol/services/brand_sync.dart';
 import 'package:zol/services/image_store.dart';
 import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
@@ -1592,6 +1593,50 @@ void main() {
     );
   });
 
+  // ── مزامنة هوية العلامة ───────────────────────────────────────────
+
+  test('السحب يملأ الفراغ ولا يدهس هوية مضبوطة على الجهاز', () async {
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+
+    // سحابة تحمل لونًا وخطًا.
+    AppState.debugBrandSyncOverride = _FakeBrandSync(
+      remote: const BrandIdentity(colorValue: 0xFF112233, fontName: 'cairo'),
+    );
+    addTearDown(() => AppState.debugBrandSyncOverride = null);
+
+    // جهاز خالٍ ⇒ يستورد.
+    await state.syncBrandIdentityFromCloud();
+    expect(state.brandColorValue, 0xFF112233);
+    expect(state.brandFont?.name, 'cairo');
+
+    // جهاز مضبوط ⇒ لا يُدهس. من ضبط لونه للتوّ ثم سجّل دخوله لا يتوقّع
+    // أن يُمحى اختياره.
+    state.setBrandColor(0xFFAABBCC);
+    await state.syncBrandIdentityFromCloud();
+    expect(state.brandColorValue, 0xFFAABBCC, reason: 'المحلي يبقى');
+  });
+
+  test('سحابة فارغة ⇒ يُرفع ما على الجهاز ليجده الجهاز التالي', () async {
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+    final fake = _FakeBrandSync(remote: null);
+    AppState.debugBrandSyncOverride = fake;
+    addTearDown(() => AppState.debugBrandSyncOverride = null);
+
+    state.setBrandColor(0xFF445566);
+    fake.pushed = 0; // نتجاهل دفع الضابط نفسه
+    await state.syncBrandIdentityFromCloud();
+    expect(fake.pushed, 1, reason: 'الفراغ السحابي يُملأ من الجهاز');
+  });
+
+  test('شعار يتجاوز الحدّ يُرفض قبل الإرسال', () async {
+    final sync = BrandSync();
+    // لا جلسة ⇒ isReady خطأ، والدفع يعيد false بلا رمي.
+    expect(sync.isReady, isFalse);
+    expect(await sync.push(colorValue: 1), isFalse);
+  });
+
   // ── حصة الشريك ────────────────────────────────────────────────────
 
   test('حساب الحصة: المتبقي لا يسلب، وبلا حد لا شريط تقدّم له', () {
@@ -1629,3 +1674,27 @@ void main() {
 
 /// اسم القالب للرسائل التشخيصية.
 String t2(AdTemplate t) => '${t.name} (${t.label})';
+
+/// مزامنة صورية: تعدّ الدفعات وتعيد لقطة ثابتة، بلا شبكة ولا جلسة.
+class _FakeBrandSync implements BrandSync {
+  _FakeBrandSync({this.remote});
+
+  final BrandIdentity? remote;
+  int pushed = 0;
+
+  @override
+  bool get isReady => true;
+
+  @override
+  Future<BrandIdentity?> fetch() async => remote;
+
+  @override
+  Future<bool> push({
+    int? colorValue,
+    String? fontName,
+    Uint8List? logoBytes,
+  }) async {
+    pushed++;
+    return true;
+  }
+}
