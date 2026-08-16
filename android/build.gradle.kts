@@ -53,6 +53,33 @@ subprojects {
     }
 }
 
+// google_mlkit_commons يفعل بجانب Java ما فعله pay_android بجانب Kotlin:
+// يضبط compileOptions على 11 في سكربته الخاص، وهو سطر يُنفَّذ **بعد**
+// plugins.withId أعلاه فيكسبه. النتيجة Java(11) مقابل Kotlin(17) وسقوط
+// البناء.
+//
+// ولا نُعيد كتابة مهام JavaCompile — التوثيق أعلاه يسجّل أن ذلك كسر
+// classpath لـgeolocator. الحل في **الترتيب** لا في القوة:
+//
+//   ١) جسم سكربت الوحدة يعمل ويضبط 11
+//   ٢) afterEvaluate الخاص بنا يضبط 17   ← مسجَّل أولًا فيعمل أولًا
+//   ٣) afterEvaluate الخاص بـAGP يبني المهام فيقرأ 17
+//
+// وأولويتنا مضمونة لأن هذه الكتلة تُنفَّذ وقت تقييم الجذر — أي قبل أن
+// تُطبَّق AGP في الوحدة الفرعية أصلًا، فتسجيلنا يسبق تسجيلها. وبهذا
+// نضبط الإعداد لا الناتج، فتبني AGP مهامها من قيمتنا بلا إعادة كتابة.
+subprojects {
+    if (name == "app") return@subprojects
+    afterEvaluate {
+        extensions
+            .findByType(com.android.build.gradle.LibraryExtension::class.java)
+            ?.compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+    }
+}
+
 // النتيجة بعد التوحيد عبر DSL أعلاه: نجح جانب Java (compileOptions) بلا
 // أي كسر لـ classpath — لكن pay_android يحدد kotlinOptions.jvmTarget="1.8"
 // صراحةً داخل سكربتها الخاص (سطر متأخر في ملفها)، فيُنفَّذ بعد withId
