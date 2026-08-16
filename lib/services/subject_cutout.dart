@@ -13,7 +13,6 @@
 library;
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_subject_segmentation/google_mlkit_subject_segmentation.dart';
@@ -52,6 +51,9 @@ class SubjectCutout {
 
       segmenter = SubjectSegmenter(
         options: SubjectSegmenterOptions(
+          // موضوع واحد: المنتج. تعدّد المواضيع يعيد قصاصات متفرّقة
+          // لا صورةً واحدة صالحة للتصميم.
+          enableMultipleSubjects: false,
           enableForegroundBitmap: true,
           enableForegroundConfidenceMask: false,
         ),

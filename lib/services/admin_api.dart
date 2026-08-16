@@ -359,7 +359,7 @@ class AdminApi {
     _unwrap(await _db.rpc('print_order_assign', params: {
       'p_order_id': orderId,
       'p_shop_id': shopId,
-      if (courierId != null) 'p_courier_id': courierId,
+      'p_courier_id': ?courierId,
     }));
   }
 
