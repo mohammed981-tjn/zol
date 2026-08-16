@@ -214,9 +214,13 @@ Deno.serve(async (req: Request) => {
           }),
         });
         const vj = await vr.json();
+        // عجز القارئ ليس دليل كسر: 429 عابر كان يُفسَّر «كل الحروف غائبة»
+        // فيكذّب صورة سليمة ويطلق إعادة رسم بلا داع. الفشل هنا يعيد
+        // { error } — والمستهلكون لا يعدّونه كسرًا، فقط «لم يُدقَّق».
+        if (!vr.ok) throw new Error(`reader_${vr.status}`);
         const raw = vj?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("") ?? "";
-        let read: { lines?: string[]; looks_broken?: boolean } = {};
-        try { read = JSON.parse(raw); } catch { /* ignore */ }
+        let read: { lines?: string[]; looks_broken?: boolean };
+        try { read = JSON.parse(raw); } catch { throw new Error("reader_no_json"); }
         const seen = (read.lines ?? []).map(norm).join("");
         const found = expect.map((e) => ({ text: e, present: seen.includes(norm(e)) }));
         verify = { lines_read: read.lines ?? [], looks_broken: read.looks_broken ?? null,
