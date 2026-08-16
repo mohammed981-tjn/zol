@@ -14,6 +14,11 @@ enum AdTemplate {
   frame,
   urgency,
   circular,
+
+  /// مستخرَج من تشريح تصاميم Canva الحية (بنيتها العنصرية لا صورها):
+  /// بطاقة داخلية بهامش ٢٪، عنوان عملاق، منتج غير مركزي، ونغمتا لون
+  /// من عائلة العلامة للهرمية بدل لون واحد للجميع.
+  studio,
 }
 
 extension AdTemplateInfo on AdTemplate {
@@ -28,6 +33,7 @@ extension AdTemplateInfo on AdTemplate {
     AdTemplate.frame => 'إطار',
     AdTemplate.urgency => 'عاجل',
     AdTemplate.circular => 'دائري',
+    AdTemplate.studio => 'استوديو',
   };
 
   String get description => switch (this) {
@@ -41,6 +47,7 @@ extension AdTemplateInfo on AdTemplate {
     AdTemplate.frame => 'إطار زخرفي مزدوج يوحي بالفخامة والهدية',
     AdTemplate.urgency => 'شريط قطري يصرخ بضيق الوقت — للعروض المؤقتة',
     AdTemplate.circular => 'المنتج في قرص دائري ونص يلتفّ حوله',
+    AdTemplate.studio => 'بطاقة فاخرة بعنوان عملاق ومنتج جانبي — أسلوب الاستوديوهات',
   };
 
   IconData get icon => switch (this) {
@@ -54,6 +61,7 @@ extension AdTemplateInfo on AdTemplate {
     AdTemplate.frame => Icons.filter_frames_outlined,
     AdTemplate.urgency => Icons.bolt,
     AdTemplate.circular => Icons.circle_outlined,
+    AdTemplate.studio => Icons.workspace_premium_outlined,
   };
 
   /// هل يعتمد القالب على خلفية فاتحة؟ (يحدد لون النص المناسب.)
@@ -67,14 +75,15 @@ extension AdTemplateInfo on AdTemplate {
   int get trendingRank => switch (this) {
     AdTemplate.bold => 1,
     AdTemplate.offer => 2,
-    AdTemplate.testimonial => 3,
-    AdTemplate.spotlight => 4,
-    AdTemplate.urgency => 5,
-    AdTemplate.poster => 6,
-    AdTemplate.circular => 7,
-    AdTemplate.split => 8,
-    AdTemplate.frame => 9,
-    AdTemplate.minimal => 10,
+    AdTemplate.studio => 3,
+    AdTemplate.testimonial => 4,
+    AdTemplate.spotlight => 5,
+    AdTemplate.urgency => 6,
+    AdTemplate.poster => 7,
+    AdTemplate.circular => 8,
+    AdTemplate.split => 9,
+    AdTemplate.frame => 10,
+    AdTemplate.minimal => 11,
   };
 
   /// أكثر شارة «رائج» تُعرض لأعلى قالبين رواجًا فقط.
@@ -131,6 +140,12 @@ extension AdTemplateInfo on AdTemplate {
       BusinessCategory.cafe,
       BusinessCategory.sweets,
       BusinessCategory.restaurant,
+    ],
+    AdTemplate.studio => [
+      BusinessCategory.retail,
+      BusinessCategory.restaurant,
+      BusinessCategory.beauty,
+      BusinessCategory.fashion,
     ],
   };
 }

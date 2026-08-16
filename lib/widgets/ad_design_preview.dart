@@ -75,6 +75,7 @@ class AdDesignPreview extends StatelessWidget {
                     AdTemplate.frame => _FrameLayout(spec: spec),
                     AdTemplate.urgency => _UrgencyLayout(spec: spec),
                     AdTemplate.circular => _CircularLayout(spec: spec),
+                    AdTemplate.studio => _StudioLayout(spec: spec),
                   },
                 ),
                 // خلفية مصمَّمة اختيارية: زخرفة زاوية مستوحاة من النشاط
@@ -1116,6 +1117,136 @@ class _CircularLayout extends StatelessWidget {
               foreground: spec.palette.onPrimary,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 11. استوديو ──────────────────────────────────────────────────────
+//
+// حصيلة تشريح تصاميم Canva الحية عبر واجهتها المهيكلة (بنية العناصر
+// بمواضعها وأحجامها وألوانها، لا الصور النهائية). أربعة أسرار تكوين
+// تكررت في تصاميمهم ولا يملكها أي قالب عندنا:
+//   ١) بطاقة داخلية بهامش ٢٪ تحيط بكل المحتوى — إطار «مُحتوى» فاخر.
+//   ٢) نغمتان من عائلة اللون نفسها للهرمية: فاتحة للعنوان وكامدة
+//      للسطور الثانوية — لا لون واحد يصرخ في كل شيء.
+//   ٣) عنوان عملاق (~١٥٪ من العرض) بدل عناويننا الخجولة.
+//   ٤) منتج غير مركزي مع عمود نص بجانبه — كل قوالبنا كانت مركزية.
+class _StudioLayout extends StatelessWidget {
+  const _StudioLayout({required this.spec});
+  final _Spec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spec.s;
+    final p = spec.palette;
+    // النغمتان: فاتحة مشرقة للعنوان، وكامدة هادئة للثانوي — من عائلة
+    // العلامة نفسها فلا يدخل التصميم لون غريب.
+    final bright = Color.lerp(p.primary, Colors.white, 0.62)!;
+    final muted = Color.lerp(p.primary, Colors.white, 0.30)!;
+    final deep = Color.lerp(p.accent, Colors.black, 0.45)!;
+
+    return Container(
+      color: deep,
+      // هامش البطاقة الداخلية: ٨ من ٤٠٠ = ٢٪ كما في تشريح Canva حرفيًا.
+      padding: EdgeInsets.all(8 * s),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [p.accent, deep],
+          ),
+          borderRadius: BorderRadius.circular(12 * s),
+          border: Border.all(
+            color: bright.withValues(alpha: 0.35),
+            width: 1.2 * s,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16 * s, 20 * s, 16 * s, 14 * s),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // العنوان العملاق — يمين الصفحة (بداية القراءة العربية).
+              Text(
+                spec.headline,
+                textAlign: TextAlign.right,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: bright,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 27 * s,
+                  height: 1.18,
+                ),
+              ),
+              SizedBox(height: 6 * s),
+              Text(
+                spec.productName,
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: muted,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13 * s,
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              // المنتج جانبيًّا (يسار — مرآة تكوين Canva في اتجاه RTL)
+              // في لوح بظل عميق، والفراغ يمينه يتنفس منه التصميم.
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: 0.78,
+                    heightFactor: 0.96,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: spec.productBackdrop,
+                        borderRadius: BorderRadius.circular(14 * s),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.38),
+                            blurRadius: 18 * s,
+                            offset: Offset(6 * s, 10 * s),
+                          ),
+                        ],
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: spec.product(fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              Row(
+                children: [
+                  _Cta(
+                    spec: spec,
+                    background: bright,
+                    foreground: deep,
+                  ),
+                  SizedBox(width: 10 * s),
+                  Expanded(
+                    child: Text(
+                      spec.hashtags.take(2).join('  '),
+                      textAlign: TextAlign.left,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: muted.withValues(alpha: 0.9),
+                        fontSize: 11 * s,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
