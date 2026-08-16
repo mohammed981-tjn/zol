@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'ad_badge.dart';
 import 'business_category.dart';
 import 'seasonal_theme.dart';
 
@@ -18,6 +19,7 @@ class AdBrief {
     this.useDecorativeBackground = false,
     this.brandName,
     this.brandColor,
+    this.badge,
   });
 
   final String productName;
@@ -53,6 +55,9 @@ class AdBrief {
   /// والصريح يغلب المستخرَج عند الإرسال للخادم.
   final int? brandColor;
 
+  /// شارة ترويجية اختيارية تُركَّب على التصميم (خصم، عرض خاص، ...).
+  final AdBadge? badge;
+
   bool get hasProductImage => imageBytes != null;
 
   Map<String, dynamic> toJson() => {
@@ -67,6 +72,7 @@ class AdBrief {
     'useDecorativeBackground': useDecorativeBackground,
     if (brandName != null) 'brandName': brandName,
     if (brandColor != null) 'brandColor': brandColor,
+    if (badge != null) 'badge': badge!.name,
     // تُحفظ الصورة (مضغوطة مسبقًا عبر ImageStore) حتى يمكن فتح الإعلان
     // من المكتبة وإعادة تصديره أو طباعته بعد إغلاق التطبيق.
     if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
@@ -85,6 +91,7 @@ class AdBrief {
     useDecorativeBackground: useDecorativeBackground,
     brandName: brandName,
     brandColor: brandColor,
+    badge: badge,
   );
 
   factory AdBrief.fromJson(Map<String, dynamic> json) => AdBrief(
@@ -104,6 +111,9 @@ class AdBrief {
     useDecorativeBackground: json['useDecorativeBackground'] as bool? ?? false,
     brandName: json['brandName'] as String?,
     brandColor: json['brandColor'] as int?,
+    badge: AdBadge.values
+        .cast<AdBadge?>()
+        .firstWhere((b) => b?.name == json['badge'], orElse: () => null),
     imageBytes: switch (json['imageBytes']) {
       final String encoded when encoded.isNotEmpty => _tryDecode(encoded),
       _ => null,

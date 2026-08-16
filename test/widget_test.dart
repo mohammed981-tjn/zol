@@ -34,6 +34,7 @@ import 'package:zol/services/image_store.dart';
 import 'package:zol/services/photo_enhancer.dart';
 import 'package:zol/services/palette_extractor.dart';
 import 'package:zol/state/app_state.dart';
+import 'package:zol/models/ad_badge.dart';
 import 'package:zol/models/trashed_ad.dart';
 import 'package:zol/models/brand_font.dart';
 import 'package:zol/models/generated_ad.dart';
@@ -1920,6 +1921,67 @@ void main() {
     );
     expect(back.brandName, 'محمصة الفجر');
     expect(back.brandColor, 0xFF0B3D2E);
+  });
+
+  // ── مكتبة الشارات الترويجية ───────────────────────────────────────
+
+  testWidgets('الشارة الترويجية تُرسم على التصميم وغيابها لا يترك أثرًا', (
+    tester,
+  ) async {
+    final state = AppState();
+    Widget host(AdBadge? badge) => MaterialApp(
+      theme: buildAppTheme(Brightness.light),
+      home: AppStateScope(
+        notifier: state,
+        child: Scaffold(
+          body: AdDesignPreview(
+            ad: GeneratedAd(
+              brief: AdBrief(
+                productName: 'قهوة',
+                description: '',
+                tone: 'حماسي',
+                platform: 'سناب شات',
+                format: 'ستوري',
+                badge: badge,
+              ),
+              kind: AdKind.image,
+              headline: 'عنوان',
+              body: 'نص',
+              hashtags: const [],
+              createdAt: DateTime(2026),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(host(AdBadge.freeDelivery));
+    expect(find.text('توصيل مجاني'), findsOneWidget);
+
+    await tester.pumpWidget(host(null));
+    expect(find.text('توصيل مجاني'), findsNothing);
+  });
+
+  test('الشارة في الموجز تنجو من الحفظ والاسترجاع وكل شارة لها تسمية', () {
+    for (final b in AdBadge.values) {
+      expect(b.label, isNotEmpty);
+    }
+    final back = AdBrief.fromJson(
+      jsonDecode(
+            jsonEncode(
+              AdBrief(
+                productName: 'قهوة',
+                description: '',
+                tone: 'حماسي',
+                platform: 'سناب شات',
+                format: 'ستوري',
+                badge: AdBadge.limited,
+              ).toJson(),
+            ),
+          )
+          as Map<String, dynamic>,
+    );
+    expect(back.badge, AdBadge.limited);
   });
 
   // ── مزامنة هوية العلامة ───────────────────────────────────────────

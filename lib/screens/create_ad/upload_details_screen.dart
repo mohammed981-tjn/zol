@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../config/app_config.dart';
+import '../../models/ad_badge.dart';
 import '../../models/ad_brief.dart';
 import '../../models/ad_template.dart';
 import '../../models/seasonal_theme.dart';
@@ -60,6 +61,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   bool _isolating = false;
   bool _picking = false;
   SeasonalTheme? _season;
+  AdBadge? _badge;
   bool _useDecorativeBackground = false;
 
   bool get _canContinue =>
@@ -195,6 +197,8 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             const SizedBox(height: 24),
             _buildSeasonPicker(),
             const SizedBox(height: 24),
+            _buildBadgePicker(),
+            const SizedBox(height: 24),
             _buildDecorativeBackgroundToggle(),
             const SizedBox(height: 36),
             ElevatedButton(
@@ -217,6 +221,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                                   : _imageBytes,
                               paletteColor: _paletteColor,
                               season: _season,
+                              badge: _badge,
                               useDecorativeBackground:
                                   _useDecorativeBackground,
                               // هوية العلامة تركب الموجز هنا لأن هذه آخر
@@ -266,6 +271,46 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   /// وجملة حملة احتفالية للتصميم دون تغيير مفردات النشاط. كله محلي بلا
   /// خادم، ومناسب لمواسم ذروة الطلب التي لا تغطيها قوالب Canva العربية
   /// (مجرد ترجمة لتصاميم غربية).
+  /// مكتبة الشارات الترويجية — عنصر جاهز يرتفع به أي قالب بضغطة.
+  Widget _buildBadgePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'شارة ترويجية (اختياري)',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: context.scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _badgeChip(null, 'بلا'),
+            for (final badge in AdBadge.values) _badgeChip(badge, badge.label),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _badgeChip(AdBadge? badge, String label) {
+    final isSelected = _badge == badge;
+    return ChoiceChip(
+      key: ValueKey('badge-${badge?.name ?? 'none'}'),
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _badge = badge),
+      selectedColor: context.scheme.primary,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : context.scheme.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
   Widget _buildSeasonPicker() {
     final now = DateTime.now();
     return Column(

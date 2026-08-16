@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../models/ad_badge.dart';
 import '../models/ad_template.dart';
 import '../models/brand_font.dart';
 import '../models/generated_ad.dart';
@@ -112,6 +113,14 @@ class AdDesignPreview extends StatelessWidget {
                     right: 12 * spec.s,
                     child: _SeasonBadge(spec: spec, season: ad.brief.season!),
                   ),
+                // الشارة الترويجية من مكتبة العناصر — تعمل فوق أي قالب،
+                // وتنزل درجة حين يشغل الموسمُ ركنَها.
+                if (ad.brief.badge != null)
+                  Positioned(
+                    top: (ad.brief.season != null ? 48 : 12) * spec.s,
+                    right: 12 * spec.s,
+                    child: _PromoBadge(spec: spec, badge: ad.brief.badge!),
+                  ),
                 if (showWatermark)
                   Positioned(
                     bottom: 8 * spec.s,
@@ -203,6 +212,49 @@ class _BrandLogo extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.memory(spec.logo!, fit: BoxFit.contain),
+    );
+  }
+}
+
+/// الشارة الترويجية من مكتبة العناصر — قطعة ملفتة بميل خفيف وظل، بلون
+/// مشتق من هوية العلامة فلا تدخل لونًا غريبًا على التصميم.
+class _PromoBadge extends StatelessWidget {
+  const _PromoBadge({required this.spec, required this.badge});
+  final _Spec spec;
+  final AdBadge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final bright = Color.lerp(spec.palette.primary, Colors.white, 0.62)!;
+    final deep = Color.lerp(spec.palette.accent, Colors.black, 0.45)!;
+    return Transform.rotate(
+      angle: -0.09,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 12 * spec.s,
+          vertical: 6 * spec.s,
+        ),
+        decoration: BoxDecoration(
+          color: bright,
+          borderRadius: BorderRadius.circular(8 * spec.s),
+          border: Border.all(color: Colors.white, width: 1.4 * spec.s),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 8 * spec.s,
+              offset: Offset(0, 3 * spec.s),
+            ),
+          ],
+        ),
+        child: Text(
+          badge.label,
+          style: TextStyle(
+            color: deep,
+            fontWeight: FontWeight.w900,
+            fontSize: 12.5 * spec.s,
+          ),
+        ),
+      ),
     );
   }
 }
