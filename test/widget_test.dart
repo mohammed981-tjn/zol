@@ -1713,7 +1713,7 @@ void main() {
     expect(sent!.containsKey('accent'), isFalse);
   });
 
-  test('صورة المنتج تسافر مضغوطة في product_b64 وغيابها لا يرسل المفتاح', () async {
+  test('المعاينة لا تحمل صورة المنتج أبدًا — الخادم يتجاهلها بلا صور', () async {
     ImageStore.debugRunSynchronously = true;
     addTearDown(() => ImageStore.debugRunSynchronously = false);
 
@@ -1743,11 +1743,55 @@ void main() {
         imageBytes: _fakeImage,
       ),
     );
+    // ميغابايتان تُرفع هباءً مع كل توليدة كانت تقطع الاتصال على إرسال
+    // الجوال الضعيف — الطلب النصي يبقى خفيفًا مهما ضخُمت القصاصة.
+    expect(sent!.containsKey('product_b64'), isFalse);
+    expect(sent!['images'], isFalse);
+  });
+
+  test('صورة المنتج تسافر مضغوطة في product_b64 وغيابها لا يرسل المفتاح', () async {
+    ImageStore.debugRunSynchronously = true;
+    addTearDown(() => ImageStore.debugRunSynchronously = false);
+
+    Map<String, dynamic>? sent;
+    final gateway = AiGateway(
+      baseUrl: 'http://test.local',
+      useSupabase: true,
+      supabaseUrl: 'http://test.local',
+      merchantId: 'merchant-test',
+      client: MockClient((req) async {
+        sent = jsonDecode(req.body) as Map<String, dynamic>;
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'ok': true,
+              'url': 'https://x.test/ads/scene-1.png',
+              'verify': {'all_present': true},
+            }),
+          ),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    // نداء المشهد هو الوحيد الذي يحمل الصورة — حيث تُستعمل فعلًا.
+    await gateway.generateScene(
+      AdBrief(
+        productName: 'قهوة',
+        description: '',
+        tone: 'حماسي',
+        platform: 'سناب شات',
+        format: 'ستوري',
+        imageBytes: _fakeImage,
+      ),
+      headline: 'عنوان',
+    );
     // بايتات صالحة تصل الخادم صالحة: ترميز ثم فك بلا رمي.
     final travelled = base64Decode(sent!['product_b64'] as String);
     expect(travelled, isNotEmpty);
 
-    await gateway.generatePreview(
+    await gateway.generateScene(
       AdBrief(
         productName: 'قهوة',
         description: '',
@@ -1755,6 +1799,7 @@ void main() {
         platform: 'سناب شات',
         format: 'ستوري',
       ),
+      headline: 'عنوان',
     );
     expect(sent!.containsKey('product_b64'), isFalse);
   });

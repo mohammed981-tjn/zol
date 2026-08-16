@@ -239,8 +239,6 @@ class AiGateway {
     final brandRgb = brief.brandColor ?? brief.paletteColor;
     final brandName = brief.brandName?.trim() ?? '';
 
-    final productB64 = await _productB64(brief);
-
     late http.Response res;
     try {
       res = await _client
@@ -264,7 +262,6 @@ class AiGateway {
                 'primary': primaryFromBrand(brandRgb),
                 'accent': accentFromBrand(brandRgb),
               },
-              'product_b64': ?productB64,
               // نصّ أولًا: البطاقات تُعرض فورًا بالقوالب المحلية وصورة
               // المنتج المحسَّنة على الجهاز، والمشهد السحابي يُولَّد عند
               // الطلب لصيغةٍ اختارها التاجر — نداءان بدل عشرة، و١٥ ثانية
@@ -306,19 +303,21 @@ class AiGateway {
     return result;
   }
 
-  /// صورة المنتج مضغوطة للإرسال — تمريرة ثانية أصغر بدل الإسقاط الصامت:
-  /// قصاصة فوتوغرافية مفصّلة تتجاوز الحدّ كانت تسافر «لا شيء» ويخرج
-  /// الإعلان بلا منتج. ٦٤٠ بكسل تكفي لثلث الإعلان الأوسط، والإسقاط آخر
-  /// الدواء لأن طلبًا يموت بمهلة الشبكة أسوأ من صورة أصغر.
+  /// صورة المنتج مضغوطة للإرسال في نداء المشهد.
+  ///
+  /// ٧٢٠ بكسل من أول تمريرة: المنتج يشغل ثلث الإعلان الأوسط فلا يستفيد
+  /// من أكثر، ورفعُ أضعافِ ذلك من جوال التاجر يقطع الاتصال قبل أن يصل.
+  /// وإن بقيت القصاصة ضخمة (PNG شفاف مفصّل) تُصغَّر ثانيةً — والإسقاط
+  /// آخر الدواء: مشهد بلا منتج خير من طلب يموت في الطريق.
   Future<String?> _productB64(AdBrief brief) async {
-    const maxLen = 2000000;
+    const maxLen = 900000;
     final bytes = brief.imageBytes;
     if (bytes == null || bytes.isEmpty) return null;
     try {
-      var compact = await ImageStore.compressForStorage(bytes);
+      var compact = await ImageStore.compressForStorage(bytes, maxWidth: 720);
       var encoded = base64Encode(compact);
       if (encoded.length > maxLen) {
-        compact = await ImageStore.compressForStorage(compact, maxWidth: 640);
+        compact = await ImageStore.compressForStorage(compact, maxWidth: 480);
         encoded = base64Encode(compact);
       }
       return encoded.length <= maxLen ? encoded : null;
