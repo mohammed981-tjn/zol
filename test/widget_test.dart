@@ -1542,38 +1542,53 @@ void main() {
       SubjectCutout.debugDisabled = false;
     });
 
-    // خلفية بيضاء موحّدة وقرص داكن في الوسط: أوضح حالة نجاح.
-    img.Image build({required bool shred}) {
+    // خلفية بيضاء موحّدة. الحالتان تختلفان في **شكل المقدّمة** لا في
+    // عددها: قرص مصمت واحد مقابل شظايا مبعثرة.
+    //
+    // النخر العشوائي داخل قرص لا يصلح للمحاكاة: التعبئة تبدأ من الحواف
+    // ولا تبلغ ثقبًا محبوسًا داخله، فيخرج القناع مصمتًا سليمًا. أما
+    // الشظايا المنفصلة فتحيط بها الخلفية من كل جهة — وهو ما يحدث فعلًا
+    // حين يفشل القصّ.
+    img.Image canvas() {
       final im = img.Image(width: 240, height: 240, numChannels: 4);
       img.fill(im, color: img.ColorRgba8(250, 250, 250, 255));
-      var seed = 7;
-      for (var y = 0; y < 240; y++) {
-        for (var x = 0; x < 240; x++) {
-          final dx = x - 120, dy = y - 120;
-          if (dx * dx + dy * dy >= 70 * 70) continue;
-          if (shred) {
-            // مولّد خطّي بسيط: تمزيق ثابت لا عشوائي، فالاختبار لا يتذبذب.
-            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-            if (seed % 100 < 40) continue; // ٤٠٪ ثقوبًا
-          }
-          im.setPixelRgba(x, y, 20, 20, 30, 255);
-        }
-      }
       return im;
     }
 
+    final solid = canvas();
+    for (var y = 0; y < 240; y++) {
+      for (var x = 0; x < 240; x++) {
+        final dx = x - 120, dy = y - 120;
+        if (dx * dx + dy * dy < 70 * 70) {
+          solid.setPixelRgba(x, y, 20, 20, 30, 255);
+        }
+      }
+    }
+
+    // شبكة نقاط ٣×٣ متباعدة ٨ بكسلات: كل نقطة معزولة، فمحيطها كله حدود.
+    final shards = canvas();
+    for (var gy = 12; gy < 228; gy += 8) {
+      for (var gx = 12; gx < 228; gx += 8) {
+        for (var y = gy; y < gy + 3; y++) {
+          for (var x = gx; x < gx + 3; x++) {
+            shards.setPixelRgba(x, y, 20, 20, 30, 255);
+          }
+        }
+      }
+    }
+
     final clean = await BackgroundRemover.removeBackground(
-      Uint8List.fromList(img.encodePng(build(shred: false))),
+      Uint8List.fromList(img.encodePng(solid)),
     );
     expect(clean, isNotNull, reason: 'قرص مصمت على خلفية موحّدة يجب أن يمرّ');
 
     final shredded = await BackgroundRemover.removeBackground(
-      Uint8List.fromList(img.encodePng(build(shred: true))),
+      Uint8List.fromList(img.encodePng(shards)),
     );
     expect(
       shredded,
       isNull,
-      reason: 'قصّ منخور بالثقوب يفسد كل قالب — يجب أن يُرفض لا أن يُعرض',
+      reason: 'مقدّمة مبعثرة إلى شظايا تفسد كل قالب — يجب أن تُرفض لا أن تُعرض',
     );
   });
 
