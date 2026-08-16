@@ -57,12 +57,25 @@ async function gemini(key: string, system: string, user: string) {
 
 const ANGLES = ["منفعة", "فضول", "عرض"];
 
-// نموذج الاحتياط يلفّ JSON بنص أحيانًا فيسقط JSON.parse على ردٍّ سليم
-// المضمون — نقتطع أول قوس إلى آخره قبل التحليل (نفس درس المدير الفني).
-function sliceJson(raw: string): Record<string, unknown> {
-  const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("no_json");
-  return JSON.parse(raw.slice(start, end + 1));
+// نموذج الاحتياط يخون الشكل بطريقتين شوهدتا حيًّا: يلفّ JSON بنص،
+// أو يسقط الغلاف فيعيد المصفوفة عارية [{...}] بدل {"variants":[...]}.
+// صيغ سليمة المضمون كانت تُرمى لأن الغلاف وحده سقط — نقبل الشكلين.
+function extractArray(raw: string, key: string): Array<Record<string, unknown>> {
+  const os = raw.indexOf("{"), oe = raw.lastIndexOf("}");
+  const as = raw.indexOf("["), ae = raw.lastIndexOf("]");
+  if (as >= 0 && ae > as && (os < 0 || as < os)) {
+    try {
+      const arr = JSON.parse(raw.slice(as, ae + 1));
+      if (Array.isArray(arr)) return arr;
+    } catch { /* جرّب الكائن */ }
+  }
+  if (os >= 0 && oe > os) {
+    try {
+      const obj = JSON.parse(raw.slice(os, oe + 1));
+      if (Array.isArray(obj?.[key])) return obj[key];
+    } catch { /* لا شيء */ }
+  }
+  return [];
 }
 
 Deno.serve(async (req: Request) => {
@@ -100,16 +113,14 @@ Deno.serve(async (req: Request) => {
 
     // ١) الكاتب
     const w = await gemini(key, writer.content, briefText);
-    let variants: Array<Record<string, unknown>> = [];
-    try { variants = (sliceJson(w.text).variants as typeof variants) ?? []; } catch { /* below */ }
+    let variants = extractArray(w.text, "variants");
     if (!variants.length) return json({ ok: false, step: "writer", raw: w.text.slice(0, 300) }, 502);
     variants = variants.slice(0, 3);
 
     // ٢) الناقد
     const c = await gemini(key, critic.content,
       `المنصة: ${platform}\nالموجز:\n${briefText}\n\nالاتجاهات:\n${JSON.stringify(variants.map(v => ({angle: v.angle, headline: v.headline, body: v.body, cta: v.cta})), null, 1)}`);
-    let scores: Array<Record<string, number | string>> = [];
-    try { scores = (sliceJson(c.text).scores as typeof scores) ?? []; } catch { /* tolerate */ }
+    const scores = extractArray(c.text, "scores") as Array<Record<string, number | string>>;
 
     const tin = w.tin + c.tin, tout = w.tout + c.tout;
     const cost = +(tin / 1e6 * IN_PER_M + tout / 1e6 * OUT_PER_M).toFixed(6);
