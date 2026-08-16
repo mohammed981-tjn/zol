@@ -3,6 +3,8 @@ import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
 
 // v3: تطبيع المقارنة يوحّد ٪/% والأرقام الهندية/اللاتينية —
 // المدقّق كان يرفض نصوصاً صحيحة لأن القارئ كتب % بدل ٪.
+// v4: وترتيبها — اتجاه النص يقلب «٣٠٪» إلى «%30» عند القراءة،
+// فتوحيد الحرف وحده لا يكفي: النسبة تُعاد دومًا بعد رقمها.
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -70,7 +72,8 @@ function norm(s: string): string {
     .replace(/ى/g, "ي").replace(/ة/g, "ه")
     .replace(/٪/g, "%")
     .replace(/[٠-٩]/g, (d) => String(AR_DIGITS.indexOf(d)))
-    .replace(/[^\p{L}\p{N}%]/gu, "");
+    .replace(/[^\p{L}\p{N}%]/gu, "")
+    .replace(/%(\p{N}+)/gu, "$1%");
 }
 
 type Body = {

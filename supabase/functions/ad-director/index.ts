@@ -105,8 +105,19 @@ async function judge(key: string, primary: string, a: string, bImg: string) {
     `التفاصيل المزاحمة للنص)، harmony (انسجام الألوان مع لون العلامة)، ` +
     `appeal (جاذبية تجارية فورية)، defects (١٠ = بلا تشوّهات؛ عناصر ` +
     `ممسوخة أو نص عشوائي تهبط بها حادًّا).\n` +
-    `أعد JSON فقط: {"a":{"clean_zones":0,"harmony":0,"appeal":0,"defects":0},` +
-    `"b":{...},"winner":"a"|"b","fix":"جملة تحسين واحدة للفائزة"}`;
+    `مثال للشكل المطلوب حرفيًا (استبدل القيم): {"a":{"clean_zones":7,"harmony":6,` +
+    `"appeal":8,"defects":9},"b":{"clean_zones":5,"harmony":7,"appeal":6,"defects":8},` +
+    `"winner":"a","fix":"جملة تحسين واحدة للفائزة"}`;
+  // مخطط إلزامي: أول تشغيل حيّ أعاد الناقدُ JSON مكسورًا فسقط حكمه —
+  // المثال وحده لا يضمن، والمخطط يجبر البنية من المصدر.
+  const scoreSchema = {
+    type: "OBJECT",
+    properties: {
+      clean_zones: { type: "NUMBER" }, harmony: { type: "NUMBER" },
+      appeal: { type: "NUMBER" }, defects: { type: "NUMBER" },
+    },
+    required: ["clean_zones", "harmony", "appeal", "defects"],
+  };
   const r = await fetch(`${G}/${TEXT_MODEL}:generateContent`, {
     method: "POST",
     headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
@@ -116,13 +127,26 @@ async function judge(key: string, primary: string, a: string, bImg: string) {
         { text: "الصورة أ:" }, { inlineData: { mimeType: "image/png", data: a } },
         { text: "الصورة ب:" }, { inlineData: { mimeType: "image/png", data: bImg } },
       ] }],
-      generationConfig: { responseMimeType: "application/json" },
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            a: scoreSchema, b: scoreSchema,
+            winner: { type: "STRING", enum: ["a", "b"] },
+            fix: { type: "STRING" },
+          },
+          required: ["a", "b", "winner"],
+        },
+      },
     }),
   });
   const j = await r.json();
-  if (!r.ok) throw new Error(`judge_${r.status}`);
+  if (!r.ok) throw new Error(`judge_${r.status}:${j?.error?.message ?? ""}`);
   const raw = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("") ?? "";
-  return JSON.parse(raw) as {
+  const start = raw.indexOf("{"), end = raw.lastIndexOf("}");
+  if (start < 0 || end <= start) throw new Error("judge_no_json");
+  return JSON.parse(raw.slice(start, end + 1)) as {
     a: Record<string, number>; b: Record<string, number>;
     winner: "a" | "b"; fix?: string;
   };
