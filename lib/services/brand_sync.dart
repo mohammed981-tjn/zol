@@ -31,6 +31,19 @@ class BrandIdentity {
   bool get isEmpty =>
       colorValue == null && fontName == null && logoBytes == null;
 
+  /// `#RRGGBB` ← عدد فلاتر معتم. ألوان العلامة كلها معتمة، فإسقاط قناة
+  /// الشفافية بلا خسارة، والنصّ الست عشري يقرؤه أي مستهلك آخر للجدول.
+  static String colorToHex(int value) =>
+      '#${(value & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+
+  static int? _colorFromHex(String? hex) {
+    if (hex == null) return null;
+    final clean = hex.replaceFirst('#', '').trim();
+    if (clean.length != 6) return null;
+    final rgb = int.tryParse(clean, radix: 16);
+    return rgb == null ? null : 0xFF000000 | rgb;
+  }
+
   static BrandIdentity? fromJson(Map<String, dynamic> j) {
     Uint8List? logo;
     final raw = j['logo_base64'] as String?;
@@ -43,7 +56,7 @@ class BrandIdentity {
       }
     }
     return BrandIdentity(
-      colorValue: (j['color_value'] as num?)?.toInt(),
+      colorValue: _colorFromHex(j['primary_color'] as String?),
       fontName: j['font_name'] as String?,
       logoBytes: logo,
       updatedAt: DateTime.tryParse((j['updated_at'] as String?) ?? ''),
@@ -83,7 +96,7 @@ class BrandSync {
     try {
       final row = await db
           .from('brand_identities')
-          .select('color_value,font_name,logo_base64,updated_at')
+          .select('primary_color,font_name,logo_base64,updated_at')
           .eq('merchant_id', id)
           .maybeSingle();
       if (row == null) return null;
@@ -114,12 +127,18 @@ class BrandSync {
     }
 
     try {
-      await db.from('brand_identities').upsert({
-        'merchant_id': id,
-        'color_value': colorValue,
-        'font_name': fontName,
-        'logo_base64': logo,
-      });
+      await db.from('brand_identities').upsert(
+        {
+          'merchant_id': id,
+          'primary_color':
+              colorValue == null ? null : BrandIdentity.colorToHex(colorValue),
+          'font_name': fontName,
+          'logo_base64': logo,
+        },
+        // المفتاح الأساسي هو id لا merchant_id، فالتعارض يُحسم على القيد
+        // الفريد صراحةً — وإلا أدرج upsert صفًّا جديدًا لكل حفظ.
+        onConflict: 'merchant_id',
+      );
       return true;
     } catch (_) {
       return false;
