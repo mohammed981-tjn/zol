@@ -119,7 +119,9 @@ Deno.serve(async (req: Request) => {
     if (!gRes.ok) return json({ ok: false, step: "log", error: gRows }, 500);
     const genId = gRows[0].id as string;
 
-    // ٤) ثلاث صور بالتوازي — مشهد كل زاوية من وصف الكاتب نفسه
+    // ٤) ثلاث صور بالتوازي — عبر المخرج الفني: مفهومان متنافسان لكل
+    // زاوية، ناقد بصري يحكم، ثم الخطاط. سلّم تراجعه ينتهي بـad-compose
+    // القديمة فلا يكون أسوأ من السلوك السابق.
     const makeImages = b.images !== false;
     let images: Array<{ url: string | null; verified: boolean | null }> =
       variants.map(() => ({ url: null, verified: null }));
@@ -128,13 +130,14 @@ Deno.serve(async (req: Request) => {
         try {
           const scene = String(v.scene ?? "") ||
             `Professional vertical product photograph related to: ${b.product}, warm lighting, clean space at top and bottom, no text, no letters, no logos`;
-          const r = await fetch(`${SB_URL}/functions/v1/ad-compose`, {
+          const r = await fetch(`${SB_URL}/functions/v1/ad-director`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-gemini-key": key },
             body: JSON.stringify({
               name: `magic-${genId.slice(0, 8)}-${i}`,
               headline: v.headline, subline: v.body, cta: v.cta,
               primary, accent, bg_prompt: scene, verify: true,
+              quality: "fast",
             }),
           });
           const j = await r.json();
