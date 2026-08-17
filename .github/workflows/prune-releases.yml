@@ -1,0 +1,42 @@
+name: تقليم الإصدارات
+
+# التقليم يجري مع كل بناء (داخل build-apk.yml)، لكن ذلك وحده يترك ثغرة:
+# لو توقف التطوير أسبوعين بقيت النسخة القديمة معروضة للتنزيل رغم مضيّ
+# مدّتها. هذا الجدول يسدّها — يعمل يوميًا بلا حاجة إلى بناء.
+#
+# ملاحظة تشغيلية: جداول GitHub لا تعمل إلا من الفرع الافتراضي، فهذا
+# الملف نائم حتى يُدمج في main. التقليم داخل البناء يعمل من الآن.
+on:
+  schedule:
+    # 03:17 UTC — دقيقة غير مستديرة: الدقائق الصفرية تزدحم عالميًّا.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: 'العمر بالأيام قبل الحذف'
+        default: '7'
+      keep_max:
+        description: 'كم إصدارًا يبقى مهما كان عمره'
+        default: '1'
+      dry_run:
+        description: 'عرض ما سيُحذف بلا حذف'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # حذف الإصدارات والوسوم
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تقليم
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_DAYS: ${{ inputs.max_age_days || '7' }}
+          KEEP_MIN: '1'
+          KEEP_MAX: ${{ inputs.keep_max || '1' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: bash tool/prune_releases.sh

@@ -114,6 +114,17 @@ jobs:
             --notes "versionCode ${{ github.run_number }} · من ${GITHUB_SHA:0:7} — نزّل $APK وثبّته مباشرة." \
             --latest
 
+      # صفحة الإصدارات تُنظَّف مع كل بناء: ستّون نسخة متراكمة تُربك من
+      # يريد التثبيت، وتُبقي بناءات فيها أعطالٌ أُصلحت قابلةً للتنزيل.
+      # الأحدث وحده يبقى، وما تجاوز سبعة أيام يُحذف على كل حال.
+      - name: تقليم الإصدارات القديمة
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_DAYS: '7'
+          KEEP_MIN: '1'
+          KEEP_MAX: '1'
+        run: bash tool/prune_releases.sh
+
       - name: تنظيف المفتاح
         if: always()
         run: rm -f android/zol-release.jks android/key.properties
