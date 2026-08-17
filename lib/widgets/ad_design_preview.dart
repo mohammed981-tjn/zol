@@ -4,10 +4,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../models/ad_badge.dart';
 import '../models/ad_template.dart';
 import '../models/brand_font.dart';
+import '../theme/art_palette.dart';
+import 'art_backdrop.dart';
+import 'art_text.dart';
 import '../models/generated_ad.dart';
 import '../models/seasonal_theme.dart';
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
 
 /// محرك قوالب التصميم — الطبقة الأولى من استراتيجية الذكاء (على الجهاز
 /// 100%): يركّب صورة المنتج مع النص والهوية على أحد عشرة قوالب مختلفة
@@ -163,6 +165,18 @@ class _Spec {
   final GeneratedAd ad;
   final Uint8List? logo;
 
+  /// اللوحة الفنية المشتقّة — انسجام كامل من لون واحد بدل درجتين منه.
+  ///
+  /// البذرة من نصّ الإعلان لا من العشوائية: نفس الإعلان يعطي نفس
+  /// اللوحة والخلفية في المعاينة والتصدير وبعد إعادة فتحه من المكتبة.
+  late final ArtPalette art = ArtPalette.from(
+    palette.primary,
+    variant: ad.headline.length + ad.brief.productName.length,
+  );
+
+  /// بذرة رسم الخلفية — حتمية كذلك.
+  int get seed => ad.headline.hashCode & 0xFFFF;
+
   /// خط العلامة (Brand Kit) — null يعني اعتماد خط الواجهة الافتراضي.
   final String? fontFamily;
 
@@ -173,13 +187,6 @@ class _Spec {
   String get headline => ad.headline;
   String get productName => ad.brief.productName;
   List<String> get hashtags => ad.hashtags;
-
-  /// سطح فاتح مشتق من لوحة الألوان يُوضع خلف المنتج.
-  ///
-  /// ضروري لأن اللوحة تُشتق من صورة المنتج نفسه، فلولا هذا التباين لذاب
-  /// المنتج في خلفية بلونه (قهوة بنية على خلفية بنية مثلًا).
-  Color get productBackdrop =>
-      Color.lerp(palette.primary, Colors.white, 0.88)!;
 
   Widget product({BoxFit fit = BoxFit.contain}) {
     final bytes = image;
@@ -239,8 +246,8 @@ class _PromoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bright = Color.lerp(spec.palette.primary, Colors.white, 0.62)!;
-    final deep = Color.lerp(spec.palette.accent, Colors.black, 0.45)!;
+    final bright = spec.art.shade(0.82);
+    final deep = spec.art.deep;
     return Transform.rotate(
       angle: -0.09,
       child: Container(
@@ -307,18 +314,23 @@ class _SeasonBadge extends StatelessWidget {
 class _Cta extends StatelessWidget {
   const _Cta({
     required this.spec,
-    this.background = AppColors.gold,
-    this.foreground = const Color(0xFF1A1A2E),
+    this.background,
+    this.foreground,
     this.outlined = false,
   });
 
   final _Spec spec;
-  final Color background;
-  final Color foreground;
+
+  /// null ⇒ يُشتقّ من لوحة الإعلان. الافتراضي كان ذهب المنصّة الثابت،
+  /// فكان زرّ الحثّ — أهمّ عنصر في الإعلان — يحمل لون zol لا لون التاجر.
+  final Color? background;
+  final Color? foreground;
   final bool outlined;
 
   @override
   Widget build(BuildContext context) {
+    final background = this.background ?? spec.art.complement;
+    final foreground = this.foreground ?? ArtPalette.inkOn(background);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: 18 * spec.s,
@@ -358,21 +370,20 @@ class _BoldLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    final on = spec.palette.onPrimary;
-    return DecoratedBox(
-      decoration: BoxDecoration(gradient: spec.palette.gradient),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -40 * s,
-            left: -40 * s,
-            child: _circle(140 * s, Colors.white.withValues(alpha: 0.08)),
-          ),
-          Positioned(
-            bottom: -30 * s,
-            right: -30 * s,
-            child: _circle(110 * s, Colors.white.withValues(alpha: 0.06)),
-          ),
+    // الحبر يُختار بالتباين فوق الخلفية الفنية الفعلية لا بافتراض
+    // «أبيض على ملوّن» — خلفية فاتحة كانت تبتلع نصًّا أبيض.
+    final on = spec.art.ink;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // خلفية فنية: بؤر متداخلة وحبيبات بدل تدرّج خطّي واحد.
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.mesh,
+        ),
+        Stack(
+          children: [
           Padding(
             padding: EdgeInsets.all(18 * s),
             child: Column(
@@ -395,18 +406,26 @@ class _BoldLayout extends StatelessWidget {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: spec.art.neutral,
                       borderRadius: BorderRadius.circular(14 * s),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 14 * s,
-                          offset: Offset(0, 6 * s),
+                          color: Colors.black.withValues(alpha: 0.32),
+                          blurRadius: 18 * s,
+                          offset: Offset(0, 8 * s),
                         ),
                       ],
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: spec.product(fit: BoxFit.cover),
+                    // ظلّ تماسّ يثبّت المنتج على السطح — بلا هالة هنا:
+                    // الهالة تفصل المنتج عن خلفية داكنة، أما فوق سطح
+                    // فاتح فتلطّخه بلونها وتجعل اللوح يبدو متّسخًا.
+                    child: ProductStage(
+                      palette: spec.art,
+                      halo: false,
+                      shadowOpacity: 0.24,
+                      child: spec.product(fit: BoxFit.cover),
+                    ),
                   ),
                 ),
                 SizedBox(height: 14 * s),
@@ -424,12 +443,17 @@ class _BoldLayout extends StatelessWidget {
                 SizedBox(height: 6 * s),
                 _hashtagLine(spec, on),
                 SizedBox(height: 8 * s),
-                _Cta(spec: spec),
+                _Cta(
+                  spec: spec,
+                  background: spec.art.complement,
+                  foreground: ArtPalette.inkOn(spec.art.complement),
+                ),
               ],
             ),
           ),
         ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -443,15 +467,38 @@ class _SplitLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    final on = spec.palette.onPrimary;
+    final on = spec.art.ink;
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: spec.palette.accent),
-        // مثلث قطري بلون العلامة الأساسي.
+        // طبقات قماشية مائلة تحت القطع القطري: القطعُ وحده على لونين
+        // مسطّحين كان يقرأ كـ«شريحتَي لون»، لا كتصميم فيه عمق.
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.strata,
+        ),
+        // مثلث قطري بلون العلامة، شبه شفاف ليمرّ منه نسيج الطبقات.
         ClipPath(
           clipper: _DiagonalClipper(),
-          child: ColoredBox(color: spec.palette.primary),
+          child: ColoredBox(color: spec.art.base.withValues(alpha: 0.82)),
+        ),
+        // أرض النصّ: القطع القطري يمرّ في منتصف كتلة النص، فيقع نصف
+        // السطر على لون ونصفه على آخر ويسقط التباين حيث لا يُنتظر.
+        // هذا التعتيم يوحّد ما تحت الحروف فيصير الحبر مضمونًا بالحساب.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                spec.art.deep,
+                spec.art.deep.withValues(alpha: 0.86),
+                spec.art.deep.withValues(alpha: 0.0),
+              ],
+              stops: const [0.0, 0.42, 0.62],
+            ),
+          ),
         ),
         Padding(
           padding: EdgeInsets.all(20 * s),
@@ -464,7 +511,7 @@ class _SplitLayout extends StatelessWidget {
                   padding: EdgeInsets.only(bottom: 8 * s),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: spec.productBackdrop,
+                      color: spec.art.neutral,
                       borderRadius: BorderRadius.circular(16 * s),
                       boxShadow: [
                         BoxShadow(
@@ -475,7 +522,11 @@ class _SplitLayout extends StatelessWidget {
                       ],
                     ),
                     padding: EdgeInsets.all(12 * s),
-                    child: spec.product(),
+                    child: ProductStage(
+                      palette: spec.art,
+                      halo: false,
+                      child: spec.product(),
+                    ),
                   ),
                 ),
               ),
@@ -488,13 +539,12 @@ class _SplitLayout extends StatelessWidget {
                     Container(
                       width: 46 * s,
                       height: 4 * s,
-                      color: AppColors.gold,
+                      color: spec.art.complement,
                     ),
                     SizedBox(height: 12 * s),
-                    Text(
+                    ArtText(
                       spec.headline,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.start,
                       style: TextStyle(
                         color: on,
                         fontWeight: FontWeight.bold,
@@ -553,19 +603,24 @@ class _PosterLayout extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // سطح فاتح خلف الصورة: يظهر حين تكون الصورة معزولة الخلفية،
-        // فلا يبتلع لونُ القالب المنتجَ المقتطَع.
-        ColoredBox(color: spec.productBackdrop),
+        // خلف الصورة فنّ لا لون مسطّح: يظهر حين تكون الصورة معزولة
+        // الخلفية، فيقف المنتج المقتطَع على مشهد بدل ورقة باهتة.
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.mesh,
+        ),
         spec.product(fit: BoxFit.cover),
-        // طبقة تعتيم سفلية تضمن قراءة النص فوق أي صورة.
+        // تعتيم سفلي **بلون العلامة** لا بأسود محض: الأسود يقرأ كطبقة
+        // افتراضية من محرّر فيديو، والداكن الملوَّن يقرأ كإضاءة مقصودة.
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.88),
-                Colors.black.withValues(alpha: 0.35),
+                spec.art.deep.withValues(alpha: 0.94),
+                spec.art.deep.withValues(alpha: 0.45),
                 Colors.transparent,
               ],
               stops: const [0, 0.45, 0.75],
@@ -578,7 +633,7 @@ class _PosterLayout extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(
-                color: spec.palette.primary.withValues(alpha: 0.9),
+                color: spec.art.complement.withValues(alpha: 0.9),
                 width: 2.5 * s,
               ),
               borderRadius: BorderRadius.circular(10 * s),
@@ -593,10 +648,12 @@ class _PosterLayout extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              // فوق صورة: النص يحتاج ظلًّا يفصله، لأن الصورة قد تكون
+              // فاتحة تحت الحرف مهما عتّمنا التدرّج.
+              ArtText(
                 spec.headline,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.start,
+                legible: true,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -610,7 +667,7 @@ class _PosterLayout extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: AppColors.gold,
+                  color: spec.art.complement,
                   fontWeight: FontWeight.w600,
                   fontSize: 14 * s,
                 ),
@@ -618,8 +675,8 @@ class _PosterLayout extends StatelessWidget {
               SizedBox(height: 12 * s),
               _Cta(
                 spec: spec,
-                background: spec.palette.primary,
-                foreground: spec.palette.onPrimary,
+                background: spec.art.complement,
+                foreground: ArtPalette.inkOn(spec.art.complement),
               ),
             ],
           ),
@@ -641,27 +698,24 @@ class _SpotlightLayout extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: Color(0xFF0E1120)),
-        // هالة إشعاعية بلون العلامة خلف المنتج.
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(0, -0.15),
-              radius: 0.85,
-              colors: [
-                spec.palette.primary.withValues(alpha: 0.55),
-                spec.palette.primary.withValues(alpha: 0.12),
-                Colors.transparent,
-              ],
-              stops: const [0, 0.55, 1],
-            ),
-          ),
+        // إضاءة مسرح حقيقية: هالة من الأعلى وقاع يعمّق، وحبيبات تكسر
+        // المسطّح الرقمي — بدل تدرّج شعاعي واحد بلون العلامة.
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.spotlight,
         ),
         Padding(
           padding: EdgeInsets.all(22 * s),
           child: Column(
             children: [
-              Expanded(flex: 6, child: spec.product()),
+              Expanded(
+                flex: 6,
+                child: ProductStage(
+                  palette: spec.art,
+                  child: spec.product(),
+                ),
+              ),
               SizedBox(height: 12 * s),
               Text(
                 spec.productName,
@@ -669,20 +723,17 @@ class _SpotlightLayout extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: spec.art.ink,
                   fontWeight: FontWeight.bold,
                   fontSize: 20 * s,
                   letterSpacing: 0.5,
                 ),
               ),
               SizedBox(height: 8 * s),
-              Text(
+              ArtText(
                 spec.headline,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.72),
+                  color: spec.art.ink.withValues(alpha: 0.76),
                   fontSize: 13 * s,
                   height: 1.4,
                 ),
@@ -691,7 +742,7 @@ class _SpotlightLayout extends StatelessWidget {
               _Cta(
                 spec: spec,
                 outlined: true,
-                foreground: AppColors.gold,
+                foreground: spec.art.complement,
               ),
             ],
           ),
@@ -710,50 +761,63 @@ class _MinimalLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    const ink = Color(0xFF1A1A2E);
-    return ColoredBox(
-      color: const Color(0xFFF7F5F2),
-      child: Padding(
-        padding: EdgeInsets.all(22 * s),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(width: 34 * s, height: 3 * s, color: spec.palette.primary),
-            SizedBox(height: 14 * s),
-            Text(
-              spec.productName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: ink,
-                fontWeight: FontWeight.w700,
-                fontSize: 17 * s,
-                letterSpacing: 1.5,
-              ),
-            ),
-            SizedBox(height: 12 * s),
-            Expanded(child: spec.product()),
-            SizedBox(height: 12 * s),
-            Text(
-              spec.headline,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: ink.withValues(alpha: 0.7),
-                fontSize: 13.5 * s,
-                height: 1.45,
-              ),
-            ),
-            SizedBox(height: 12 * s),
-            _Cta(
-              spec: spec,
-              background: spec.palette.primary,
-              foreground: spec.palette.onPrimary,
-            ),
-          ],
+    final ink = spec.art.onInk;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // ورق بلون العلامة لا `#F7F5F2` جامد: القالب يبقى فاتحًا متنفّسًا
+        // لكنه يصير **ورق التاجر** لا ورقًا عامًّا يصلح لأي أحد.
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.paper,
         ),
-      ),
+        Padding(
+          padding: EdgeInsets.all(22 * s),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(width: 34 * s, height: 3 * s, color: spec.art.base),
+              SizedBox(height: 14 * s),
+              Text(
+                spec.productName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: ink,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17 * s,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              Expanded(
+                child: ProductStage(
+                  palette: spec.art,
+                  halo: false,
+                  shadowOpacity: 0.2,
+                  child: spec.product(),
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              ArtText(
+                spec.headline,
+                style: TextStyle(
+                  color: ink.withValues(alpha: 0.72),
+                  fontSize: 13.5 * s,
+                  height: 1.45,
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              _Cta(
+                spec: spec,
+                background: spec.art.base,
+                foreground: ArtPalette.inkOn(spec.art.base),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -767,11 +831,17 @@ class _OfferLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    final on = spec.palette.onPrimary;
+    final on = spec.art.ink;
     return Stack(
       fit: StackFit.expand,
       children: [
-        DecoratedBox(decoration: BoxDecoration(gradient: spec.palette.gradient)),
+        // أقواس منطلقة من الزاوية: إحساس «انفجار عرض» يقابل هدوء التدرّج
+        // الخطّي الذي كان هنا — والعرض الخاص لا يُباع بالهدوء.
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.arcs,
+        ),
         Padding(
           padding: EdgeInsets.fromLTRB(18 * s, 18 * s, 18 * s, 18 * s),
           child: Column(
@@ -780,7 +850,7 @@ class _OfferLayout extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: spec.art.neutral,
                     borderRadius: BorderRadius.circular(200 * s),
                   ),
                   clipBehavior: Clip.antiAlias,
@@ -800,19 +870,20 @@ class _OfferLayout extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 6 * s),
-              Text(
+              ArtText(
                 spec.headline,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: on.withValues(alpha: 0.85),
+                  color: on.withValues(alpha: 0.86),
                   fontSize: 13 * s,
                   height: 1.35,
                 ),
               ),
               SizedBox(height: 10 * s),
-              _Cta(spec: spec),
+              _Cta(
+                spec: spec,
+                background: spec.art.complement,
+                foreground: ArtPalette.inkOn(spec.art.complement),
+              ),
             ],
           ),
         ),
@@ -826,7 +897,9 @@ class _OfferLayout extends StatelessWidget {
               width: 76 * s,
               height: 76 * s,
               decoration: BoxDecoration(
-                color: AppColors.gold,
+                // بلون اللوحة المقابل لا بذهب ثابت: شارة العرض يجب أن
+                // تقفز من تصميم **هذا** التاجر، لا أن تحمل لون منصّتنا.
+                color: spec.art.complement,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -840,7 +913,7 @@ class _OfferLayout extends StatelessWidget {
                 'عرض\nخاص',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF1A1A2E),
+                  color: ArtPalette.inkOn(spec.art.complement),
                   fontWeight: FontWeight.bold,
                   fontSize: 15 * s,
                   height: 1.15,
@@ -854,12 +927,6 @@ class _OfferLayout extends StatelessWidget {
   }
 }
 
-Widget _circle(double size, Color color) => Container(
-  width: size,
-  height: size,
-  decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-);
-
 // ── 7. رأي عميل ──────────────────────────────────────────────────────
 //
 // يبيع بالثقة لا بالسعر. العنوان يُعرض كاقتباس بين علامتَي تنصيص كبيرتين،
@@ -872,27 +939,33 @@ class _TestimonialLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    const ink = Color(0xFF1F2430);
-    return ColoredBox(
-      color: const Color(0xFFFAF8F5),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(24 * s, 26 * s, 24 * s, 20 * s),
+    final ink = spec.art.onInk;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.paper,
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(24 * s, 26 * s, 24 * s, 20 * s),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
               Icons.format_quote,
               size: 40 * s,
-              color: spec.palette.primary.withValues(alpha: 0.35),
+              color: spec.art.base.withValues(alpha: 0.35),
             ),
             SizedBox(height: 6 * s),
             Expanded(
               child: Center(
-                child: Text(
+                // الاقتباس هو بطل هذا القالب: يكبر ليملأ ما أُفرِد له
+                // حين يقصر، ويصغر ليُقرأ كاملًا حين يطول — لا يُبتر.
+                child: ArtText(
                   spec.headline,
-                  textAlign: TextAlign.center,
                   maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: ink,
                     fontSize: 17 * s,
@@ -923,7 +996,7 @@ class _TestimonialLayout extends StatelessWidget {
                     width: 40 * s,
                     height: 40 * s,
                     child: ColoredBox(
-                      color: spec.productBackdrop,
+                      color: spec.art.neutral,
                       child: spec.product(fit: BoxFit.cover),
                     ),
                   ),
@@ -946,12 +1019,13 @@ class _TestimonialLayout extends StatelessWidget {
             SizedBox(height: 14 * s),
             _Cta(
               spec: spec,
-              background: spec.palette.primary,
-              foreground: spec.palette.onPrimary,
+              background: spec.art.base,
+              foreground: ArtPalette.inkOn(spec.art.base),
             ),
           ],
         ),
-      ),
+        ),
+      ],
     );
   }
 }
@@ -968,11 +1042,17 @@ class _FrameLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    const ink = Color(0xFF23201C);
-    final gold = spec.palette.primary;
-    return ColoredBox(
-      color: const Color(0xFFFCFAF6),
-      child: Padding(
+    final ink = spec.art.onInk;
+    final gold = spec.art.base;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.paper,
+        ),
+        Padding(
         padding: EdgeInsets.all(12 * s),
         child: Container(
           decoration: BoxDecoration(
@@ -1000,15 +1080,19 @@ class _FrameLayout extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 10 * s),
-                    Expanded(child: spec.product()),
+                    Expanded(
+                      child: ProductStage(
+                        palette: spec.art,
+                        halo: false,
+                        shadowOpacity: 0.16,
+                        child: spec.product(),
+                      ),
+                    ),
                     SizedBox(height: 10 * s),
                     Container(width: 46 * s, height: 1 * s, color: gold),
                     SizedBox(height: 10 * s),
-                    Text(
+                    ArtText(
                       spec.headline,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: ink,
                         fontSize: 15 * s,
@@ -1018,14 +1102,15 @@ class _FrameLayout extends StatelessWidget {
                     ),
                     SizedBox(height: 12 * s),
                     _Cta(spec: spec, background: gold,
-                        foreground: spec.palette.onPrimary),
+                        foreground: ArtPalette.inkOn(gold)),
                   ],
                 ),
               ),
             ),
           ),
         ),
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1042,11 +1127,17 @@ class _UrgencyLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    final accent = spec.palette.accent;
+    final accent = spec.art.complement;
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: const Color(0xFF14161C)),
+        // أقواس متسارعة بدل الأسود الجامد `#14161C`: الاستعجال يُرسم
+        // حركةً، والمربّع الأسود سكون لا استعجال.
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.arcs,
+        ),
         Padding(
           padding: EdgeInsets.fromLTRB(20 * s, 34 * s, 20 * s, 18 * s),
           child: Column(
@@ -1054,7 +1145,7 @@ class _UrgencyLayout extends StatelessWidget {
               Expanded(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: spec.productBackdrop,
+                    color: spec.art.neutral,
                     borderRadius: BorderRadius.circular(10 * s),
                   ),
                   child: ClipRRect(
@@ -1064,20 +1155,22 @@ class _UrgencyLayout extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 14 * s),
-              Text(
+              ArtText(
                 spec.headline,
-                textAlign: TextAlign.center,
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: spec.art.ink,
                   fontSize: 19 * s,
                   height: 1.3,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               SizedBox(height: 12 * s),
-              _Cta(spec: spec, background: accent, foreground: Colors.white),
+              _Cta(
+                spec: spec,
+                background: accent,
+                foreground: ArtPalette.inkOn(accent),
+              ),
             ],
           ),
         ),
@@ -1098,7 +1191,7 @@ class _UrgencyLayout extends StatelessWidget {
                       'لفترة محدودة',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: ArtPalette.inkOn(accent),
                         fontSize: 11 * s,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2 * s,
@@ -1127,19 +1220,16 @@ class _CircularLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    final primary = spec.palette.primary;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color.lerp(primary, Colors.white, 0.82)!,
-            Color.lerp(primary, Colors.white, 0.62)!,
-          ],
+    final primary = spec.art.base;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ArtBackdrop(
+          palette: spec.art,
+          seed: spec.seed,
+          style: BackdropStyle.paper,
         ),
-      ),
-      child: Padding(
+        Padding(
         padding: EdgeInsets.fromLTRB(20 * s, 24 * s, 20 * s, 18 * s),
         child: Column(
           children: [
@@ -1152,10 +1242,19 @@ class _CircularLayout extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: primary, width: 2 * s),
+                      // الحلقة تُلقي ظلًّا فتصير قرصًا مرفوعًا عن الورق
+                      // لا دائرة مرسومة عليه.
+                      boxShadow: [
+                        BoxShadow(
+                          color: primary.withValues(alpha: 0.22),
+                          blurRadius: 18 * s,
+                          offset: Offset(0, 7 * s),
+                        ),
+                      ],
                     ),
                     child: ClipOval(
                       child: ColoredBox(
-                        color: Colors.white,
+                        color: spec.art.neutral,
                         child: spec.product(fit: BoxFit.cover),
                       ),
                     ),
@@ -1164,13 +1263,10 @@ class _CircularLayout extends StatelessWidget {
               ),
             ),
             SizedBox(height: 14 * s),
-            Text(
+            ArtText(
               spec.headline,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: const Color(0xFF1A1A2E),
+                color: spec.art.onInk,
                 fontSize: 17 * s,
                 height: 1.35,
                 fontWeight: FontWeight.w800,
@@ -1180,11 +1276,12 @@ class _CircularLayout extends StatelessWidget {
             _Cta(
               spec: spec,
               background: primary,
-              foreground: spec.palette.onPrimary,
+              foreground: ArtPalette.inkOn(primary),
             ),
           ],
         ),
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1206,42 +1303,47 @@ class _StudioLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = spec.s;
-    final p = spec.palette;
     // النغمتان: فاتحة مشرقة للعنوان، وكامدة هادئة للثانوي — من عائلة
     // العلامة نفسها فلا يدخل التصميم لون غريب.
-    final bright = Color.lerp(p.primary, Colors.white, 0.62)!;
-    final muted = Color.lerp(p.primary, Colors.white, 0.30)!;
-    final deep = Color.lerp(p.accent, Colors.black, 0.45)!;
+    final bright = spec.art.shade(0.78);
+    final muted = spec.art.shade(0.62);
+    final deep = spec.art.deep;
 
     return Container(
       color: deep,
       // هامش البطاقة الداخلية: ٨ من ٤٠٠ = ٢٪ كما في تشريح Canva حرفيًا.
       padding: EdgeInsets.all(8 * s),
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [p.accent, deep],
-          ),
           borderRadius: BorderRadius.circular(12 * s),
           border: Border.all(
             color: bright.withValues(alpha: 0.35),
             width: 1.2 * s,
           ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12 * s),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // بؤر لونية داخل البطاقة: التدرّج الخطّي كان يعطي الاستوديو
+              // سطحًا مسطّحًا يفضح أنه قالب، والبؤر تعطيه عمق إضاءة.
+              ArtBackdrop(
+                palette: spec.art,
+                seed: spec.seed,
+                style: BackdropStyle.mesh,
+              ),
+              Padding(
           padding: EdgeInsets.fromLTRB(16 * s, 20 * s, 16 * s, 14 * s),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // العنوان العملاق — يمين الصفحة (بداية القراءة العربية).
-              Text(
+              // يكبر إلى ٣٥٪ فوق حجمه حين يقصر: العنوان العملاق هو سرّ
+              // هذا القالب، وتثبيته على مقاس واحد يهدر نصف أثره.
+              ArtText(
                 spec.headline,
                 textAlign: TextAlign.right,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: bright,
                   fontWeight: FontWeight.w900,
@@ -1272,7 +1374,7 @@ class _StudioLayout extends StatelessWidget {
                     heightFactor: 0.96,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: spec.productBackdrop,
+                        color: spec.art.neutral,
                         borderRadius: BorderRadius.circular(14 * s),
                         boxShadow: [
                           BoxShadow(
@@ -1294,7 +1396,7 @@ class _StudioLayout extends StatelessWidget {
                   _Cta(
                     spec: spec,
                     background: bright,
-                    foreground: deep,
+                    foreground: ArtPalette.inkOn(bright),
                   ),
                   SizedBox(width: 10 * s),
                   Expanded(
@@ -1311,6 +1413,9 @@ class _StudioLayout extends StatelessWidget {
                   ),
                 ],
               ),
+            ],
+          ),
+        ),
             ],
           ),
         ),

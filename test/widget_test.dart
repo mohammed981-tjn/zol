@@ -28,6 +28,9 @@ import 'package:zol/models/business_category.dart';
 import 'package:zol/services/admin_api.dart';
 import 'package:zol/models/template_category.dart';
 import 'package:zol/widgets/ad_design_preview.dart';
+import 'package:zol/theme/art_palette.dart';
+import 'package:zol/widgets/art_backdrop.dart';
+import 'package:zol/widgets/art_text.dart';
 import 'package:zol/services/background_remover.dart';
 import 'package:zol/services/subject_cutout.dart';
 import 'package:zol/services/brand_sync.dart';
@@ -1526,10 +1529,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull, reason: 'استثناء في ${t2(template)}');
+      // الكسر المتوازن يُدخل أسطرًا داخل العنوان، فالمطابقة الحرفية لم
+      // تعد صالحة. نقارن بعد تسوية المسافات: هذا يقبل الكسر الفنّي
+      // ويظلّ يرفض العنوان المبتور — وهو الخطر الحقيقي.
+      final rendered = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
+          .toSet();
       expect(
-        find.text(ad.headline),
-        findsOneWidget,
-        reason: 'العنوان غائب في ${t2(template)}',
+        rendered,
+        contains(ad.headline.replaceAll(RegExp(r'\s+'), ' ').trim()),
+        reason: 'العنوان غائب أو مبتور في ${t2(template)}',
       );
     }
   });
@@ -2284,6 +2294,186 @@ void main() {
       quota: 0, used: 0, isActive: true,
     );
     expect(zero.usageRatio, isNull);
+  });
+
+  // ── محرك الفن ──────────────────────────────────────────────────────
+  //
+  // هذه الاختبارات تحرس الادّعاء المركزي: أن التصميم صار **محسوبًا** لا
+  // مذوَّقًا. لو انكسر أحدها عاد الإعلان إلى ما كان — لونًا واحدًا باهتًا
+  // ونصًّا مبتورًا — بلا أن يظهر عطل في أي شاشة.
+
+  test('اللوحة الفنية: الحبر مقروء فوق كل سطح تُرسم عليه الحروف', () {
+    // عيّنة تغطي الحواف: مشبع، شاحب جدًا، قاتم جدًا، رمادي بلا درجة.
+    const sources = [
+      Color(0xFF8B5E3C), // بنّي قهوة
+      Color(0xFFF2E9E1), // شاحب
+      Color(0xFF06070A), // شبه أسود
+      Color(0xFF808080), // رمادي محض (تشبّع صفر)
+      Color(0xFF1BC47D), // أخضر مشبع
+      Color(0xFFFFEB3B), // أصفر ساطع — أخطر لون على النص الأبيض
+    ];
+    for (final src in sources) {
+      for (var variant = 0; variant < 4; variant++) {
+        final p = ArtPalette.from(src, variant: variant);
+        for (final (bg, ink, where) in [
+          (p.deep, p.ink, 'deep'),
+          (p.neutral, p.onInk, 'neutral'),
+          (p.base, ArtPalette.inkOn(p.base), 'base'),
+          (p.complement, ArtPalette.inkOn(p.complement), 'complement'),
+        ]) {
+          expect(
+            ArtPalette.contrast(bg, ink),
+            greaterThanOrEqualTo(4.5),
+            reason: 'تباين دون معيار WCAG على $where للون $src (نوع $variant)',
+          );
+        }
+      }
+    }
+  });
+
+  test('اللوحة الفنية: نفس المدخل يعطي نفس اللوحة دائمًا', () {
+    // الحتمية ليست ترفًا: المعاينة والتصدير وإعادة الفتح من المكتبة
+    // ثلاث عمليات منفصلة تبني اللوحة من جديد. لو دخلت عشوائية اختلف
+    // ما صدّره التاجر عمّا وافق عليه.
+    const src = Color(0xFF8B5E3C);
+    for (var v = 0; v < 6; v++) {
+      final a = ArtPalette.from(src, variant: v);
+      final b = ArtPalette.from(src, variant: v);
+      expect(a.base, b.base);
+      expect(a.complement, b.complement);
+      expect(a.deep, b.deep);
+      expect(a.scheme, b.scheme);
+    }
+    // والتنويع يعمل فعلًا: أنواع الانسجام الأربعة كلها تُستعمل.
+    final schemes = List.generate(
+      8,
+      (v) => ArtPalette.from(src, variant: v).scheme,
+    ).toSet();
+    expect(schemes.length, HarmonyScheme.values.length,
+        reason: 'التنويع معطَّل — كل الإعلانات ستخرج بانسجام واحد');
+  });
+
+  test('اللوحة الفنية: المرافق لون آخر لا درجة من الأساس', () {
+    // هذا هو الفرق الحقيقي عن السابق. لو رجع المرافق قريبًا من الأساس
+    // عادت اللوحة أحادية: كل شيء بنّي حول منتج بنّي.
+    for (final src in const [
+      Color(0xFF8B5E3C),
+      Color(0xFF1BC47D),
+      Color(0xFF3355EE),
+    ]) {
+      final p = ArtPalette.from(src, variant: 0); // متقابل ١٨٠°
+      final d = (p.base.r - p.complement.r).abs() +
+          (p.base.g - p.complement.g).abs() +
+          (p.base.b - p.complement.b).abs();
+      expect(d, greaterThan(0.35),
+          reason: 'المرافق يكاد يطابق الأساس للون $src');
+    }
+  });
+
+  test('اللوحة الفنية: الرمادي المحض يُنعش بدل أن يُخرج لوحة ميتة', () {
+    final p = ArtPalette.from(const Color(0xFF9A9A9A));
+    // لو مرّ الرمادي كما هو لخرجت كل الطبقات رمادية والتصميم بلا هوية.
+    expect(p.base, isNot(equals(p.complement)));
+    expect(ArtPalette.contrast(p.deep, p.neutral), greaterThan(3.0),
+        reason: 'العمق والحيادي متقاربان ⇒ لا عمق في الخلفية');
+  });
+
+  test('صفّ النص: الطويل يُصغَّر ليُقرأ كاملًا بدل أن يُبتر', () {
+    const style = TextStyle(fontSize: 20, height: 1.2);
+    const long = 'افتتاح فرعنا الجديد في حي الياسمين بالرياض هذا الخميس';
+    final fitted = ArtText.fitFontSize(
+      text: long,
+      style: style,
+      maxWidth: 200,
+      maxHeight: 60,
+      maxLines: 2,
+      minSize: 20 * 0.62,
+      maxSize: 20 * 1.35,
+      direction: TextDirection.rtl,
+    );
+    expect(fitted, lessThan(20.0), reason: 'لم يُصغَّر ⇒ سيُبتر بالنقاط');
+    expect(fitted, greaterThanOrEqualTo(20 * 0.62),
+        reason: 'هبط تحت حدّ القراءة');
+  });
+
+  test('صفّ النص: القصير يكبر ليملأ الفراغ حين يكون الارتفاع معلومًا', () {
+    const style = TextStyle(fontSize: 14);
+    final fitted = ArtText.fitFontSize(
+      text: 'خصم ٥٠٪',
+      style: style,
+      maxWidth: 320,
+      maxHeight: 200,
+      maxLines: 2,
+      minSize: 14 * 0.62,
+      maxSize: 14 * 1.35,
+      direction: TextDirection.rtl,
+    );
+    expect(fitted, greaterThan(14.0), reason: 'بقي صغيرًا وسط فراغ واسع');
+  });
+
+  test('صفّ النص: الكسر المتوازن يمنع السطر اليتيم', () {
+    const style = TextStyle(fontSize: 16);
+    // نصّ يجبر على سطرين. الكسر الساذج يملأ الأول ويترك كلمة في الثاني.
+    const text = 'قهوة مختصة محمّصة طازجة كل صباح';
+    // العرض مختار ليفرض سطرين ويسمح بهما معًا: أضيق منه لا يتّسع
+    // أيّ توزيع، وأوسع منه يسع النص سطرًا واحدًا فلا يُكسر أصلًا.
+    final out = ArtText.balanceLines(
+      text: text,
+      style: style,
+      maxWidth: 300,
+      maxLines: 2,
+      direction: TextDirection.rtl,
+    );
+    final lines = out.split('\n');
+    expect(lines.length, 2, reason: 'لم يُكسر إلى سطرين');
+    // لا يضيع ولا يُزاد حرف: الكسر تنسيق لا تحرير.
+    expect(out.replaceAll('\n', ' '), text);
+    final shortest = lines.map((l) => l.length).reduce(math.min);
+    final longest = lines.map((l) => l.length).reduce(math.max);
+    expect(shortest / longest, greaterThan(0.45),
+        reason: 'سطر يتيم: $lines');
+  });
+
+  test('صفّ النص: ما يسع سطرًا واحدًا لا يُكسر', () {
+    const style = TextStyle(fontSize: 14);
+    const text = 'خصم اليوم';
+    expect(
+      ArtText.balanceLines(
+        text: text,
+        style: style,
+        maxWidth: 400,
+        maxLines: 2,
+        direction: TextDirection.rtl,
+      ),
+      text,
+    );
+  });
+
+  testWidgets('الخلفيات الفنية: كل نمط يُرسم بلا استثناء', (tester) async {
+    final palette = ArtPalette.from(const Color(0xFF8B5E3C));
+    for (final style in BackdropStyle.values) {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: SizedBox(
+            width: 400,
+            height: 400,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ArtBackdrop(palette: palette, seed: 7, style: style),
+                ProductStage(
+                  palette: palette,
+                  child: const SizedBox.expand(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: 'استثناء في $style');
+    }
   });
 }
 
