@@ -108,12 +108,23 @@ jobs:
           fi
           echo "الأداة: $SIGNER"
 
-          # بلا `|| true`: فشلُ الفحص عطلٌ يجب أن يُرى لا أن يُبتلع.
-          "$SIGNER" verify --print-certs "$APK" > certs.txt
-          grep -i "Signer #1 certificate SHA-256\|Signer #1 certificate DN" certs.txt
+          # المخرجان معًا إلى ملفّ **ثم يُطبعان دائمًا**. توجيه stdout
+          # وحده إلى ملفّ أخفى رسالة الأداة حين سقطت، فرأينا رقم خروج
+          # بلا سبب — ومخرَجٌ لا يُطبع عند الفشل يساوي عدمه.
+          set +e
+          "$SIGNER" verify --print-certs "$APK" > certs.txt 2>&1
+          RC=$?
+          set -e
+          echo "──── مخرَج apksigner (خروج=$RC) ────"
+          cat certs.txt
+          echo "────────────────────────────────────"
 
           SHA=$(grep -i "Signer #1 certificate SHA-256" certs.txt \
                 | head -n1 | sed 's/.*: *//')
+          if [ -z "$SHA" ]; then
+            echo "::error::تعذّر استخراج بصمة التوقيع — راجع المخرَج أعلاه."
+            exit 1
+          fi
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
           echo "versionCode: ${{ github.run_number }}"
 
