@@ -119,8 +119,13 @@ jobs:
           cat certs.txt
           echo "────────────────────────────────────"
 
-          SHA=$(grep -i "Signer #1 certificate SHA-256" certs.txt \
-                | head -n1 | sed 's/.*: *//')
+          # النمط واسع عمدًا: apksigner يكتب التسمية بأكثر من صيغة بحسب
+          # إصداره ومخطط التوقيع — «Signer #1 certificate SHA-256 digest»
+          # مع v1، و«V2 Signer: certificate SHA-256 digest» مع v2 وحده.
+          # نمطٌ يطابق واحدة منهما يسقط البناء عند ترقية الأدوات، وقد
+          # أسقطه فعلًا: النسخة موقَّعة صحيحة والبحث هو ما أخفق.
+          SHA=$(grep -iE "certificate SHA-256 digest" certs.txt \
+                | head -n1 | sed 's/.*digest: *//')
           if [ -z "$SHA" ]; then
             echo "::error::تعذّر استخراج بصمة التوقيع — راجع المخرَج أعلاه."
             exit 1
