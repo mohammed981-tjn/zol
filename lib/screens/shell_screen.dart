@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'market_screen.dart';
 import 'my_ads_screen.dart';
 import 'templates_screen.dart';
 import 'orders_screen.dart';
 import 'settings_screen.dart';
 
 /// الهيكل الرئيسي بتنقل سفلي على نمط التطبيقات العالمية:
-/// الرئيسية، القوالب (المعرض)، إعلاناتي (المكتبة)، طلباتي (التتبع)،
-/// الإعدادات.
+/// الرئيسية، السوق، القوالب (المعرض)، إعلاناتي (المكتبة)، طلباتي
+/// (التتبع)، الإعدادات.
+///
+/// «السوق» في الموضع الثاني لا الأخير: التطبيق اسمه «سوق الدعاية
+/// والإعلان الشامل»، ودفنُ السوق في آخر شريط التنقّل يجعل الاسم دعوى
+/// لا وصفًا. وهو ثانٍ لا أوّل لأن الرئيسية تبقى مدخل الفعل (ولّد
+/// إعلانًا)، والسوق ما يليه مباشرة.
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
 
@@ -25,6 +31,7 @@ class _ShellScreenState extends State<ShellScreen> {
         index: _index,
         children: const [
           HomeScreen(),
+          MarketScreen(),
           TemplatesScreen(),
           MyAdsScreen(),
           OrdersScreen(),
@@ -39,6 +46,11 @@ class _ShellScreenState extends State<ShellScreen> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'الرئيسية',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.storefront_outlined),
+            selectedIcon: Icon(Icons.storefront),
+            label: 'السوق',
           ),
           NavigationDestination(
             icon: Icon(Icons.dashboard_customize_outlined),

@@ -28,6 +28,12 @@ import 'package:zol/models/business_category.dart';
 import 'package:zol/services/admin_api.dart';
 import 'package:zol/models/template_category.dart';
 import 'package:zol/widgets/ad_design_preview.dart';
+import 'package:zol/models/ad_service.dart';
+import 'package:zol/screens/market_screen.dart';
+import 'package:zol/screens/storefront_screen.dart';
+import 'package:zol/screens/shell_screen.dart';
+import 'package:zol/theme/app_palette_source.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:zol/theme/art_palette.dart';
 import 'package:zol/widgets/art_backdrop.dart';
 import 'package:zol/widgets/art_text.dart';
@@ -2447,6 +2453,179 @@ void main() {
       ),
       text,
     );
+  });
+
+  // ── السوق ──────────────────────────────────────────────────────────
+
+  test('دليل السوق: المطابع تدخله تلقائيًا فلا تفترق قائمتان', () {
+    final printing = serviceProviders.where(
+      (p) => p.kind == ServiceKind.printing,
+    );
+    expect(printing.length, printShops.length,
+        reason: 'شبكة المطابع لم تُطابق ما في السوق');
+    for (final shop in printShops) {
+      expect(
+        printing.any((p) => p.name == shop.name && p.city == shop.city),
+        isTrue,
+        reason: 'المطبعة ${shop.name} غائبة عن السوق',
+      );
+    }
+  });
+
+  test('دليل السوق: المدن تُشتقّ فلا مدينة فارغة ولا مدينة غائبة', () {
+    final cities = providerCities;
+    expect(cities.toSet().length, cities.length, reason: 'مدينة مكرّرة');
+    expect(cities, cities.toList()..sort(), reason: 'غير مرتّبة');
+    for (final p in serviceProviders) {
+      expect(cities, contains(p.city));
+    }
+    expect(cities.any((c) => c.trim().isEmpty), isFalse);
+  });
+
+  test('دليل السوق: المرشّحات تتراكم ولا يلغي أحدها الآخر', () {
+    final byKind = filterProviders(kind: ServiceKind.printing);
+    expect(byKind, isNotEmpty);
+    expect(byKind.every((p) => p.kind == ServiceKind.printing), isTrue);
+
+    final city = byKind.first.city;
+    final both = filterProviders(kind: ServiceKind.printing, city: city);
+    expect(both, isNotEmpty);
+    expect(
+      both.every((p) => p.kind == ServiceKind.printing && p.city == city),
+      isTrue,
+      reason: 'المرشّح الثاني ألغى الأول',
+    );
+
+    // بحث لا يطابق شيئًا يعطي قائمة فارغة لا استثناء.
+    expect(filterProviders(query: 'زققزق'), isEmpty);
+  });
+
+  test('دليل السوق: الترتيب يوازن التقييم بعدد المراجعات', () {
+    // تقييم ٥٫٠ من مراجعتين ليس أفضل من ٤٫٨ من مئتين — لكن الأعلى
+    // تقييمًا يتقدّم أولًا، وعند التساوي يفصل عدد المراجعات.
+    final all = filterProviders();
+    for (var i = 1; i < all.length; i++) {
+      final prev = all[i - 1], cur = all[i];
+      expect(prev.rating >= cur.rating, isTrue, reason: 'الترتيب مكسور');
+      if (prev.rating == cur.rating) {
+        expect(prev.reviews >= cur.reviews, isTrue,
+            reason: 'التساوي لم يُفصل بعدد المراجعات');
+      }
+    }
+  });
+
+  test('لوحة المزوّد: حتمية، ومقروءة، ومختلفة بين مزوّد وآخر', () {
+    for (final p in serviceProviders) {
+      final a = paletteForProvider(p);
+      final b = paletteForProvider(p);
+      expect(a.base, b.base, reason: 'لون ${p.name} يتغيّر بين استدعاءين');
+      // الشارة والزرّ يُرسمان فوق هذين، فالحبر فوقهما ليس تفصيلًا.
+      expect(ArtPalette.contrast(a.deep, a.ink),
+          greaterThanOrEqualTo(4.5));
+      expect(
+        ArtPalette.contrast(a.complement, ArtPalette.inkOn(a.complement)),
+        greaterThanOrEqualTo(4.5),
+      );
+    }
+    // مزوّدان مختلفان لا يخرجان بلون واحد، وإلا ضاع تمييزهم البصري.
+    final hues = serviceProviders
+        .map((p) => paletteForProvider(p).base.toARGB32())
+        .toSet();
+    expect(hues.length, greaterThan(serviceProviders.length ~/ 2),
+        reason: 'ألوان المزوّدين متكرّرة إلى حدّ يُفقد التمييز');
+  });
+
+  testWidgets('شريط التنقّل بستّة أقسام لا يفيض على عرض جوّال', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    // ٣٦٠ نقطة: عرض جوّال شائع. الاختبار الافتراضي ٨٠٠ نقطة يخفي
+    // الفيضان تمامًا، وإضافة قسم سادس تُقاس هنا لا هناك.
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(Brightness.light),
+        locale: const Locale('ar'),
+        supportedLocales: const [Locale('ar')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: AppStateScope(notifier: state, child: const ShellScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('السوق'), findsOneWidget);
+  });
+
+  testWidgets('السوق: البحث يرشّح، والفارغ يعرض مخرجًا لا شاشة ميتة',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(notifier: state, child: const MarketScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('متجري'), findsOneWidget,
+        reason: 'مدخل واجهة التاجر غائب عن السوق');
+
+    await tester.enterText(find.byType(TextField), 'تصوير');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('لقطة'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField), 'زققزق');
+    await tester.pumpAndSettle();
+    expect(find.text('لا مزوّد يطابق بحثك'), findsOneWidget);
+
+    // المخرج يعمل فعلًا: زرّ بلا أثر أسوأ من لا زرّ.
+    await tester.tap(find.text('إزالة المرشّحات'));
+    await tester.pumpAndSettle();
+    expect(find.text('لا مزوّد يطابق بحثك'), findsNothing);
+  });
+
+  testWidgets('متجري: يُعرض قبل ضبط الهوية، ويعرض ما حُفظ بعدها',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState();
+
+    Widget app() => MaterialApp(
+      theme: buildAppTheme(Brightness.light),
+      home: AppStateScope(notifier: state, child: const StorefrontScreen()),
+    );
+
+    // بلا حساب ولا لون علامة ولا إعلانات: يجب أن تُرسم لا أن تنهار.
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('واجهتك جاهزة وتنتظر أول عمل'), findsOneWidget);
+
+    state.savedAds.add(
+      GeneratedAd(
+        kind: AdKind.copy,
+        headline: 'قهوتنا تفتح نهارك',
+        body: 'حبوب مختصة',
+        hashtags: const ['#قهوة'],
+        cta: 'اطلب الآن',
+        createdAt: DateTime(2026, 8, 18),
+        brief: AdBrief(
+          productName: 'قهوة',
+          description: 'حبوب',
+          tone: 'حماسي',
+          platform: 'إنستغرام',
+          format: 'منشور مربع',
+          category: BusinessCategory.cafe,
+        ),
+      ),
+    );
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('المعروض (1)'), findsOneWidget);
+    expect(find.text('قهوتنا تفتح نهارك'), findsOneWidget);
   });
 
   testWidgets('الخلفيات الفنية: كل نمط يُرسم بلا استثناء', (tester) async {
