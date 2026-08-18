@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/shell_screen.dart';
 import 'services/supabase_config.dart';
@@ -36,13 +36,12 @@ class ZolApp extends StatelessWidget {
           theme: buildAppTheme(Brightness.light),
           darkTheme: buildAppTheme(Brightness.dark),
           themeMode: state.themeMode,
-          locale: const Locale('ar'),
-          supportedLocales: const [Locale('ar'), Locale('en')],
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
+          // `null` ⇒ يتبع Flutter لغة الجهاز ويختار أقربها من
+          // المدعومة. فرضُ `Locale('ar')` كان يجعل الاتجاه والنصّ
+          // عربيَّين على كل جهاز مهما كانت لغته.
+          locale: state.locale,
+          supportedLocales: L.supportedLocales,
+          localizationsDelegates: L.localizationsDelegates,
           home: state.hasOnboarded
               ? const ShellScreen()
               : const OnboardingScreen(),

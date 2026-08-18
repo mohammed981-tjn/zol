@@ -147,7 +147,8 @@ class BackgroundRemover {
       for (var x = 0; x < w; x++) {
         if (isBg[y * w + x] == 1) continue;
         fgArea++;
-        final touchesBg = (x + 1 < w && isBg[y * w + x + 1] == 1) ||
+        final touchesBg =
+            (x + 1 < w && isBg[y * w + x + 1] == 1) ||
             (x > 0 && isBg[y * w + x - 1] == 1) ||
             (y + 1 < h && isBg[(y + 1) * w + x] == 1) ||
             (y > 0 && isBg[(y - 1) * w + x] == 1);
@@ -166,12 +167,9 @@ class BackgroundRemover {
         if (isBg[i] == 1) {
           image.setPixelRgba(x, y, 0, 0, 0, 0);
         } else {
-          final nearBg = [
-            (x + 1, y),
-            (x - 1, y),
-            (x, y + 1),
-            (x, y - 1),
-          ].any((n) {
+          final nearBg = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)].any((
+            n,
+          ) {
             final (nx, ny) = n;
             return nx >= 0 &&
                 ny >= 0 &&
@@ -197,14 +195,7 @@ class BackgroundRemover {
     return Uint8List.fromList(img.encodePng(image));
   }
 
-  static double _dist2(
-    num r1,
-    num g1,
-    num b1,
-    num r2,
-    num g2,
-    num b2,
-  ) {
+  static double _dist2(num r1, num g1, num b1, num r2, num g2, num b2) {
     final dr = r1 - r2, dg = g1 - g2, db = b1 - b2;
     return (dr * dr + dg * dg + db * db).toDouble();
   }

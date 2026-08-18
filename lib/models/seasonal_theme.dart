@@ -64,7 +64,9 @@ bool isSeasonApproaching(SeasonalTheme season, DateTime now) {
     case SeasonalTheme.nationalDay:
       // 23 سبتمبر — نافذة الاقتراب: من 30 يومًا قبله وحتى يوم الاحتفال.
       final target = DateTime(now.year, 9, 23);
-      final diff = target.difference(DateTime(now.year, now.month, now.day)).inDays;
+      final diff = target
+          .difference(DateTime(now.year, now.month, now.day))
+          .inDays;
       return diff >= 0 && diff <= 30;
     case SeasonalTheme.whiteFriday:
       // النصف الثاني من نوفمبر تقريبًا (موعدها الفعلي يختلف قليلًا كل سنة).

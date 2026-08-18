@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
 import '../models/print_catalog.dart';
 import '../models/print_order.dart';
 import '../state/app_state.dart';
@@ -13,25 +15,22 @@ class OrdersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final l = L.of(context);
     final orders = state.orders;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('طلباتي')),
+      appBar: AppBar(title: Text(l.navOrders)),
       body: SafeArea(
         child: orders.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: Icons.local_shipping_outlined,
-                title: 'لا توجد طلبات بعد',
-                subtitle:
-                    'عند اختيار «اطبعه وصلّه» بعد توليد إعلانك، سيظهر الطلب هنا مع خط زمني لتتبع حالته.',
+                title: l.ordersEmptyTitle,
+                subtitle: l.ordersEmptyBody,
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
-                  const SectionHeader(
-                    kicker: 'التتبع',
-                    title: 'حالة طلبات الطباعة',
-                  ),
+                  SectionHeader(kicker: l.ordersKicker, title: l.ordersTitle),
                   const SizedBox(height: 16),
                   ...orders.map((order) => _OrderCard(order: order)),
                 ],
@@ -49,6 +48,7 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final l = L.of(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -61,58 +61,58 @@ class _OrderCard extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          leading: Icon(order.status.icon, color: AppColors.coral),
-          title: Text(
-            '${order.productLabel} — ${order.id}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: context.scheme.onSurface,
-            ),
-          ),
-          subtitle: Text(
-            '${order.sizeLabel} × ${order.quantity} • ${formatPrice(order.total)}',
-            style: TextStyle(color: context.textMuted, fontSize: 12.5),
-          ),
-          trailing: _StatusChip(status: order.status),
-          children: [
-            _OrderTimeline(status: order.status),
-            const SizedBox(height: 8),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                'التوصيل إلى: ${order.address}\n'
-                '${order.shopName != null ? 'المطبعة: ${order.shopName}\n' : ''}'
-                '${order.isPaid ? 'مدفوع بالبطاقة ✓' : 'الدفع عند الاستلام'}',
-                style: TextStyle(color: context.textMuted, fontSize: 12.5),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            leading: Icon(order.status.icon, color: AppColors.coral),
+            title: Text(
+              '${order.productLabel} — ${order.id}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: context.scheme.onSurface,
               ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (order.hasDeliveryPoint)
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => OrderMapScreen(order: order),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.map_outlined, size: 18),
-                    label: const Text('عرض على الخريطة'),
-                  ),
-                const Spacer(),
-                if (order.status != OrderStatus.delivered)
-                  TextButton.icon(
-                    onPressed: () => state.advanceOrder(order),
-                    icon: const Icon(Icons.fast_forward_outlined, size: 18),
-                    label: const Text('محاكاة التقدم (تجريبي)'),
-                  ),
-              ],
+            subtitle: Text(
+              '${order.sizeLabel} × ${order.quantity} • ${formatPrice(order.total)}',
+              style: TextStyle(color: context.textMuted, fontSize: 12.5),
             ),
-          ],
+            trailing: _StatusChip(status: order.status),
+            children: [
+              _OrderTimeline(status: order.status),
+              const SizedBox(height: 8),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  '${l.ordersDeliverTo(order.address)}\n'
+                  '${order.shopName != null ? '${l.ordersShop(order.shopName!)}\n' : ''}'
+                  '${order.isPaid ? l.ordersPaidByCard : l.ordersCashOnDelivery}',
+                  style: TextStyle(color: context.textMuted, fontSize: 12.5),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (order.hasDeliveryPoint)
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => OrderMapScreen(order: order),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.map_outlined, size: 18),
+                      label: Text(L.of(context).ordersShowOnMap),
+                    ),
+                  const Spacer(),
+                  if (order.status != OrderStatus.delivered)
+                    TextButton.icon(
+                      onPressed: () => state.advanceOrder(order),
+                      icon: const Icon(Icons.fast_forward_outlined, size: 18),
+                      label: Text(L.of(context).ordersSimulate),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

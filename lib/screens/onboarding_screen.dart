@@ -21,19 +21,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     (
       icon: Icons.auto_awesome,
       title: 'إعلانك يولد في ثوانٍ',
-      text: 'ارفع صورة منتجك واختر النبرة والمنصة، '
+      text:
+          'ارفع صورة منتجك واختر النبرة والمنصة، '
           'ونحن نخرج لك نصًا وتصميمًا جاهزين للنشر.',
     ),
     (
       icon: Icons.print_outlined,
       title: 'اطبعه عند أقرب مطبعة',
-      text: 'بنرات، استيكرات، كروت ورول أب بأسعار فورية — '
+      text:
+          'بنرات، استيكرات، كروت ورول أب بأسعار فورية — '
           'ويُسند طلبك تلقائيًا لأقرب مطبعة شريكة لموقعك.',
     ),
     (
       icon: Icons.delivery_dining,
       title: 'ويصلك حتى الباب',
-      text: 'حدّد موقعك على الخريطة وتابع طلبك خطوة بخطوة '
+      text:
+          'حدّد موقعك على الخريطة وتابع طلبك خطوة بخطوة '
           'حتى يصل بين يديك.',
     ),
   ];
@@ -246,7 +249,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         },
                   child: Text(
                     _isCategoryPage
-                        ? (_category == null ? 'اختر نشاطك للمتابعة' : 'ابدأ الآن')
+                        ? (_category == null
+                              ? 'اختر نشاطك للمتابعة'
+                              : 'ابدأ الآن')
                         : 'التالي',
                   ),
                 ),

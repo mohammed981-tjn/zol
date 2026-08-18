@@ -103,7 +103,10 @@ class _OrderMapScreenState extends State<OrderMapScreen> {
               children: [
                 FlutterMap(
                   mapController: _mapController,
-                  options: MapOptions(initialCenter: _delivery, initialZoom: 14),
+                  options: MapOptions(
+                    initialCenter: _delivery,
+                    initialZoom: 14,
+                  ),
                   children: [
                     TileLayer(
                       urlTemplate:
@@ -142,8 +145,14 @@ class _OrderMapScreenState extends State<OrderMapScreen> {
 
   Widget _statusBanner() {
     final (text, icon) = switch (order.status) {
-      OrderStatus.received => ('الطلب لدى المطبعة وسيبدأ تجهيزه', Icons.receipt_long_outlined),
-      OrderStatus.printing => ('مطبوعاتك قيد الطباعة الآن', Icons.print_outlined),
+      OrderStatus.received => (
+        'الطلب لدى المطبعة وسيبدأ تجهيزه',
+        Icons.receipt_long_outlined,
+      ),
+      OrderStatus.printing => (
+        'مطبوعاتك قيد الطباعة الآن',
+        Icons.print_outlined,
+      ),
       OrderStatus.shipping => ('السائق في طريقه إليك', Icons.delivery_dining),
       OrderStatus.delivered => ('تم تسليم طلبك بنجاح', Icons.done_all_rounded),
     };

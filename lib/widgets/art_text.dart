@@ -137,7 +137,10 @@ class ArtText extends StatelessWidget {
 
     bool fits(double size) {
       final tp = TextPainter(
-        text: TextSpan(text: text, style: style.copyWith(fontSize: size)),
+        text: TextSpan(
+          text: text,
+          style: style.copyWith(fontSize: size),
+        ),
         maxLines: maxLines,
         textDirection: direction,
       )..layout(maxWidth: maxWidth);

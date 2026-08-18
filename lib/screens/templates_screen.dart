@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
 import '../models/ad_brief.dart';
 import '../models/ad_template.dart';
 import '../models/generated_ad.dart';
@@ -41,7 +43,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
     final categories = _visibleCategories;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('القوالب')),
+      appBar: AppBar(title: Text(L.of(context).navTemplates)),
       body: SafeArea(
         child: Column(
           children: [
@@ -51,7 +53,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                 controller: _searchController,
                 onChanged: (v) => setState(() => _query = v),
                 decoration: InputDecoration(
-                  hintText: 'ابحث في القوالب — ستوري، بنر، كرت…',
+                  hintText: L.of(context).templatesSearchHint,
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _query.isEmpty
                       ? null
@@ -75,7 +77,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
               child: categories.isEmpty
                   ? Center(
                       child: Text(
-                        'لا توجد قوالب مطابقة لبحثك',
+                        L.of(context).templatesEmpty,
                         style: TextStyle(color: context.textMuted),
                       ),
                     )
@@ -83,11 +85,11 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                       padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
                       children: [
                         if (_query.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(20, 4, 20, 16),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                             child: SectionHeader(
-                              kicker: 'ابدأ من قالب',
-                              title: 'اختر الشكل الذي تريده',
+                              kicker: L.of(context).templatesKicker,
+                              title: L.of(context).templatesTitle,
                             ),
                           ),
                         for (final category in categories)
@@ -109,10 +111,12 @@ class _CategoryRow extends StatelessWidget {
 
   /// إعلان توضيحي بلا صورة منتج — يُظهر شكل القالب قبل أن يرفع التاجر شيئًا،
   /// بمفردات نشاطه هو لا بنص عام.
-  GeneratedAd _sampleAd(BusinessCategory business) {
+  GeneratedAd _sampleAd(BuildContext context, BusinessCategory business) {
     final brief = AdBrief(
-      productName: 'اسم منتجك',
+      productName: L.of(context).templatesSampleProduct,
       description: '',
+      // نبرة العيّنة: نصّ **محتوى** لا واجهة — يُترجَم مع مولّد النصوص
+      // في الدفعة الثالثة حيث تُحسم لغة الإعلان، لا هنا.
       tone: 'حماسي',
       platform: category.suggestedPlatform,
       format: category.adFormat,
@@ -127,7 +131,7 @@ class _CategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final business = AppStateScope.of(context).businessCategory;
-    final sample = _sampleAd(business);
+    final sample = _sampleAd(context, business);
     final templates = orderTemplatesForBusiness(category.templates, business);
 
     return Padding(
@@ -160,9 +164,9 @@ class _CategoryRow extends StatelessWidget {
                       color: AppColors.gold.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text(
-                      'قابل للطباعة',
-                      style: TextStyle(
+                    child: Text(
+                      L.of(context).templatesPrintable,
+                      style: const TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF8A6D00),
@@ -248,9 +252,9 @@ class _TemplateCard extends StatelessWidget {
                         color: AppColors.coral,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Text(
-                        '🔥 رائج',
-                        style: TextStyle(
+                      child: Text(
+                        L.of(context).templatesTrending,
+                        style: const TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,

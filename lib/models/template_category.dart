@@ -41,9 +41,11 @@ extension TemplateCategoryInfo on TemplateCategory {
 
   /// صيغة الإعلان التي تُملأ تلقائيًا عند اختيار الفئة.
   String get adFormat => switch (this) {
-    TemplateCategory.post || TemplateCategory.banner ||
+    TemplateCategory.post ||
+    TemplateCategory.banner ||
     TemplateCategory.card => 'منشور مربع',
-    TemplateCategory.story || TemplateCategory.poster ||
+    TemplateCategory.story ||
+    TemplateCategory.poster ||
     TemplateCategory.rollup => 'ستوري',
     TemplateCategory.reel => 'ريلز',
   };

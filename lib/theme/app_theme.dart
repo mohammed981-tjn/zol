@@ -127,8 +127,9 @@ ThemeData buildAppTheme(Brightness brightness) {
     tertiary: isDark ? AppColors.gold : AppColors.goldDeep,
     error: AppColors.danger,
     surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLightHigh,
-    surfaceContainerHighest:
-        isDark ? AppColors.surfaceDarkHigh : AppColors.surfaceLight,
+    surfaceContainerHighest: isDark
+        ? AppColors.surfaceDarkHigh
+        : AppColors.surfaceLight,
   );
 
   final onSurface = scheme.onSurface;
@@ -178,18 +179,18 @@ ThemeData buildAppTheme(Brightness brightness) {
         (states) => TextStyle(
           fontFamily: kFontFamily,
           fontSize: 11.5,
-          fontWeight:
-              states.contains(WidgetState.selected)
-                  ? FontWeight.w800
-                  : FontWeight.w600,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w800
+              : FontWeight.w600,
           color: states.contains(WidgetState.selected) ? onSurface : muted,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
           size: 24,
-          color:
-              states.contains(WidgetState.selected) ? AppColors.coral : muted,
+          color: states.contains(WidgetState.selected)
+              ? AppColors.coral
+              : muted,
         ),
       ),
     ),
@@ -249,7 +250,10 @@ ThemeData buildAppTheme(Brightness brightness) {
       style: OutlinedButton.styleFrom(
         foregroundColor: scheme.primary,
         // حدّ ١٫٤ لا ١: الحدّ الشعرة يختفي على الشاشات عالية الكثافة.
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.55), width: 1.4),
+        side: BorderSide(
+          color: scheme.primary.withValues(alpha: 0.55),
+          width: 1.4,
+        ),
         backgroundColor: isDark ? Colors.white10 : Colors.transparent,
         minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -308,7 +312,11 @@ ThemeData buildAppTheme(Brightness brightness) {
       fillColor: isDark ? AppColors.surfaceDarkHigh : AppColors.surfaceLight,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       hintStyle: TextStyle(fontFamily: kFontFamily, color: muted, fontSize: 14),
-      labelStyle: TextStyle(fontFamily: kFontFamily, color: muted, fontSize: 14),
+      labelStyle: TextStyle(
+        fontFamily: kFontFamily,
+        color: muted,
+        fontSize: 14,
+      ),
       floatingLabelStyle: TextStyle(
         fontFamily: kFontFamily,
         color: scheme.primary,
@@ -337,7 +345,9 @@ ThemeData buildAppTheme(Brightness brightness) {
     ),
 
     chipTheme: ChipThemeData(
-      backgroundColor: isDark ? AppColors.surfaceDarkHigh : AppColors.surfaceLight,
+      backgroundColor: isDark
+          ? AppColors.surfaceDarkHigh
+          : AppColors.surfaceLight,
       selectedColor: scheme.primary,
       surfaceTintColor: Colors.transparent,
       checkmarkColor: Colors.white,
@@ -457,15 +467,14 @@ extension AppSurfaces on BuildContext {
   ColorScheme get scheme => Theme.of(this).colorScheme;
   bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
 
-  Color get cardBg => isDarkMode
-      ? AppColors.surfaceDarkHigh
-      : AppColors.surfaceLight;
+  Color get cardBg =>
+      isDarkMode ? AppColors.surfaceDarkHigh : AppColors.surfaceLight;
 
-  Color get textMuted => isDarkMode
-      ? const Color(0xFF9AA3C7)
-      : const Color(0xFF666E8C);
+  Color get textMuted =>
+      isDarkMode ? const Color(0xFF9AA3C7) : const Color(0xFF666E8C);
 
-  Color get hairline => isDarkMode ? AppColors.borderDark : AppColors.borderLight;
+  Color get hairline =>
+      isDarkMode ? AppColors.borderDark : AppColors.borderLight;
 
   /// ذهبيّ مقروء على السطح الحالي: الفاتح فوق الداكن والعكس.
   Color get goldOnSurface => isDarkMode ? AppColors.gold : AppColors.goldDeep;

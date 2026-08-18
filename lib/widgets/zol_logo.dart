@@ -7,7 +7,12 @@ import '../theme/app_theme.dart';
 ///
 /// الإحداثيات مبنية على مساحة تصميم 332×180 وتُقاس تلقائيًا.
 class ZolLogo extends StatelessWidget {
-  const ZolLogo({super.key, this.height = 56, this.color, this.showSpark = true});
+  const ZolLogo({
+    super.key,
+    this.height = 56,
+    this.color,
+    this.showSpark = true,
+  });
 
   /// ارتفاع الشعار؛ العرض يُحسب بنسبة التصميم.
   final double height;
@@ -23,7 +28,8 @@ class ZolLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final letterColor = color ??
+    final letterColor =
+        color ??
         (Theme.of(context).brightness == Brightness.dark
             ? Colors.white
             : AppColors.navy);

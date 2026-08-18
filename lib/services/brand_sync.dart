@@ -130,8 +130,9 @@ class BrandSync {
       await db.from('brand_identities').upsert(
         {
           'merchant_id': id,
-          'primary_color':
-              colorValue == null ? null : BrandIdentity.colorToHex(colorValue),
+          'primary_color': colorValue == null
+              ? null
+              : BrandIdentity.colorToHex(colorValue),
           'font_name': fontName,
           'logo_base64': logo,
         },

@@ -134,15 +134,17 @@ class AdBrief {
       orElse: () => BusinessCategory.retail,
     ),
     paletteColor: json['paletteColor'] as int?,
-    season: SeasonalTheme.values
-        .cast<SeasonalTheme?>()
-        .firstWhere((s) => s?.name == json['season'], orElse: () => null),
+    season: SeasonalTheme.values.cast<SeasonalTheme?>().firstWhere(
+      (s) => s?.name == json['season'],
+      orElse: () => null,
+    ),
     useDecorativeBackground: json['useDecorativeBackground'] as bool? ?? false,
     brandName: json['brandName'] as String?,
     brandColor: json['brandColor'] as int?,
-    badge: AdBadge.values
-        .cast<AdBadge?>()
-        .firstWhere((b) => b?.name == json['badge'], orElse: () => null),
+    badge: AdBadge.values.cast<AdBadge?>().firstWhere(
+      (b) => b?.name == json['badge'],
+      orElse: () => null,
+    ),
     productScale: (json['productScale'] as num?)?.toDouble() ?? 1,
     productDx: (json['productDx'] as num?)?.toDouble() ?? 0,
     productDy: (json['productDy'] as num?)?.toDouble() ?? 0,

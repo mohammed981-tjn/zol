@@ -130,10 +130,11 @@ class AdDesignPreview extends StatelessWidget {
                     child: Text(
                       'zol ✦',
                       style: TextStyle(
-                        color: (template.isLightSurface
-                                ? Colors.black
-                                : Colors.white)
-                            .withValues(alpha: 0.42),
+                        color:
+                            (template.isLightSurface
+                                    ? Colors.black
+                                    : Colors.white)
+                                .withValues(alpha: 0.42),
                         fontSize: 10 * spec.s,
                         fontWeight: FontWeight.w700,
                       ),
@@ -338,7 +339,9 @@ class _Cta extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: outlined ? Colors.transparent : background,
-        border: outlined ? Border.all(color: foreground, width: 1.4 * spec.s) : null,
+        border: outlined
+            ? Border.all(color: foreground, width: 1.4 * spec.s)
+            : null,
         borderRadius: BorderRadius.circular(22 * spec.s),
       ),
       child: Text(
@@ -358,7 +361,10 @@ Widget _hashtagLine(_Spec spec, Color color) => Text(
   textAlign: TextAlign.center,
   maxLines: 1,
   overflow: TextOverflow.ellipsis,
-  style: TextStyle(color: color.withValues(alpha: 0.85), fontSize: 11.5 * spec.s),
+  style: TextStyle(
+    color: color.withValues(alpha: 0.85),
+    fontSize: 11.5 * spec.s,
+  ),
 );
 
 // ── 1. جريء ──────────────────────────────────────────────────────────
@@ -384,74 +390,74 @@ class _BoldLayout extends StatelessWidget {
         ),
         Stack(
           children: [
-          Padding(
-            padding: EdgeInsets.all(18 * s),
-            child: Column(
-              children: [
-                SizedBox(height: 8 * s),
-                Text(
-                  spec.headline,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: on,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 21 * s,
-                    height: 1.3,
-                  ),
-                ),
-                SizedBox(height: 14 * s),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: spec.art.neutral,
-                      borderRadius: BorderRadius.circular(14 * s),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.32),
-                          blurRadius: 18 * s,
-                          offset: Offset(0, 8 * s),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    // ظلّ تماسّ يثبّت المنتج على السطح — بلا هالة هنا:
-                    // الهالة تفصل المنتج عن خلفية داكنة، أما فوق سطح
-                    // فاتح فتلطّخه بلونها وتجعل اللوح يبدو متّسخًا.
-                    child: ProductStage(
-                      palette: spec.art,
-                      halo: false,
-                      shadowOpacity: 0.24,
-                      child: spec.product(fit: BoxFit.cover),
+            Padding(
+              padding: EdgeInsets.all(18 * s),
+              child: Column(
+                children: [
+                  SizedBox(height: 8 * s),
+                  Text(
+                    spec.headline,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: on,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 21 * s,
+                      height: 1.3,
                     ),
                   ),
-                ),
-                SizedBox(height: 14 * s),
-                Text(
-                  spec.productName,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: on,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17 * s,
+                  SizedBox(height: 14 * s),
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: spec.art.neutral,
+                        borderRadius: BorderRadius.circular(14 * s),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.32),
+                            blurRadius: 18 * s,
+                            offset: Offset(0, 8 * s),
+                          ),
+                        ],
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      // ظلّ تماسّ يثبّت المنتج على السطح — بلا هالة هنا:
+                      // الهالة تفصل المنتج عن خلفية داكنة، أما فوق سطح
+                      // فاتح فتلطّخه بلونها وتجعل اللوح يبدو متّسخًا.
+                      child: ProductStage(
+                        palette: spec.art,
+                        halo: false,
+                        shadowOpacity: 0.24,
+                        child: spec.product(fit: BoxFit.cover),
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(height: 6 * s),
-                _hashtagLine(spec, on),
-                SizedBox(height: 8 * s),
-                _Cta(
-                  spec: spec,
-                  background: spec.art.complement,
-                  foreground: ArtPalette.inkOn(spec.art.complement),
-                ),
-              ],
+                  SizedBox(height: 14 * s),
+                  Text(
+                    spec.productName,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: on,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17 * s,
+                    ),
+                  ),
+                  SizedBox(height: 6 * s),
+                  _hashtagLine(spec, on),
+                  SizedBox(height: 8 * s),
+                  _Cta(
+                    spec: spec,
+                    background: spec.art.complement,
+                    foreground: ArtPalette.inkOn(spec.art.complement),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ],
     );
@@ -711,10 +717,7 @@ class _SpotlightLayout extends StatelessWidget {
             children: [
               Expanded(
                 flex: 6,
-                child: ProductStage(
-                  palette: spec.art,
-                  child: spec.product(),
-                ),
+                child: ProductStage(palette: spec.art, child: spec.product()),
               ),
               SizedBox(height: 12 * s),
               Text(
@@ -739,11 +742,7 @@ class _SpotlightLayout extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 14 * s),
-              _Cta(
-                spec: spec,
-                outlined: true,
-                foreground: spec.art.complement,
-              ),
+              _Cta(spec: spec, outlined: true, foreground: spec.art.complement),
             ],
           ),
         ),
@@ -950,80 +949,83 @@ class _TestimonialLayout extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(24 * s, 26 * s, 24 * s, 20 * s),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.format_quote,
-              size: 40 * s,
-              color: spec.art.base.withValues(alpha: 0.35),
-            ),
-            SizedBox(height: 6 * s),
-            Expanded(
-              child: Center(
-                // الاقتباس هو بطل هذا القالب: يكبر ليملأ ما أُفرِد له
-                // حين يقصر، ويصغر ليُقرأ كاملًا حين يطول — لا يُبتر.
-                child: ArtText(
-                  spec.headline,
-                  maxLines: 4,
-                  style: TextStyle(
-                    color: ink,
-                    fontSize: 17 * s,
-                    height: 1.55,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.format_quote,
+                size: 40 * s,
+                color: spec.art.base.withValues(alpha: 0.35),
               ),
-            ),
-            SizedBox(height: 10 * s),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                5,
-                (_) => Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 1.5 * s),
-                  child: Icon(Icons.star_rounded,
-                      size: 15 * s, color: const Color(0xFFF5A623)),
-                ),
-              ),
-            ),
-            SizedBox(height: 12 * s),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ClipOval(
-                  child: SizedBox(
-                    width: 40 * s,
-                    height: 40 * s,
-                    child: ColoredBox(
-                      color: spec.art.neutral,
-                      child: spec.product(fit: BoxFit.cover),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 10 * s),
-                Flexible(
-                  child: Text(
-                    spec.productName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+              SizedBox(height: 6 * s),
+              Expanded(
+                child: Center(
+                  // الاقتباس هو بطل هذا القالب: يكبر ليملأ ما أُفرِد له
+                  // حين يقصر، ويصغر ليُقرأ كاملًا حين يطول — لا يُبتر.
+                  child: ArtText(
+                    spec.headline,
+                    maxLines: 4,
                     style: TextStyle(
-                      color: ink.withValues(alpha: 0.75),
-                      fontSize: 13 * s,
-                      fontWeight: FontWeight.w700,
+                      color: ink,
+                      fontSize: 17 * s,
+                      height: 1.55,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 14 * s),
-            _Cta(
-              spec: spec,
-              background: spec.art.base,
-              foreground: ArtPalette.inkOn(spec.art.base),
-            ),
-          ],
-        ),
+              ),
+              SizedBox(height: 10 * s),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  5,
+                  (_) => Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 1.5 * s),
+                    child: Icon(
+                      Icons.star_rounded,
+                      size: 15 * s,
+                      color: const Color(0xFFF5A623),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12 * s),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ClipOval(
+                    child: SizedBox(
+                      width: 40 * s,
+                      height: 40 * s,
+                      child: ColoredBox(
+                        color: spec.art.neutral,
+                        child: spec.product(fit: BoxFit.cover),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10 * s),
+                  Flexible(
+                    child: Text(
+                      spec.productName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: ink.withValues(alpha: 0.75),
+                        fontSize: 13 * s,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 14 * s),
+              _Cta(
+                spec: spec,
+                background: spec.art.base,
+                foreground: ArtPalette.inkOn(spec.art.base),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -1053,62 +1055,68 @@ class _FrameLayout extends StatelessWidget {
           style: BackdropStyle.paper,
         ),
         Padding(
-        padding: EdgeInsets.all(12 * s),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: gold.withValues(alpha: 0.55), width: 1.2 * s),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(5 * s),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: gold, width: 0.8 * s),
+          padding: EdgeInsets.all(12 * s),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: gold.withValues(alpha: 0.55),
+                width: 1.2 * s,
               ),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(18 * s, 18 * s, 18 * s, 14 * s),
-                child: Column(
-                  children: [
-                    Text(
-                      spec.productName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: gold,
-                        fontSize: 12 * s,
-                        letterSpacing: 3 * s,
-                        fontWeight: FontWeight.w700,
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(5 * s),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: gold, width: 0.8 * s),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(18 * s, 18 * s, 18 * s, 14 * s),
+                  child: Column(
+                    children: [
+                      Text(
+                        spec.productName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: gold,
+                          fontSize: 12 * s,
+                          letterSpacing: 3 * s,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 10 * s),
-                    Expanded(
-                      child: ProductStage(
-                        palette: spec.art,
-                        halo: false,
-                        shadowOpacity: 0.16,
-                        child: spec.product(),
+                      SizedBox(height: 10 * s),
+                      Expanded(
+                        child: ProductStage(
+                          palette: spec.art,
+                          halo: false,
+                          shadowOpacity: 0.16,
+                          child: spec.product(),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 10 * s),
-                    Container(width: 46 * s, height: 1 * s, color: gold),
-                    SizedBox(height: 10 * s),
-                    ArtText(
-                      spec.headline,
-                      style: TextStyle(
-                        color: ink,
-                        fontSize: 15 * s,
-                        height: 1.45,
-                        fontWeight: FontWeight.w600,
+                      SizedBox(height: 10 * s),
+                      Container(width: 46 * s, height: 1 * s, color: gold),
+                      SizedBox(height: 10 * s),
+                      ArtText(
+                        spec.headline,
+                        style: TextStyle(
+                          color: ink,
+                          fontSize: 15 * s,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 12 * s),
-                    _Cta(spec: spec, background: gold,
-                        foreground: ArtPalette.inkOn(gold)),
-                  ],
+                      SizedBox(height: 12 * s),
+                      _Cta(
+                        spec: spec,
+                        background: gold,
+                        foreground: ArtPalette.inkOn(gold),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         ),
       ],
     );
@@ -1230,56 +1238,56 @@ class _CircularLayout extends StatelessWidget {
           style: BackdropStyle.paper,
         ),
         Padding(
-        padding: EdgeInsets.fromLTRB(20 * s, 24 * s, 20 * s, 18 * s),
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Container(
-                    padding: EdgeInsets.all(7 * s),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: primary, width: 2 * s),
-                      // الحلقة تُلقي ظلًّا فتصير قرصًا مرفوعًا عن الورق
-                      // لا دائرة مرسومة عليه.
-                      boxShadow: [
-                        BoxShadow(
-                          color: primary.withValues(alpha: 0.22),
-                          blurRadius: 18 * s,
-                          offset: Offset(0, 7 * s),
+          padding: EdgeInsets.fromLTRB(20 * s, 24 * s, 20 * s, 18 * s),
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Container(
+                      padding: EdgeInsets.all(7 * s),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: primary, width: 2 * s),
+                        // الحلقة تُلقي ظلًّا فتصير قرصًا مرفوعًا عن الورق
+                        // لا دائرة مرسومة عليه.
+                        boxShadow: [
+                          BoxShadow(
+                            color: primary.withValues(alpha: 0.22),
+                            blurRadius: 18 * s,
+                            offset: Offset(0, 7 * s),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: ColoredBox(
+                          color: spec.art.neutral,
+                          child: spec.product(fit: BoxFit.cover),
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: ColoredBox(
-                        color: spec.art.neutral,
-                        child: spec.product(fit: BoxFit.cover),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 14 * s),
-            ArtText(
-              spec.headline,
-              style: TextStyle(
-                color: spec.art.onInk,
-                fontSize: 17 * s,
-                height: 1.35,
-                fontWeight: FontWeight.w800,
+              SizedBox(height: 14 * s),
+              ArtText(
+                spec.headline,
+                style: TextStyle(
+                  color: spec.art.onInk,
+                  fontSize: 17 * s,
+                  height: 1.35,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            SizedBox(height: 10 * s),
-            _Cta(
-              spec: spec,
-              background: primary,
-              foreground: ArtPalette.inkOn(primary),
-            ),
-          ],
-        ),
+              SizedBox(height: 10 * s),
+              _Cta(
+                spec: spec,
+                background: primary,
+                foreground: ArtPalette.inkOn(primary),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -1334,88 +1342,88 @@ class _StudioLayout extends StatelessWidget {
                 style: BackdropStyle.mesh,
               ),
               Padding(
-          padding: EdgeInsets.fromLTRB(16 * s, 20 * s, 16 * s, 14 * s),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // العنوان العملاق — يمين الصفحة (بداية القراءة العربية).
-              // يكبر إلى ٣٥٪ فوق حجمه حين يقصر: العنوان العملاق هو سرّ
-              // هذا القالب، وتثبيته على مقاس واحد يهدر نصف أثره.
-              ArtText(
-                spec.headline,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  color: bright,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 27 * s,
-                  height: 1.18,
-                ),
-              ),
-              SizedBox(height: 6 * s),
-              Text(
-                spec.productName,
-                textAlign: TextAlign.right,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: muted,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13 * s,
-                ),
-              ),
-              SizedBox(height: 12 * s),
-              // المنتج جانبيًّا (يسار — مرآة تكوين Canva في اتجاه RTL)
-              // في لوح بظل عميق، والفراغ يمينه يتنفس منه التصميم.
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: 0.78,
-                    heightFactor: 0.96,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: spec.art.neutral,
-                        borderRadius: BorderRadius.circular(14 * s),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.38),
-                            blurRadius: 18 * s,
-                            offset: Offset(6 * s, 10 * s),
-                          ),
-                        ],
+                padding: EdgeInsets.fromLTRB(16 * s, 20 * s, 16 * s, 14 * s),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // العنوان العملاق — يمين الصفحة (بداية القراءة العربية).
+                    // يكبر إلى ٣٥٪ فوق حجمه حين يقصر: العنوان العملاق هو سرّ
+                    // هذا القالب، وتثبيته على مقاس واحد يهدر نصف أثره.
+                    ArtText(
+                      spec.headline,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: bright,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 27 * s,
+                        height: 1.18,
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: spec.product(fit: BoxFit.cover),
                     ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 12 * s),
-              Row(
-                children: [
-                  _Cta(
-                    spec: spec,
-                    background: bright,
-                    foreground: ArtPalette.inkOn(bright),
-                  ),
-                  SizedBox(width: 10 * s),
-                  Expanded(
-                    child: Text(
-                      spec.hashtags.take(2).join('  '),
-                      textAlign: TextAlign.left,
+                    SizedBox(height: 6 * s),
+                    Text(
+                      spec.productName,
+                      textAlign: TextAlign.right,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: muted.withValues(alpha: 0.9),
-                        fontSize: 11 * s,
+                        color: muted,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13 * s,
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: 12 * s),
+                    // المنتج جانبيًّا (يسار — مرآة تكوين Canva في اتجاه RTL)
+                    // في لوح بظل عميق، والفراغ يمينه يتنفس منه التصميم.
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.78,
+                          heightFactor: 0.96,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: spec.art.neutral,
+                              borderRadius: BorderRadius.circular(14 * s),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.38),
+                                  blurRadius: 18 * s,
+                                  offset: Offset(6 * s, 10 * s),
+                                ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: spec.product(fit: BoxFit.cover),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12 * s),
+                    Row(
+                      children: [
+                        _Cta(
+                          spec: spec,
+                          background: bright,
+                          foreground: ArtPalette.inkOn(bright),
+                        ),
+                        SizedBox(width: 10 * s),
+                        Expanded(
+                          child: Text(
+                            spec.hashtags.take(2).join('  '),
+                            textAlign: TextAlign.left,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: muted.withValues(alpha: 0.9),
+                              fontSize: 11 * s,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
             ],
           ),
         ),

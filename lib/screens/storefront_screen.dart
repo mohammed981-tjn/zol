@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../models/generated_ad.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -21,6 +23,7 @@ class StorefrontScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final l = L.of(context);
     final ads = state.savedAds;
     // لون العلامة إن وُجد، وإلا كحليّ الهوية: الواجهة يجب أن تُعرض
     // حتى قبل أن يضبط التاجر هويته.
@@ -37,14 +40,14 @@ class StorefrontScreen extends StatelessWidget {
             backgroundColor: art.deep,
             actions: [
               IconButton(
-                tooltip: 'شارك واجهتك',
+                tooltip: l.storefrontShare,
                 onPressed: () => _share(context, storeName, ads.length),
                 icon: const Icon(Icons.ios_share),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                storeName ?? 'متجري',
+                storeName ?? l.storefrontMine,
                 style: TextStyle(
                   color: art.ink,
                   fontWeight: FontWeight.w800,
@@ -95,16 +98,19 @@ class StorefrontScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.storefront_outlined,
-                        size: 44, color: context.textMuted),
+                    Icon(
+                      Icons.storefront_outlined,
+                      size: 44,
+                      color: context.textMuted,
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    const Text(
-                      'واجهتك جاهزة وتنتظر أول عمل',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    Text(
+                      l.storefrontEmptyTitle,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'كل إعلان تحفظه من شاشة السحر يظهر هنا معروضًا.',
+                      l.storefrontEmptyBody,
                       textAlign: TextAlign.center,
                       style: TextStyle(color: context.textMuted, fontSize: 13),
                     ),
@@ -122,7 +128,7 @@ class StorefrontScreen extends StatelessWidget {
                   AppSpacing.sm,
                 ),
                 child: Text(
-                  'المعروض (${ads.length})',
+                  l.storefrontShowcase(ads.length),
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
@@ -138,8 +144,7 @@ class StorefrontScreen extends StatelessWidget {
                 AppSpacing.xl,
               ),
               sliver: SliverGrid.builder(
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: AppSpacing.md,
                   crossAxisSpacing: AppSpacing.md,
@@ -155,14 +160,15 @@ class StorefrontScreen extends StatelessWidget {
   }
 
   void _share(BuildContext context, String? storeName, int count) {
+    final l = L.of(context);
     // المشاركة الحقيقية (صورة الواجهة أو رابطها) تحتاج صفحة عامة على
     // الخادم؛ حتى تُبنى، لا نَعِد بما لا نفعل.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           count == 0
-              ? 'احفظ إعلانًا أولًا لتصير واجهتك قابلة للمشاركة'
-              : 'الرابط العام لواجهة ${storeName ?? 'متجرك'} قيد التجهيز',
+              ? l.storefrontShareEmpty
+              : l.storefrontSharePending(storeName ?? l.storefrontMine),
         ),
       ),
     );
@@ -176,6 +182,7 @@ class _Identity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     final name = state.account?.name;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,12 +198,12 @@ class _Identity extends StatelessWidget {
           runSpacing: AppSpacing.sm,
           children: [
             _Pill(
-              label: 'الانسجام: ${art.scheme.label}',
+              label: l.storefrontHarmony(art.scheme.label),
               color: art.base,
             ),
             if (state.brandColor != null)
-              _Pill(label: 'لون العلامة', color: state.brandColor!),
-            _Pill(label: 'لون مساند', color: art.complement),
+              _Pill(label: l.storefrontBrandColor, color: state.brandColor!),
+            _Pill(label: l.storefrontSupportColor, color: art.complement),
           ],
         ),
       ],

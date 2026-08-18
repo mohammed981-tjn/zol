@@ -92,7 +92,10 @@ class _LoaderState<T> extends State<_Loader<T>> {
           }
           final data = snap.data as T;
           if (data is List && data.isEmpty) {
-            return _Message(icon: Icons.inbox_outlined, text: widget.emptyLabel);
+            return _Message(
+              icon: Icons.inbox_outlined,
+              text: widget.emptyLabel,
+            );
           }
           return widget.builder(context, data, _reload);
         },
@@ -140,10 +143,8 @@ class _DashboardTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Loader<(AdminSummary, List<PrintShop>)>(
       emptyLabel: 'لا بيانات بعد.',
-      load: () async => (
-        await api.summary(),
-        await api.shops(status: 'review'),
-      ),
+      load: () async =>
+          (await api.summary(), await api.shops(status: 'review')),
       builder: (context, data, reload) {
         final (s, pending) = data;
         return ListView(
@@ -196,16 +197,14 @@ class _DashboardTab extends StatelessWidget {
                         IconButton(
                           tooltip: 'اعتماد',
                           icon: const Icon(Icons.check_circle_outline),
-                          onPressed: () => _setStatus(
-                            context, shop, 'approved', reload,
-                          ),
+                          onPressed: () =>
+                              _setStatus(context, shop, 'approved', reload),
                         ),
                         IconButton(
                           tooltip: 'رفض',
                           icon: const Icon(Icons.cancel_outlined),
-                          onPressed: () => _setStatus(
-                            context, shop, 'rejected', reload,
-                          ),
+                          onPressed: () =>
+                              _setStatus(context, shop, 'rejected', reload),
                         ),
                       ],
                     ),
@@ -416,7 +415,8 @@ class _GenerationsTab extends StatelessWidget {
                 [
                   if (g.model != null) g.model!,
                   if (g.costSar != null) '${g.costSar!.toStringAsFixed(3)} ر.س',
-                  if (g.latencyMs != null) '${(g.latencyMs! / 1000).toStringAsFixed(1)} ث',
+                  if (g.latencyMs != null)
+                    '${(g.latencyMs! / 1000).toStringAsFixed(1)} ث',
                 ].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -490,95 +490,95 @@ class _PartnersTab extends StatelessWidget {
     VoidCallback reload,
   ) {
     return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-        itemCount: partners.length,
-        itemBuilder: (context, i) {
-          final p = partners[i];
-          final theme = Theme.of(context);
-          final ratio = p.usageRatio;
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(p.name, style: theme.textTheme.titleMedium),
-                      ),
-                      Switch(
-                        value: p.isActive,
-                        onChanged: (v) => _setActive(context, p, v, reload),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    p.slug,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+      itemCount: partners.length,
+      itemBuilder: (context, i) {
+        final p = partners[i];
+        final theme = Theme.of(context);
+        final ratio = p.usageRatio;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(p.name, style: theme.textTheme.titleMedium),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          p.unlimited
-                              ? 'الاستهلاك: ${p.used} — بلا حد'
-                              : 'الاستهلاك: ${p.used} من ${p.quota}'
-                                  ' · متبقٍ ${p.remaining}',
-                        ),
-                      ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.tune, size: 18),
-                        label: const Text('الحصة'),
-                        onPressed: () => _editQuota(context, p, reload),
-                      ),
-                    ],
-                  ),
-                  if (ratio != null) ...[
-                    const SizedBox(height: 6),
-                    LinearProgressIndicator(
-                      value: ratio,
-                      // الأحمر عند النفاد: الشريك يُردّ بـ429 عند هذا الحد.
-                      color: ratio >= 1.0 ? theme.colorScheme.error : null,
+                    Switch(
+                      value: p.isActive,
+                      onChanged: (v) => _setActive(context, p, v, reload),
                     ),
                   ],
-                  if (p.costSar != null && p.costSar! > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
+                ),
+                Text(
+                  p.slug,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
                       child: Text(
-                        'كلفة الشهر: ${p.costSar!.toStringAsFixed(2)} ر.س',
-                        style: theme.textTheme.bodySmall,
+                        p.unlimited
+                            ? 'الاستهلاك: ${p.used} — بلا حد'
+                            : 'الاستهلاك: ${p.used} من ${p.quota}'
+                                  ' · متبقٍ ${p.remaining}',
                       ),
                     ),
-                  const Divider(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          p.keys.where((k) => !k.revoked).isEmpty
-                              ? 'لا مفتاح فعّال'
-                              : p.keys
+                    TextButton.icon(
+                      icon: const Icon(Icons.tune, size: 18),
+                      label: const Text('الحصة'),
+                      onPressed: () => _editQuota(context, p, reload),
+                    ),
+                  ],
+                ),
+                if (ratio != null) ...[
+                  const SizedBox(height: 6),
+                  LinearProgressIndicator(
+                    value: ratio,
+                    // الأحمر عند النفاد: الشريك يُردّ بـ429 عند هذا الحد.
+                    color: ratio >= 1.0 ? theme.colorScheme.error : null,
+                  ),
+                ],
+                if (p.costSar != null && p.costSar! > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      'كلفة الشهر: ${p.costSar!.toStringAsFixed(2)} ر.س',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                const Divider(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        p.keys.where((k) => !k.revoked).isEmpty
+                            ? 'لا مفتاح فعّال'
+                            : p.keys
                                   .where((k) => !k.revoked)
                                   .map((k) => '${k.prefix}…')
                                   .join(' · '),
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        style: theme.textTheme.bodySmall,
                       ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.key, size: 18),
-                        label: const Text('مفتاح جديد'),
-                        onPressed: () => _issueKey(context, p, reload),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.key, size: 18),
+                      label: const Text('مفتاح جديد'),
+                      onPressed: () => _issueKey(context, p, reload),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        );
+      },
     );
   }
 
@@ -641,10 +641,12 @@ class _PartnersTab extends StatelessWidget {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'حساب التاجر'),
                   items: merchants
-                      .map((m) => DropdownMenuItem(
-                            value: m.id,
-                            child: Text(m.name, overflow: TextOverflow.ellipsis),
-                          ))
+                      .map(
+                        (m) => DropdownMenuItem(
+                          value: m.id,
+                          child: Text(m.name, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) => setLocal(() => merchantId = v),
                 ),
@@ -707,7 +709,9 @@ class _PartnersTab extends StatelessWidget {
         quota: int.parse(quotaCtl.text.trim()),
       );
       messenger.showSnackBar(
-        SnackBar(content: Text('أُنشئ ${nameCtl.text.trim()} — أصدر له مفتاحًا')),
+        SnackBar(
+          content: Text('أُنشئ ${nameCtl.text.trim()} — أصدر له مفتاحًا'),
+        ),
       );
       reload();
     } catch (e) {

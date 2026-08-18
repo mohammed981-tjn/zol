@@ -76,7 +76,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isDigital ? 'حفظ ونشر' : 'اطبعه وصلّه')),
+      appBar: AppBar(
+        title: Text(widget.isDigital ? 'حفظ ونشر' : 'اطبعه وصلّه'),
+      ),
       body: SafeArea(
         child: widget.isDigital ? _buildDigitalPath() : _buildPrintPath(),
       ),
@@ -130,7 +132,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                   ),
                 )
               : const Icon(Icons.download_outlined),
-          label: Text(_exporting ? 'جارٍ التصدير…' : 'تحميل/مشاركة التصميم (PNG)'),
+          label: Text(
+            _exporting ? 'جارٍ التصدير…' : 'تحميل/مشاركة التصميم (PNG)',
+          ),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
@@ -143,9 +147,8 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: () => _showConfirmation(
-            'النشر المباشر سيتوفر مع ربط واجهات المنصات',
-          ),
+          onPressed: () =>
+              _showConfirmation('النشر المباشر سيتوفر مع ربط واجهات المنصات'),
           icon: const Icon(Icons.ios_share),
           label: Text('نشر مباشر على ${_ad.brief.platform}'),
         ),
@@ -235,11 +238,10 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                       template.label,
                       style: TextStyle(
                         fontSize: 11.5,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected
-                            ? AppColors.coral
-                            : context.textMuted,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isSelected ? AppColors.coral : context.textMuted,
                       ),
                     ),
                   ],
@@ -262,20 +264,18 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   Future<void> _exportDesign() async {
     setState(() => _exporting = true);
     try {
-      final boundary = _designKey.currentContext!.findRenderObject()!
-          as RenderRepaintBoundary;
+      final boundary =
+          _designKey.currentContext!.findRenderObject()!
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
-      await Share.shareXFiles(
-        [
-          XFile.fromData(
-            data!.buffer.asUint8List(),
-            mimeType: 'image/png',
-            name: 'zol_${_ad.brief.productName}.png',
-          ),
-        ],
-        text: _ad.shareText,
-      );
+      await Share.shareXFiles([
+        XFile.fromData(
+          data!.buffer.asUint8List(),
+          mimeType: 'image/png',
+          name: 'zol_${_ad.brief.productName}.png',
+        ),
+      ], text: _ad.shareText);
     } catch (_) {
       if (mounted) {
         _showConfirmation('تعذّر تصدير التصميم على هذا الجهاز');
@@ -434,8 +434,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
         _buildPriceSummary(),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed:
-              _addressController.text.trim().isEmpty ? null : _confirmOrder,
+          onPressed: _addressController.text.trim().isEmpty
+              ? null
+              : _confirmOrder,
           child: Text(
             _payMethod == PayMethod.card
                 ? 'ادفع وأكّد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}'
@@ -482,7 +483,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                     ? Text(
                         'محاكاة تجريبية — تصبح بوابة «ميسر» الحقيقية بعد ضبط المفتاح',
                         style: TextStyle(
-                            fontSize: 11.5, color: context.textMuted),
+                          fontSize: 11.5,
+                          color: context.textMuted,
+                        ),
                       )
                     : null,
                 dense: true,
@@ -646,9 +649,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           OutlinedButton.icon(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => OrderMapScreen(order: order),
-                ),
+                MaterialPageRoute(builder: (_) => OrderMapScreen(order: order)),
               );
             },
             icon: const Icon(Icons.map_outlined),
@@ -666,6 +667,8 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   }
 
   void _showConfirmation(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

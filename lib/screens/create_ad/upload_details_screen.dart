@@ -47,10 +47,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _selectedTone = _tones.first;
-  late String _selectedPlatform =
-      _platforms.contains(widget.initialPlatform)
-          ? widget.initialPlatform!
-          : _platforms.first;
+  late String _selectedPlatform = _platforms.contains(widget.initialPlatform)
+      ? widget.initialPlatform!
+      : _platforms.first;
   late String _selectedFormat = _formats.contains(widget.initialFormat)
       ? widget.initialFormat!
       : _formats.first;
@@ -214,16 +213,16 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                               tone: _selectedTone,
                               platform: _selectedPlatform,
                               format: _selectedFormat,
-                              category:
-                                  AppStateScope.of(context).businessCategory,
+                              category: AppStateScope.of(
+                                context,
+                              ).businessCategory,
                               imageBytes: _useCutout && _cutoutBytes != null
                                   ? _cutoutBytes
                                   : _imageBytes,
                               paletteColor: _paletteColor,
                               season: _season,
                               badge: _badge,
-                              useDecorativeBackground:
-                                  _useDecorativeBackground,
+                              useDecorativeBackground: _useDecorativeBackground,
                               // هوية العلامة تركب الموجز هنا لأن هذه آخر
                               // نقطة تملك AppState قبل أن يسافر الطلب.
                               brandName: AppStateScope.of(
@@ -440,7 +439,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             fontWeight: FontWeight.w600,
           ),
           backgroundColor: context.cardBg,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           side: BorderSide.none,
         ),
         ChoiceChip(
@@ -455,7 +456,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             fontWeight: FontWeight.w600,
           ),
           backgroundColor: context.cardBg,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           side: BorderSide.none,
         ),
       ],
@@ -463,8 +466,9 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   }
 
   Widget _buildImagePicker() {
-    final image =
-        _useCutout && _cutoutBytes != null ? _cutoutBytes : _imageBytes;
+    final image = _useCutout && _cutoutBytes != null
+        ? _cutoutBytes
+        : _imageBytes;
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: _pickImage,

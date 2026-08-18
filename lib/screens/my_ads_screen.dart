@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 import '../models/generated_ad.dart';
 import '../state/app_state.dart';
@@ -15,19 +17,20 @@ class MyAdsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final l = L.of(context);
     final ads = state.savedAds;
     final trashCount = state.trashedAds.length;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إعلاناتي'),
+        title: Text(l.navMyAds),
         actions: [
           IconButton(
-            tooltip: 'سلة المهملات',
+            tooltip: l.myAdsTrash,
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const TrashScreen()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const TrashScreen()));
             },
             icon: trashCount == 0
                 ? const Icon(Icons.delete_outline)
@@ -40,19 +43,15 @@ class MyAdsScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: ads.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: Icons.collections_outlined,
-                title: 'مكتبتك فارغة',
-                subtitle:
-                    'احفظ النسخ التي تعجبك من «شاشة السحر» لتجدها هنا جاهزة لإعادة الاستخدام أو الطباعة.',
+                title: l.myAdsEmptyTitle,
+                subtitle: l.myAdsEmptyBody,
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
-                  const SectionHeader(
-                    kicker: 'المكتبة',
-                    title: 'إعلاناتك المحفوظة',
-                  ),
+                  SectionHeader(kicker: l.myAdsKicker, title: l.myAdsTitle),
                   const SizedBox(height: 16),
                   ...ads.map((ad) => _SavedAdCard(ad: ad)),
                 ],
@@ -70,6 +69,7 @@ class _SavedAdCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final l = L.of(context);
     final d = ad.createdAt;
 
     // زرّا النسخ والحذف عنصران مستقلّان لا يقعان داخل شجرة InkWell فتح
@@ -160,7 +160,7 @@ class _SavedAdCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'اضغط لفتح التصميم وإعادة تصديره أو طباعته',
+                        L.of(context).myAdsOpenHint,
                         style: TextStyle(
                           color: context.textMuted,
                           fontSize: 11.5,
@@ -183,23 +183,23 @@ class _SavedAdCard extends StatelessWidget {
                 // يُسقط محرك الوصولية (Accessibility Tree) العقدة كليًا
                 // بصفتها غير قابلة للتفعيل رغم ظهورها في DOM.
                 Semantics(
-                  label: 'نسخ النص',
+                  label: l.myAdsCopyText,
                   button: true,
                   excludeSemantics: true,
                   onTap: () => _copyText(context, ad),
                   child: IconButton(
-                    tooltip: 'نسخ النص',
+                    tooltip: l.myAdsCopyText,
                     onPressed: () => _copyText(context, ad),
                     icon: const Icon(Icons.copy_outlined, size: 20),
                   ),
                 ),
                 Semantics(
-                  label: 'حذف',
+                  label: l.myAdsDelete,
                   button: true,
                   excludeSemantics: true,
                   onTap: () => _deleteAd(context, state, ad),
                   child: IconButton(
-                    tooltip: 'حذف',
+                    tooltip: l.myAdsDelete,
                     onPressed: () => _deleteAd(context, state, ad),
                     icon: const Icon(Icons.delete_outline, size: 20),
                   ),
@@ -215,9 +215,9 @@ class _SavedAdCard extends StatelessWidget {
   Future<void> _copyText(BuildContext context, GeneratedAd ad) async {
     await Clipboard.setData(ClipboardData(text: ad.shareText));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم نسخ النص الإعلاني')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(L.of(context).myAdsCopied)));
   }
 
   void _deleteAd(BuildContext context, AppState state, GeneratedAd ad) {
@@ -225,9 +225,9 @@ class _SavedAdCard extends StatelessWidget {
     final trashed = state.trashedAds.first;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('نُقل الإعلان إلى سلة المهملات'),
+        content: Text(L.of(context).myAdsMovedToTrash),
         action: SnackBarAction(
-          label: 'تراجع',
+          label: L.of(context).actionUndo,
           onPressed: () => state.restoreAd(trashed),
         ),
       ),

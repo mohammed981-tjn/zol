@@ -248,9 +248,9 @@ class _MagicScreenState extends State<MagicScreen> {
               Text(
                 e.message,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: context.textMuted,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: context.textMuted),
               ),
               if (!quotaHit) ...[
                 const SizedBox(height: AppSpacing.xl),
@@ -321,8 +321,11 @@ class _MagicScreenState extends State<MagicScreen> {
               child: Row(
                 children: [
                   if (i < _stage)
-                    const Icon(Icons.check_circle,
-                        color: AppColors.coral, size: 22)
+                    const Icon(
+                      Icons.check_circle,
+                      color: AppColors.coral,
+                      size: 22,
+                    )
                   else if (i == _stage)
                     const SizedBox(
                       width: 22,
@@ -333,8 +336,11 @@ class _MagicScreenState extends State<MagicScreen> {
                       ),
                     )
                   else
-                    Icon(Icons.circle_outlined,
-                        color: context.textMuted, size: 22),
+                    Icon(
+                      Icons.circle_outlined,
+                      color: context.textMuted,
+                      size: 22,
+                    ),
                   const SizedBox(width: 12),
                   Text(
                     AdGenerator.generationStages[i],
@@ -342,8 +348,9 @@ class _MagicScreenState extends State<MagicScreen> {
                       color: i <= _stage
                           ? context.scheme.onSurface
                           : context.textMuted,
-                      fontWeight:
-                          i == _stage ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: i == _stage
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -450,17 +457,17 @@ class _MagicScreenState extends State<MagicScreen> {
 
   void _saveAd(GeneratedAd ad) {
     AppStateScope.of(context).saveAd(ad);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم الحفظ في «إعلاناتي»')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('تم الحفظ في «إعلاناتي»')));
   }
 
   Future<void> _copyAd(GeneratedAd ad) async {
     await Clipboard.setData(ClipboardData(text: ad.shareText));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم نسخ النص الإعلاني')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('تم نسخ النص الإعلاني')));
   }
 
   void _goExecute(List<GeneratedAd> ads, {required bool isDigital}) {
@@ -550,10 +557,8 @@ class _AdPreviewCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, progress) =>
                             progress == null
-                                ? child
-                                : const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                            ? child
+                            : const Center(child: CircularProgressIndicator()),
                         errorBuilder: (context, _, _) => AdDesignPreview(
                           ad: ad,
                           showWatermark: !AppStateScope.of(context).isPro,

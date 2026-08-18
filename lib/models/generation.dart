@@ -132,9 +132,9 @@ class PreviewResult {
           .map((v) => CopyVariant.fromJson(v.cast<String, dynamic>()))
           .toList(growable: false),
       bestIndex: 0,
-      critiqued: ((json['variants'] as List?) ?? const [])
-          .whereType<Map>()
-          .any((v) => v['score_total'] != null),
+      critiqued: ((json['variants'] as List?) ?? const []).whereType<Map>().any(
+        (v) => v['score_total'] != null,
+      ),
       quota: const QuotaStatus(used: 0, limit: 0),
     );
   }

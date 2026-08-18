@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
 import '../models/generated_ad.dart';
 import '../models/trashed_ad.dart';
 import '../state/app_state.dart';
@@ -19,31 +21,28 @@ class TrashScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('سلة المهملات'),
+        title: Text(L.of(context).trashTitle),
         actions: [
           if (items.isNotEmpty)
             TextButton(
               onPressed: () => _confirmEmptyTrash(context, state),
-              child: const Text('إفراغ السلة'),
+              child: Text(L.of(context).trashEmptyAction),
             ),
         ],
       ),
       body: SafeArea(
         child: items.isEmpty
-            ? const EmptyState(
+            ? EmptyState(
                 icon: Icons.delete_outline,
-                title: 'سلة المهملات فارغة',
-                subtitle:
-                    'الإعلانات التي تحذفها من «إعلاناتي» تبقى هنا لمدة '
-                    '${TrashedAd.retentionDays} يومًا قبل حذفها نهائيًا،\n'
-                    'وتقدر تسترجعها في أي وقت قبل ذلك.',
+                title: L.of(context).trashEmptyTitle,
+                subtitle: L.of(context).trashEmptyBody(TrashedAd.retentionDays),
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
                   SectionHeader(
-                    kicker: 'استعادة أو حذف نهائي',
-                    title: '${items.length} إعلان في السلة',
+                    kicker: L.of(context).trashKicker,
+                    title: L.of(context).trashCount(items.length),
                   ),
                   const SizedBox(height: 16),
                   ...items.map((item) => _TrashedAdCard(item: item)),
@@ -57,18 +56,16 @@ class TrashScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('إفراغ السلة نهائيًا؟'),
-        content: Text(
-          'سيُحذف ${state.trashedAds.length} إعلان نهائيًا ولا يمكن التراجع.',
-        ),
+        title: Text(L.of(context).trashConfirmTitle),
+        content: Text(L.of(context).trashConfirmBody(state.trashedAds.length)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('إلغاء'),
+            child: Text(L.of(context).actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('إفراغ نهائيًا'),
+            child: Text(L.of(context).trashConfirmAction),
           ),
         ],
       ),
@@ -120,12 +117,14 @@ class _TrashedAdCard extends StatelessWidget {
                     ),
                     Text(
                       days <= 0
-                          ? 'سيُحذف نهائيًا قريبًا'
-                          : 'يُحذف نهائيًا خلال $days يومًا',
+                          ? L.of(context).trashExpiringSoon
+                          : L.of(context).trashExpiresIn(days),
                       style: TextStyle(
                         color: days <= 3 ? AppColors.coral : context.textMuted,
                         fontSize: 12,
-                        fontWeight: days <= 3 ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: days <= 3
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ],
@@ -140,7 +139,7 @@ class _TrashedAdCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => state.restoreAd(item),
                   icon: const Icon(Icons.restore_outlined, size: 18),
-                  label: const Text('استعادة'),
+                  label: Text(L.of(context).trashRestore),
                 ),
               ),
               const SizedBox(width: 10),
@@ -152,7 +151,7 @@ class _TrashedAdCard extends StatelessWidget {
                     side: const BorderSide(color: AppColors.coral),
                   ),
                   icon: const Icon(Icons.delete_forever_outlined, size: 18),
-                  label: const Text('حذف نهائي'),
+                  label: Text(L.of(context).trashDeleteForever),
                 ),
               ),
             ],

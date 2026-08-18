@@ -17,10 +17,7 @@ ArtPalette paletteForProvider(ServiceProvider p) {
   // درجة اللون من تجزئة الاسم، والتشبّع والإضاءة ثابتان: ترك الثلاثة
   // للتجزئة يُخرج ألوانًا شاحبة أو فاقعة بلا ضابط.
   final hue = (p.id.hashCode.abs() % 360).toDouble();
-  return ArtPalette.from(
-    _fromHsl(hue, 0.58, 0.46),
-    variant: p.kind.index,
-  );
+  return ArtPalette.from(_fromHsl(hue, 0.58, 0.46), variant: p.kind.index);
 }
 
 /// لكل صنف خدمة نمط خلفية يناسب طبيعته: الحركة للحملات، والورق الهادئ

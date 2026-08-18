@@ -122,7 +122,10 @@ class _PrintCostCalculatorState extends State<PrintCostCalculator> {
                     children: [
                       Text(
                         'الإجمالي مع التوصيل والضريبة',
-                        style: TextStyle(color: context.textMuted, fontSize: 12.5),
+                        style: TextStyle(
+                          color: context.textMuted,
+                          fontSize: 12.5,
+                        ),
                       ),
                       Text(
                         formatPrice(_total),
@@ -185,7 +188,9 @@ class _PrintCostCalculatorState extends State<PrintCostCalculator> {
             fontWeight: FontWeight.w600,
           ),
           backgroundColor: context.scheme.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           side: BorderSide.none,
           visualDensity: VisualDensity.compact,
         );

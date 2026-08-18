@@ -227,14 +227,14 @@ List<ServiceProvider> filterProviders({
 }) {
   final q = query.trim();
   return serviceProviders.where((p) {
-    if (kind != null && p.kind != kind) return false;
-    if (city != null && p.city != city) return false;
-    if (q.isEmpty) return true;
-    return p.name.contains(q) ||
-        p.tagline.contains(q) ||
-        p.kind.label.contains(q) ||
-        p.works.any((w) => w.contains(q));
-  }).toList()
+      if (kind != null && p.kind != kind) return false;
+      if (city != null && p.city != city) return false;
+      if (q.isEmpty) return true;
+      return p.name.contains(q) ||
+          p.tagline.contains(q) ||
+          p.kind.label.contains(q) ||
+          p.works.any((w) => w.contains(q));
+    }).toList()
     // الأعلى تقييمًا أولًا، وعند التساوي الأكثر مراجعات: تقييم ٥٫٠ من
     // مراجعتين ليس أفضل من ٤٫٨ من مئتين.
     ..sort((a, b) {

@@ -1,0 +1,10 @@
+# توليد صنف الترجمات من ملفات ARB.
+#
+# الملف العربي هو المرجع (template-arb-file): منه تُشتقّ أسماء المفاتيح
+# وأنواع الوسائط، وأي مفتاح ينقص من لغة أخرى يعود إليه تلقائيًا — فلا
+# تظهر شاشة فارغة لأن مترجمًا تأخّر.
+arb-dir: lib/l10n
+template-arb-file: app_ar.arb
+output-localization-file: app_localizations.dart
+output-class: L
+nullable-getter: false

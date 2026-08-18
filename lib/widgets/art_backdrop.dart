@@ -119,21 +119,28 @@ class _BackdropPainter extends CustomPainter {
   void _paintMesh(Canvas canvas, Size size, math.Random rnd) {
     final blobs = <(Offset, double, Color, double)>[
       (
-        Offset(size.width * (0.18 + rnd.nextDouble() * 0.2),
-            size.height * (0.14 + rnd.nextDouble() * 0.12)),
+        Offset(
+          size.width * (0.18 + rnd.nextDouble() * 0.2),
+          size.height * (0.14 + rnd.nextDouble() * 0.12),
+        ),
         size.width * 0.95,
         palette.base,
         0.64,
       ),
       (
-        Offset(size.width * (0.72 + rnd.nextDouble() * 0.18),
-            size.height * (0.3 + rnd.nextDouble() * 0.15)),
+        Offset(
+          size.width * (0.72 + rnd.nextDouble() * 0.18),
+          size.height * (0.3 + rnd.nextDouble() * 0.15),
+        ),
         size.width * 0.62,
         palette.complement,
         0.3,
       ),
       (
-        Offset(size.width * 0.45, size.height * (0.88 + rnd.nextDouble() * 0.08)),
+        Offset(
+          size.width * 0.45,
+          size.height * (0.88 + rnd.nextDouble() * 0.08),
+        ),
         size.width * 0.9,
         palette.shade(0.34),
         0.58,
@@ -142,10 +149,12 @@ class _BackdropPainter extends CustomPainter {
 
     for (final (center, radius, color, alpha) in blobs) {
       final paint = Paint()
-        ..shader = ui.Gradient.radial(center, radius, [
-          color.withValues(alpha: alpha),
-          color.withValues(alpha: 0.0),
-        ], const [0.0, 1.0]);
+        ..shader = ui.Gradient.radial(
+          center,
+          radius,
+          [color.withValues(alpha: alpha), color.withValues(alpha: 0.0)],
+          const [0.0, 1.0],
+        );
       canvas.drawCircle(center, radius, paint);
     }
   }
@@ -155,10 +164,15 @@ class _BackdropPainter extends CustomPainter {
     canvas.drawRect(
       Offset.zero & size,
       Paint()
-        ..shader = ui.Gradient.radial(center, size.width * 0.85, [
-          palette.base.withValues(alpha: 0.75),
-          palette.deep.withValues(alpha: 0.0),
-        ], const [0.0, 1.0]),
+        ..shader = ui.Gradient.radial(
+          center,
+          size.width * 0.85,
+          [
+            palette.base.withValues(alpha: 0.75),
+            palette.deep.withValues(alpha: 0.0),
+          ],
+          const [0.0, 1.0],
+        ),
     );
     // قاع أعمق يثبّت الزرّ والنص السفلي على أرض صلبة.
     canvas.drawRect(
@@ -182,8 +196,9 @@ class _BackdropPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = size.width * 0.012
-          ..color = (i.isEven ? palette.base : palette.complement)
-              .withValues(alpha: 0.16 + rnd.nextDouble() * 0.06),
+          ..color = (i.isEven ? palette.base : palette.complement).withValues(
+            alpha: 0.16 + rnd.nextDouble() * 0.06,
+          ),
       );
     }
     canvas.drawCircle(
@@ -240,20 +255,24 @@ class _BackdropPainter extends CustomPainter {
         center,
         radius,
         Paint()
-          ..shader = ui.Gradient.radial(center, radius, [
-            color.withValues(alpha: 0.10),
-            color.withValues(alpha: 0.0),
-          ], const [0.0, 1.0]),
+          ..shader = ui.Gradient.radial(
+            center,
+            radius,
+            [color.withValues(alpha: 0.10), color.withValues(alpha: 0.0)],
+            const [0.0, 1.0],
+          ),
       );
     }
     final c = Offset(size.width / 2, size.height / 2);
     canvas.drawRect(
       Offset.zero & size,
       Paint()
-        ..shader = ui.Gradient.radial(c, size.width * 0.78, [
-          const Color(0x00000000),
-          Colors.black.withValues(alpha: 0.06),
-        ], const [0.62, 1.0]),
+        ..shader = ui.Gradient.radial(
+          c,
+          size.width * 0.78,
+          [const Color(0x00000000), Colors.black.withValues(alpha: 0.06)],
+          const [0.62, 1.0],
+        ),
     );
   }
 
@@ -265,7 +284,10 @@ class _BackdropPainter extends CustomPainter {
     final dark = Paint()..color = Colors.black.withValues(alpha: 0.05);
     final dot = size.width * 0.0035;
     for (var i = 0; i < count; i++) {
-      final o = Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height);
+      final o = Offset(
+        rnd.nextDouble() * size.width,
+        rnd.nextDouble() * size.height,
+      );
       canvas.drawCircle(o, dot, i.isEven ? light : dark);
     }
   }
@@ -313,9 +335,7 @@ class ProductStage extends StatelessWidget {
           children: [
             if (halo)
               Positioned.fill(
-                child: CustomPaint(
-                  painter: _HaloPainter(palette.complement),
-                ),
+                child: CustomPaint(painter: _HaloPainter(palette.complement)),
               ),
             if (contactShadow)
               Positioned(
@@ -325,7 +345,9 @@ class ProductStage extends StatelessWidget {
                 height: h * 0.09,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.elliptical(w, h * 0.09)),
+                    borderRadius: BorderRadius.all(
+                      Radius.elliptical(w, h * 0.09),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(

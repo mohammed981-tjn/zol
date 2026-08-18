@@ -191,10 +191,7 @@ class _Stickers extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               // خط القصّ المتقطّع الذي يميّز ورقة الاستيكرات.
-              border: Border.all(
-                color: const Color(0xFFB9BDC2),
-                width: 1,
-              ),
+              border: Border.all(color: const Color(0xFFB9BDC2), width: 1),
             ),
             clipBehavior: Clip.antiAlias,
             child: design,

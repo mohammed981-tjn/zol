@@ -33,6 +33,7 @@ class AppState extends ChangeNotifier {
   static const _adsKey = 'saved_ads';
   static const _ordersKey = 'orders';
   static const _themeKey = 'theme_mode';
+  static const _localeKey = 'app_locale';
   static const _orderNumberKey = 'next_order_number';
   static const _accountsKey = 'merchant_accounts';
   static const _sessionKey = 'session_email';
@@ -51,6 +52,12 @@ class AppState extends ChangeNotifier {
   /// سلة مهملات تمنع فقدان عمل التاجر بضغطة خاطئة.
   final List<TrashedAd> trashedAds = [];
   ThemeMode themeMode = ThemeMode.light;
+
+  /// لغة الواجهة المختارة. `null` يعني «اتبع لغة الجهاز» — وهو
+  /// الافتراضي: التاجر الذي جهازه عربيّ يجد التطبيق عربيًّا بلا ضبط،
+  /// ومن جهازه إنجليزيّ يجده إنجليزيًّا. فرضُ العربية على الجميع كان
+  /// يجعل المقيم غير الناطق بها يغلق التطبيق عند أول شاشة.
+  Locale? locale;
 
   /// حساب التاجر المسجَّل دخوله حاليًا (null = زائر).
   MerchantAccount? account;
@@ -120,6 +127,8 @@ class AppState extends ChangeNotifier {
     }
     _purgeExpiredTrash();
     themeMode = ThemeMode.values[prefs.getInt(_themeKey) ?? 1];
+    final code = prefs.getString(_localeKey);
+    locale = code == null || code.isEmpty ? null : Locale(code);
     _nextOrderNumber = prefs.getInt(_orderNumberKey) ?? 1001;
     isPro = prefs.getBool(_proKey) ?? false;
     hasOnboarded = prefs.getBool(_onboardedKey) ?? false;
@@ -130,9 +139,9 @@ class AppState extends ChangeNotifier {
     brandColorValue = prefs.getInt(_brandColorKey);
     final fontName = prefs.getString(_brandFontKey);
     brandFont = BrandFont.values.cast<BrandFont?>().firstWhere(
-          (f) => f?.name == fontName,
-          orElse: () => null,
-        );
+      (f) => f?.name == fontName,
+      orElse: () => null,
+    );
     final logo = prefs.getString(_brandLogoKey);
     if (logo != null && logo.isNotEmpty) {
       try {
@@ -295,6 +304,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// يضبط لغة الواجهة. `null` يعيدها إلى لغة الجهاز.
+  ///
+  /// تُحفظ فورًا لا ضمن `_persist` العام: تغيير اللغة يُعيد بناء
+  /// التطبيق كلّه، ولو تأخّر الحفظ عاد التطبيق بعد الإغلاق إلى اللغة
+  /// السابقة فيظنّ التاجر أن الاختيار لم يُقبل.
+  void setLocale(Locale? value) {
+    locale = value;
+    if (value == null) {
+      _prefs?.remove(_localeKey);
+    } else {
+      _prefs?.setString(_localeKey, value.languageCode);
+    }
+    notifyListeners();
+  }
+
   void setBusinessCategory(BusinessCategory category) {
     businessCategory = category;
     _prefs?.setString(_categoryKey, category.name);
@@ -387,9 +411,10 @@ class AppState extends ChangeNotifier {
       changed = true;
     }
     if (brandFont == null && remote.fontName != null) {
-      final font = BrandFont.values
-          .cast<BrandFont?>()
-          .firstWhere((f) => f?.name == remote.fontName, orElse: () => null);
+      final font = BrandFont.values.cast<BrandFont?>().firstWhere(
+        (f) => f?.name == remote.fontName,
+        orElse: () => null,
+      );
       if (font != null) {
         brandFont = font;
         _prefs?.setString(_brandFontKey, font.name);
@@ -599,7 +624,6 @@ class AppStateScope extends InheritedNotifier<AppState> {
     required super.child,
   });
 
-  static AppState of(BuildContext context) => context
-      .dependOnInheritedWidgetOfExactType<AppStateScope>()!
-      .notifier!;
+  static AppState of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppStateScope>()!.notifier!;
 }

@@ -86,7 +86,11 @@ class SceneResult {
 
 /// خطأ يحمل رسالة عربية جاهزة للعرض على المستخدم.
 class GatewayException implements Exception {
-  GatewayException(this.message, {this.isQuota = false, this.retryable = false});
+  GatewayException(
+    this.message, {
+    this.isQuota = false,
+    this.retryable = false,
+  });
 
   final String message;
 
@@ -120,11 +124,11 @@ class AiGateway {
     String? supabaseUrl,
     String? supabaseAnonKey,
     String? merchantId,
-  })  : _client = client ?? http.Client(),
-        useSupabase = useSupabase ?? AppConfig.useSupabase,
-        supabaseUrl = supabaseUrl ?? AppConfig.supabaseUrl,
-        supabaseAnonKey = supabaseAnonKey ?? AppConfig.supabaseAnonKey,
-        merchantId = merchantId ?? AppConfig.merchantId;
+  }) : _client = client ?? http.Client(),
+       useSupabase = useSupabase ?? AppConfig.useSupabase,
+       supabaseUrl = supabaseUrl ?? AppConfig.supabaseUrl,
+       supabaseAnonKey = supabaseAnonKey ?? AppConfig.supabaseAnonKey,
+       merchantId = merchantId ?? AppConfig.merchantId;
 
   /// هل يُستعمل عقل Supabase المنشور بدل منسّق Node المحلي؟
   final bool useSupabase;
@@ -158,10 +162,10 @@ class AiGateway {
   final http.Client _client;
 
   Map<String, String> get _headers => {
-        'content-type': 'application/json',
-        'x-account-id': accountId,
-        'x-account-plan': plan,
-      };
+    'content-type': 'application/json',
+    'x-account-id': accountId,
+    'x-account-plan': plan,
+  };
 
   /// المعاينة الرخيصة: نص + صورة خلفية. لا فيديو — الفيديو خلف بوابة الدفع.
   Future<PreviewResult> generatePreview(
@@ -454,7 +458,9 @@ class AiGateway {
     if (res.statusCode == 200) {
       final result = PreviewResult.fromJson(json);
       if (result.variants.isEmpty) {
-        throw GatewayException('لم تُنتج الخدمة أي صيغة. حاول بوصف أوضح للمنتج.');
+        throw GatewayException(
+          'لم تُنتج الخدمة أي صيغة. حاول بوصف أوضح للمنتج.',
+        );
       }
       return result;
     }

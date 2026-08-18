@@ -47,7 +47,8 @@ extension AdTemplateInfo on AdTemplate {
     AdTemplate.frame => 'إطار زخرفي مزدوج يوحي بالفخامة والهدية',
     AdTemplate.urgency => 'شريط قطري يصرخ بضيق الوقت — للعروض المؤقتة',
     AdTemplate.circular => 'المنتج في قرص دائري ونص يلتفّ حوله',
-    AdTemplate.studio => 'بطاقة فاخرة بعنوان عملاق ومنتج جانبي — أسلوب الاستوديوهات',
+    AdTemplate.studio =>
+      'بطاقة فاخرة بعنوان عملاق ومنتج جانبي — أسلوب الاستوديوهات',
   };
 
   IconData get icon => switch (this) {
@@ -204,8 +205,9 @@ class AdPalette {
   }
 
   /// لون نص مقروء فوق [primary].
-  Color get onPrimary =>
-      primary.computeLuminance() > 0.55 ? const Color(0xFF14182E) : Colors.white;
+  Color get onPrimary => primary.computeLuminance() > 0.55
+      ? const Color(0xFF14182E)
+      : Colors.white;
 
   LinearGradient get gradient => LinearGradient(
     begin: Alignment.topRight,

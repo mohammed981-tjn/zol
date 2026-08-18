@@ -76,8 +76,9 @@ class AdGenerator {
     // الوصف الاختياري يُدمج جملةً كاملة بدل إقحامه كما هو.
     final aboutClause = about.isEmpty ? '' : ' $about.';
     // الموسم يضيف طابعًا احتفاليًا فوق مفردات النشاط، لا يستبدلها.
-    final seasonClause =
-        brief.season == null ? '' : ' ${brief.season!.campaignPhrase}.';
+    final seasonClause = brief.season == null
+        ? ''
+        : ' ${brief.season!.campaignPhrase}.';
 
     return [
       GeneratedAd(
@@ -129,7 +130,8 @@ class AdGenerator {
 
   /// درجة توافق (78-97) على نمط Creative Score، حتمية لنفس المدخلات.
   static int _score(AdBrief brief, AdKind kind, int seed) {
-    final hash = brief.tone.length * 7 +
+    final hash =
+        brief.tone.length * 7 +
         brief.platform.length * 5 +
         brief.format.length * 3 +
         brief.category.index * 17 +

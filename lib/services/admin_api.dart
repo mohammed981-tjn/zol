@@ -36,14 +36,14 @@ class AdminSummary {
   final int couriersActive;
 
   factory AdminSummary.fromJson(Map<String, dynamic> j) => AdminSummary(
-        shopsPending: (j['shops_pending'] as num?)?.toInt() ?? 0,
-        shopsApproved: (j['shops_approved'] as num?)?.toInt() ?? 0,
-        ordersOpen: (j['orders_open'] as num?)?.toInt() ?? 0,
-        ordersToday: (j['orders_today'] as num?)?.toInt() ?? 0,
-        revenueMonth: (j['revenue_month'] as num?) ?? 0,
-        gmvMonth: (j['gmv_month'] as num?) ?? 0,
-        couriersActive: (j['couriers_active'] as num?)?.toInt() ?? 0,
-      );
+    shopsPending: (j['shops_pending'] as num?)?.toInt() ?? 0,
+    shopsApproved: (j['shops_approved'] as num?)?.toInt() ?? 0,
+    ordersOpen: (j['orders_open'] as num?)?.toInt() ?? 0,
+    ordersToday: (j['orders_today'] as num?)?.toInt() ?? 0,
+    revenueMonth: (j['revenue_month'] as num?) ?? 0,
+    gmvMonth: (j['gmv_month'] as num?) ?? 0,
+    couriersActive: (j['couriers_active'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class AdminOrder {
@@ -76,19 +76,19 @@ class AdminOrder {
   final DateTime? createdAt;
 
   factory AdminOrder.fromJson(Map<String, dynamic> j) => AdminOrder(
-        id: j['id'] as String,
-        status: (j['status'] as String?) ?? 'unknown',
-        quantity: (j['quantity'] as num?)?.toInt() ?? 0,
-        grandTotal: (j['grand_total'] as num?) ?? 0,
-        platformCut: (j['platform_cut'] as num?) ?? 0,
-        isPaid: (j['is_paid'] as bool?) ?? false,
-        productKind: j['product_kind'] as String?,
-        merchantName: j['merchant_name'] as String?,
-        shopName: j['shop_name'] as String?,
-        courierName: j['courier_name'] as String?,
-        deliveryAddress: j['delivery_address'] as String?,
-        createdAt: DateTime.tryParse((j['created_at'] as String?) ?? ''),
-      );
+    id: j['id'] as String,
+    status: (j['status'] as String?) ?? 'unknown',
+    quantity: (j['quantity'] as num?)?.toInt() ?? 0,
+    grandTotal: (j['grand_total'] as num?) ?? 0,
+    platformCut: (j['platform_cut'] as num?) ?? 0,
+    isPaid: (j['is_paid'] as bool?) ?? false,
+    productKind: j['product_kind'] as String?,
+    merchantName: j['merchant_name'] as String?,
+    shopName: j['shop_name'] as String?,
+    courierName: j['courier_name'] as String?,
+    deliveryAddress: j['delivery_address'] as String?,
+    createdAt: DateTime.tryParse((j['created_at'] as String?) ?? ''),
+  );
 }
 
 class GenerationEntry {
@@ -123,22 +123,22 @@ class GenerationEntry {
   bool get failed => status != 'ok';
 
   factory GenerationEntry.fromJson(Map<String, dynamic> j) => GenerationEntry(
-        id: (j['id'] ?? '').toString(),
-        merchant: (j['merchant'] as String?) ?? 'تاجر',
-        status: (j['status'] as String?) ?? 'ok',
-        model: j['model'] as String?,
-        platform: j['platform'] as String?,
-        costSar: j['cost_sar'] as num?,
-        tokensIn: (j['tokens_in'] as num?)?.toInt(),
-        tokensOut: (j['tokens_out'] as num?)?.toInt(),
-        latencyMs: (j['latency_ms'] as num?)?.toInt(),
-        errorCode: j['error_code'] as String?,
-        createdAt: DateTime.tryParse((j['created_at'] as String?) ?? ''),
-        variants: ((j['variants'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(GenerationVariant.fromJson)
-            .toList(),
-      );
+    id: (j['id'] ?? '').toString(),
+    merchant: (j['merchant'] as String?) ?? 'تاجر',
+    status: (j['status'] as String?) ?? 'ok',
+    model: j['model'] as String?,
+    platform: j['platform'] as String?,
+    costSar: j['cost_sar'] as num?,
+    tokensIn: (j['tokens_in'] as num?)?.toInt(),
+    tokensOut: (j['tokens_out'] as num?)?.toInt(),
+    latencyMs: (j['latency_ms'] as num?)?.toInt(),
+    errorCode: j['error_code'] as String?,
+    createdAt: DateTime.tryParse((j['created_at'] as String?) ?? ''),
+    variants: ((j['variants'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(GenerationVariant.fromJson)
+        .toList(),
+  );
 }
 
 class GenerationVariant {
@@ -185,12 +185,12 @@ class PrintShop {
   final String? phone;
 
   factory PrintShop.fromJson(Map<String, dynamic> j) => PrintShop(
-        id: j['id'] as String,
-        name: (j['name'] as String?) ?? 'مطبعة',
-        status: (j['status'] as String?) ?? 'review',
-        city: j['city'] as String?,
-        phone: j['phone'] as String?,
-      );
+    id: j['id'] as String,
+    name: (j['name'] as String?) ?? 'مطبعة',
+    status: (j['status'] as String?) ?? 'review',
+    city: j['city'] as String?,
+    phone: j['phone'] as String?,
+  );
 }
 
 class Partner {
@@ -224,18 +224,18 @@ class Partner {
       unlimited || quota == 0 ? null : (used / quota).clamp(0.0, 1.0);
 
   factory Partner.fromJson(Map<String, dynamic> j) => Partner(
-        id: j['id'] as String,
-        name: (j['name'] as String?) ?? 'شريك',
-        slug: (j['slug'] as String?) ?? '',
-        quota: (j['quota'] as num?)?.toInt() ?? 0,
-        used: (j['used'] as num?)?.toInt() ?? 0,
-        isActive: (j['is_active'] as bool?) ?? true,
-        costSar: j['cost_sar'] as num?,
-        keys: ((j['keys'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(PartnerKey.fromJson)
-            .toList(),
-      );
+    id: j['id'] as String,
+    name: (j['name'] as String?) ?? 'شريك',
+    slug: (j['slug'] as String?) ?? '',
+    quota: (j['quota'] as num?)?.toInt() ?? 0,
+    used: (j['used'] as num?)?.toInt() ?? 0,
+    isActive: (j['is_active'] as bool?) ?? true,
+    costSar: j['cost_sar'] as num?,
+    keys: ((j['keys'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(PartnerKey.fromJson)
+        .toList(),
+  );
 }
 
 class PartnerKey {
@@ -252,11 +252,11 @@ class PartnerKey {
   final DateTime? lastUsedAt;
 
   factory PartnerKey.fromJson(Map<String, dynamic> j) => PartnerKey(
-        id: j['id'] as String,
-        prefix: (j['prefix'] as String?) ?? '',
-        revoked: (j['revoked'] as bool?) ?? false,
-        lastUsedAt: DateTime.tryParse((j['last_used_at'] as String?) ?? ''),
-      );
+    id: j['id'] as String,
+    prefix: (j['prefix'] as String?) ?? '',
+    revoked: (j['revoked'] as bool?) ?? false,
+    lastUsedAt: DateTime.tryParse((j['last_used_at'] as String?) ?? ''),
+  );
 }
 
 class AdminApi {
@@ -325,9 +325,9 @@ class AdminApi {
   }
 
   Future<List<GenerationEntry>> generations({int limit = 30}) async {
-    final map = _unwrap(await _db.rpc('generation_feed', params: {
-      'p_limit': limit,
-    }));
+    final map = _unwrap(
+      await _db.rpc('generation_feed', params: {'p_limit': limit}),
+    );
     return ((map['items'] as List?) ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(GenerationEntry.fromJson)
@@ -345,10 +345,12 @@ class AdminApi {
   }
 
   Future<void> setShopStatus(String shopId, String status) async {
-    _unwrap(await _db.rpc('admin_set_shop_status', params: {
-      'p_shop_id': shopId,
-      'p_status': status,
-    }));
+    _unwrap(
+      await _db.rpc(
+        'admin_set_shop_status',
+        params: {'p_shop_id': shopId, 'p_status': status},
+      ),
+    );
   }
 
   Future<void> assignOrder(
@@ -356,11 +358,16 @@ class AdminApi {
     required String shopId,
     String? courierId,
   }) async {
-    _unwrap(await _db.rpc('print_order_assign', params: {
-      'p_order_id': orderId,
-      'p_shop_id': shopId,
-      'p_courier_id': ?courierId,
-    }));
+    _unwrap(
+      await _db.rpc(
+        'print_order_assign',
+        params: {
+          'p_order_id': orderId,
+          'p_shop_id': shopId,
+          'p_courier_id': ?courierId,
+        },
+      ),
+    );
   }
 
   Future<List<Partner>> partners() async {
@@ -376,10 +383,10 @@ class AdminApi {
     final map = _unwrap(await _db.rpc('partner_candidate_merchants'));
     return ((map['items'] as List?) ?? const [])
         .whereType<Map<String, dynamic>>()
-        .map((m) => (
-              id: m['id'] as String,
-              name: (m['name'] as String?) ?? 'تاجر',
-            ))
+        .map(
+          (m) =>
+              (id: m['id'] as String, name: (m['name'] as String?) ?? 'تاجر'),
+        )
         .toList();
   }
 
@@ -389,35 +396,44 @@ class AdminApi {
     required String merchantId,
     int quota = 100,
   }) async {
-    final map = _unwrap(await _db.rpc('partner_create', params: {
-      'p_name': name,
-      'p_slug': slug,
-      'p_merchant_id': merchantId,
-      'p_quota': quota,
-    }));
+    final map = _unwrap(
+      await _db.rpc(
+        'partner_create',
+        params: {
+          'p_name': name,
+          'p_slug': slug,
+          'p_merchant_id': merchantId,
+          'p_quota': quota,
+        },
+      ),
+    );
     return (map['partner_id'] as String?) ?? '';
   }
 
   Future<void> setPartnerQuota(String partnerId, int quota) async {
-    _unwrap(await _db.rpc('partner_set_quota', params: {
-      'p_partner_id': partnerId,
-      'p_quota': quota,
-    }));
+    _unwrap(
+      await _db.rpc(
+        'partner_set_quota',
+        params: {'p_partner_id': partnerId, 'p_quota': quota},
+      ),
+    );
   }
 
   Future<void> setPartnerActive(String partnerId, bool active) async {
-    _unwrap(await _db.rpc('partner_set_active', params: {
-      'p_partner_id': partnerId,
-      'p_active': active,
-    }));
+    _unwrap(
+      await _db.rpc(
+        'partner_set_active',
+        params: {'p_partner_id': partnerId, 'p_active': active},
+      ),
+    );
   }
 
   /// يعيد المفتاح نصًّا **مرة واحدة**. لا سبيل لعرضه ثانيةً بعد إغلاق
   /// الحوار، فالمخزَّن تجزئته لا نصّه.
   Future<String> issuePartnerKey(String partnerId) async {
-    final map = _unwrap(await _db.rpc('partner_issue_key', params: {
-      'p_partner_id': partnerId,
-    }));
+    final map = _unwrap(
+      await _db.rpc('partner_issue_key', params: {'p_partner_id': partnerId}),
+    );
     return (map['key'] as String?) ?? '';
   }
 
@@ -425,11 +441,20 @@ class AdminApi {
     _unwrap(await _db.rpc('partner_revoke_key', params: {'p_key_id': keyId}));
   }
 
-  Future<void> transitionOrder(String orderId, String to, {String? note}) async {
-    _unwrap(await _db.rpc('print_order_transition', params: {
-      'p_order_id': orderId,
-      'p_to': to,
-      if (note != null && note.isNotEmpty) 'p_note': note,
-    }));
+  Future<void> transitionOrder(
+    String orderId,
+    String to, {
+    String? note,
+  }) async {
+    _unwrap(
+      await _db.rpc(
+        'print_order_transition',
+        params: {
+          'p_order_id': orderId,
+          'p_to': to,
+          if (note != null && note.isNotEmpty) 'p_note': note,
+        },
+      ),
+    );
   }
 }

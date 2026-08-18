@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../models/ad_service.dart';
 import '../theme/app_palette_source.dart';
 import '../theme/app_theme.dart';
@@ -19,6 +21,7 @@ class ProviderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     final art = paletteForProvider(provider);
     return Scaffold(
       body: CustomScrollView(
@@ -69,21 +72,31 @@ class ProviderScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.place_outlined,
-                          size: 16, color: context.textMuted),
+                      Icon(
+                        Icons.place_outlined,
+                        size: 16,
+                        color: context.textMuted,
+                      ),
                       const SizedBox(width: 4),
-                      Text(provider.city,
-                          style: TextStyle(color: context.textMuted)),
+                      Text(
+                        provider.city,
+                        style: TextStyle(color: context.textMuted),
+                      ),
                       const Spacer(),
                       Semantics(
-                        label:
-                            'التقييم ${provider.rating} من ٥، ${provider.reviews} مراجعة',
+                        label: l.marketRatingSemantics(
+                          provider.rating.toStringAsFixed(1),
+                          provider.reviews,
+                        ),
                         excludeSemantics: true,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star_rounded,
-                                size: 18, color: Color(0xFFF5A623)),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 18,
+                              color: Color(0xFFF5A623),
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               provider.rating.toStringAsFixed(1),
@@ -93,7 +106,7 @@ class ProviderScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '(${provider.reviews} مراجعة)',
+                              l.providerReviewsCount(provider.reviews),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: context.textMuted,
@@ -112,9 +125,12 @@ class ProviderScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.lg),
                   _PriceRow(provider: provider),
                   const SizedBox(height: AppSpacing.xl),
-                  const Text(
-                    'أعمال سابقة',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  Text(
+                    l.providerWorks,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   for (final work in provider.works)
@@ -123,15 +139,14 @@ class ProviderScreen extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: () => _requestQuote(context),
                     icon: const Icon(Icons.send_outlined),
-                    label: const Text('اطلب عرض سعر'),
+                    label: Text(l.providerRequestQuote),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     // الصدق أهم من إيهام الجاهزية: الطلب لا يصل المزوّد
                     // حتى تُوصَل لوحة المزوّدين على الخادم، وإخفاء ذلك
                     // يجعل التاجر ينتظر ردًّا لا يأتي.
-                    'الدليل في مرحلته الأولى: طلبك يُحفظ ويصلك تأكيد حين '
-                    'يُفعَّل حساب المزوّد.',
+                    l.providerDisclaimer,
                     style: TextStyle(fontSize: 12, color: context.textMuted),
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -146,7 +161,9 @@ class ProviderScreen extends StatelessWidget {
 
   void _requestQuote(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('سجّلنا اهتمامك بـ${provider.name}')),
+      SnackBar(
+        content: Text(L.of(context).providerInterestLogged(provider.name)),
+      ),
     );
   }
 }
@@ -182,31 +199,32 @@ class _PriceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     return Row(
       children: [
         Expanded(
           child: _Fact(
             icon: Icons.payments_outlined,
-            label: 'السعر',
+            label: l.providerPrice,
             value: provider.onRequest
-                ? 'حسب الطلب'
-                : 'من ${provider.priceFrom} ر.س',
+                ? l.marketOnRequest
+                : l.marketPriceFrom(provider.priceFrom),
           ),
         ),
         if (provider.respondsInHours != null)
           Expanded(
             child: _Fact(
               icon: Icons.schedule,
-              label: 'زمن الردّ',
-              value: '~${provider.respondsInHours} ساعات',
+              label: l.providerResponseTime,
+              value: l.providerResponseHours(provider.respondsInHours!),
             ),
           ),
         if (provider.verified)
           Expanded(
             child: _Fact(
               icon: Icons.verified_outlined,
-              label: 'الحالة',
-              value: 'موثّق',
+              label: l.providerStatus,
+              value: l.marketVerified,
             ),
           ),
       ],
@@ -229,8 +247,10 @@ class _Fact extends StatelessWidget {
           children: [
             Icon(icon, size: 15, color: context.textMuted),
             const SizedBox(width: 4),
-            Text(label,
-                style: TextStyle(fontSize: 11.5, color: context.textMuted)),
+            Text(
+              label,
+              style: TextStyle(fontSize: 11.5, color: context.textMuted),
+            ),
           ],
         ),
         const SizedBox(height: 2),
@@ -261,9 +281,7 @@ class _WorkTile extends StatelessWidget {
             child: Icon(Icons.image_outlined, size: 20, color: art.base),
           ),
           const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(title, style: const TextStyle(fontSize: 14)),
-          ),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
         ],
       ),
     );

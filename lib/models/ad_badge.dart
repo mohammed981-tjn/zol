@@ -3,14 +3,7 @@
 /// تصميمه فورًا بلون هويته، بلا بحث عن ملصقات ولا برامج خارجية.
 ///
 /// المفردات سعودية تجارية صرفة — ما يكتبه التاجر على واجهة محله فعلًا.
-enum AdBadge {
-  discount,
-  special,
-  fresh,
-  freeDelivery,
-  limited,
-  halal,
-}
+enum AdBadge { discount, special, fresh, freeDelivery, limited, halal }
 
 extension AdBadgeInfo on AdBadge {
   String get label => switch (this) {

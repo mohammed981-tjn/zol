@@ -53,8 +53,9 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
           productScale: (_baseScale * d.scale).clamp(_minScale, _maxScale),
           // الإزاحة نسبة من اللوحة: إصبع يقطع ربع العرض يزيح المنتج
           // ربعًا مهما كان مقاس الشاشة أو دقة التصدير.
-          productDx: (_ad.brief.productDx + d.focalPointDelta.dx / _canvas.width)
-              .clamp(-0.5, 0.5),
+          productDx:
+              (_ad.brief.productDx + d.focalPointDelta.dx / _canvas.width)
+                  .clamp(-0.5, 0.5),
           productDy:
               (_ad.brief.productDy + d.focalPointDelta.dy / _canvas.height)
                   .clamp(-0.5, 0.5),
@@ -190,7 +191,10 @@ class _DesignEditorScreenState extends State<DesignEditorScreen> {
                     builder: (context, constraints) {
                       // اللوحة تُقاس هنا لا في المستمع: قسمة الإزاحة على
                       // صفر تجعل التحويل NaN فيختفي المنتج كليًا.
-                      _canvas = Size(constraints.maxWidth, constraints.maxHeight);
+                      _canvas = Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      );
                       return GestureDetector(
                         onScaleStart: _onScaleStart,
                         onScaleUpdate: _onScaleUpdate,

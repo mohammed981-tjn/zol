@@ -41,10 +41,7 @@ class SectionHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
+        Text(title, style: Theme.of(context).textTheme.headlineMedium),
       ],
     );
   }

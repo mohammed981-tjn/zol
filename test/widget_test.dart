@@ -33,7 +33,7 @@ import 'package:zol/screens/market_screen.dart';
 import 'package:zol/screens/storefront_screen.dart';
 import 'package:zol/screens/shell_screen.dart';
 import 'package:zol/theme/app_palette_source.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:zol/l10n/app_localizations.dart';
 import 'package:zol/theme/art_palette.dart';
 import 'package:zol/widgets/art_backdrop.dart';
 import 'package:zol/widgets/art_text.dart';
@@ -180,8 +180,9 @@ void main() {
     expect(find.text('أنشئ إعلانك الآن'), findsOneWidget);
   });
 
-  testWidgets('Home screen shows the main call-to-action and stats',
-      (tester) async {
+  testWidgets('Home screen shows the main call-to-action and stats', (
+    tester,
+  ) async {
     await _pumpApp(tester);
 
     expect(find.text('أنشئ إعلانك الآن'), findsOneWidget);
@@ -189,8 +190,9 @@ void main() {
     expect(find.text('طلب طباعة'), findsOneWidget);
   });
 
-  testWidgets('Continue button stays disabled until name and image are set',
-      (tester) async {
+  testWidgets('Continue button stays disabled until name and image are set', (
+    tester,
+  ) async {
     await _pumpApp(tester);
     await tester.tap(find.text('أنشئ إعلانك الآن'));
     await tester.pumpAndSettle();
@@ -223,8 +225,9 @@ void main() {
     expect(tester.widget<ElevatedButton>(button).enabled, isTrue);
   });
 
-  testWidgets('Magic screen renders Supabase variants with critic scores',
-      (tester) async {
+  testWidgets('Magic screen renders Supabase variants with critic scores', (
+    tester,
+  ) async {
     await _pumpApp(tester);
     await _reachMagicResults(tester);
 
@@ -239,8 +242,7 @@ void main() {
     expect(find.text('اطبعه وصلّه'), findsOneWidget);
   });
 
-  testWidgets('Saving a variant adds it to the My Ads library',
-      (tester) async {
+  testWidgets('Saving a variant adds it to the My Ads library', (tester) async {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -253,8 +255,9 @@ void main() {
     expect(state.savedAds.first.brief.productName, 'قهوة مختصة');
   });
 
-  testWidgets('Print flow computes a price and creates a tracked order',
-      (tester) async {
+  testWidgets('Print flow computes a price and creates a tracked order', (
+    tester,
+  ) async {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -263,7 +266,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // بنر 1×2 متر: 90 + توصيل 25 + ضريبة 15% = 132.25
-    final confirm = find.widgetWithText(ElevatedButton, 'تأكيد الطلب — 132.25 ر.س');
+    final confirm = find.widgetWithText(
+      ElevatedButton,
+      'تأكيد الطلب — 132.25 ر.س',
+    );
     // التمرير لأسفل القائمة (السحب المباشر يتفادى التباس تعدد الـ Scrollables).
     await tester.drag(find.byType(ListView).last, const Offset(0, -1600));
     await tester.pumpAndSettle();
@@ -331,8 +337,9 @@ void main() {
     expect(second.nextOrderId(), 'AD-1002');
   });
 
-  testWidgets('Card payment (simulated) marks the order as paid',
-      (tester) async {
+  testWidgets('Card payment (simulated) marks the order as paid', (
+    tester,
+  ) async {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -414,40 +421,50 @@ void main() {
     expect(find.text('الترقية للاحترافية'), findsNothing);
   });
 
-  test('Background remover isolates product from a uniform background',
-      () async {
-    // صورة اصطناعية: خلفية بيضاء وموضوع أحمر في المنتصف.
-    final source = img.Image(width: 120, height: 120, numChannels: 4);
-    img.fill(source, color: img.ColorRgba8(250, 250, 250, 255));
-    img.fillRect(
-      source,
-      x1: 40,
-      y1: 40,
-      x2: 80,
-      y2: 80,
-      color: img.ColorRgba8(200, 30, 30, 255),
-    );
-    final bytes = img.encodePng(source);
+  test(
+    'Background remover isolates product from a uniform background',
+    () async {
+      // صورة اصطناعية: خلفية بيضاء وموضوع أحمر في المنتصف.
+      final source = img.Image(width: 120, height: 120, numChannels: 4);
+      img.fill(source, color: img.ColorRgba8(250, 250, 250, 255));
+      img.fillRect(
+        source,
+        x1: 40,
+        y1: 40,
+        x2: 80,
+        y2: 80,
+        color: img.ColorRgba8(200, 30, 30, 255),
+      );
+      final bytes = img.encodePng(source);
 
-    final result =
-        await BackgroundRemover.removeBackground(Uint8List.fromList(bytes));
-    expect(result, isNotNull);
+      final result = await BackgroundRemover.removeBackground(
+        Uint8List.fromList(bytes),
+      );
+      expect(result, isNotNull);
 
-    final cutout = img.decodePng(result!)!;
-    // الزاوية أصبحت شفافة (خلفية معزولة).
-    expect(cutout.getPixel(5, 5).a, 0);
-    // مركز المنتج بقي معتمًا وبلونه.
-    final center = cutout.getPixel(60, 60);
-    expect(center.a, 255);
-    expect(center.r, greaterThan(150));
-  });
+      final cutout = img.decodePng(result!)!;
+      // الزاوية أصبحت شفافة (خلفية معزولة).
+      expect(cutout.getPixel(5, 5).a, 0);
+      // مركز المنتج بقي معتمًا وبلونه.
+      final center = cutout.getPixel(60, 60);
+      expect(center.a, 255);
+      expect(center.r, greaterThan(150));
+    },
+  );
 
   test('Background remover refuses to butcher a busy background', () async {
     // خلفية عشوائية الألوان (ضوضاء) — يجب أن يمتنع العزل بدل إتلاف الصورة.
     final noisy = img.Image(width: 60, height: 60, numChannels: 4);
     for (var y = 0; y < 60; y++) {
       for (var x = 0; x < 60; x++) {
-        noisy.setPixelRgba(x, y, (x * 37) % 256, (y * 91) % 256, (x * y) % 256, 255);
+        noisy.setPixelRgba(
+          x,
+          y,
+          (x * 37) % 256,
+          (y * 91) % 256,
+          (x * y) % 256,
+          255,
+        );
       }
     }
     final result = await BackgroundRemover.removeBackground(
@@ -456,50 +473,52 @@ void main() {
     expect(result, isNull);
   });
 
-  test('Merchant account: register, login, logout, and session restore',
-      () async {
-    SharedPreferences.setMockInitialValues({});
+  test(
+    'Merchant account: register, login, logout, and session restore',
+    () async {
+      SharedPreferences.setMockInitialValues({});
 
-    final first = await AppState.load();
-    expect(
-      await first.register(
-        name: 'محمد',
-        storeName: 'محمصة الفجر',
-        email: 'M@Example.com',
-        password: 'secret123',
-      ),
-      isNull,
-    );
-    expect(first.isLoggedIn, isTrue);
+      final first = await AppState.load();
+      expect(
+        await first.register(
+          name: 'محمد',
+          storeName: 'محمصة الفجر',
+          email: 'M@Example.com',
+          password: 'secret123',
+        ),
+        isNull,
+      );
+      expect(first.isLoggedIn, isTrue);
 
-    // بريد مكرر يرفض.
-    expect(
-      await first.register(
-        name: 'آخر',
-        storeName: 'متجر',
-        email: 'm@example.com',
-        password: 'other123',
-      ),
-      isNotNull,
-    );
+      // بريد مكرر يرفض.
+      expect(
+        await first.register(
+          name: 'آخر',
+          storeName: 'متجر',
+          email: 'm@example.com',
+          password: 'other123',
+        ),
+        isNotNull,
+      );
 
-    // الجلسة تُسترجع بعد «إعادة تشغيل».
-    final second = await AppState.load();
-    expect(second.account?.name, 'محمد');
-    expect(second.account?.email, 'm@example.com');
+      // الجلسة تُسترجع بعد «إعادة تشغيل».
+      final second = await AppState.load();
+      expect(second.account?.name, 'محمد');
+      expect(second.account?.email, 'm@example.com');
 
-    second.logout();
-    expect(second.isLoggedIn, isFalse);
-    expect(
-      await second.login(email: 'm@example.com', password: 'wrong'),
-      isNotNull,
-    );
-    expect(
-      await second.login(email: 'm@example.com', password: 'secret123'),
-      isNull,
-    );
-    expect(second.account?.storeName, 'محمصة الفجر');
-  });
+      second.logout();
+      expect(second.isLoggedIn, isFalse);
+      expect(
+        await second.login(email: 'm@example.com', password: 'wrong'),
+        isNotNull,
+      );
+      expect(
+        await second.login(email: 'm@example.com', password: 'secret123'),
+        isNull,
+      );
+      expect(second.account?.storeName, 'محمصة الفجر');
+    },
+  );
 
   testWidgets('Merchant can register from the settings tab', (tester) async {
     final state = AppState();
@@ -526,27 +545,30 @@ void main() {
     expect(find.textContaining('محمصة الفجر'), findsOneWidget);
   });
 
-  test('Palette extractor finds the product colour, not the background', () async {
-    // خلفية بيضاء واسعة + منتج أخضر — يجب أن يفوز الأخضر لا الأبيض.
-    final source = img.Image(width: 120, height: 120, numChannels: 4);
-    img.fill(source, color: img.ColorRgba8(252, 252, 252, 255));
-    img.fillRect(
-      source,
-      x1: 35,
-      y1: 35,
-      x2: 85,
-      y2: 85,
-      color: img.ColorRgba8(20, 160, 70, 255),
-    );
+  test(
+    'Palette extractor finds the product colour, not the background',
+    () async {
+      // خلفية بيضاء واسعة + منتج أخضر — يجب أن يفوز الأخضر لا الأبيض.
+      final source = img.Image(width: 120, height: 120, numChannels: 4);
+      img.fill(source, color: img.ColorRgba8(252, 252, 252, 255));
+      img.fillRect(
+        source,
+        x1: 35,
+        y1: 35,
+        x2: 85,
+        y2: 85,
+        color: img.ColorRgba8(20, 160, 70, 255),
+      );
 
-    final value = await PaletteExtractor.dominantColor(
-      Uint8List.fromList(img.encodePng(source)),
-    );
-    expect(value, isNotNull);
-    final color = Color(value!);
-    expect(color.g, greaterThan(color.r));
-    expect(color.g, greaterThan(color.b));
-  });
+      final value = await PaletteExtractor.dominantColor(
+        Uint8List.fromList(img.encodePng(source)),
+      );
+      expect(value, isNotNull);
+      final color = Color(value!);
+      expect(color.g, greaterThan(color.r));
+      expect(color.g, greaterThan(color.b));
+    },
+  );
 
   test('Palette extractor returns null for a colourless image', () async {
     final grey = img.Image(width: 60, height: 60, numChannels: 4);
@@ -578,8 +600,7 @@ void main() {
     expect(formal.primary, const Color(0xFF1F2A5E));
   });
 
-  test('Season color slots between brand and product in palette priority',
-      () {
+  test('Season color slots between brand and product in palette priority', () {
     // العلامة تتقدّم حتى على الموسم — الهوية الدائمة تسبق الاختيار الموسمي.
     final branded = AdPalette.resolve(
       brandColor: 0xFF00695C,
@@ -635,8 +656,9 @@ void main() {
     // قالب يُرسم». هذا الاختبار عن التبديل لا عن الجرد.
   });
 
-  testWidgets('Print flow previews the design on the actual product',
-      (tester) async {
+  testWidgets('Print flow previews the design on the actual product', (
+    tester,
+  ) async {
     await _pumpApp(tester);
     await _reachMagicResults(tester);
 
@@ -661,8 +683,9 @@ void main() {
     expect(preview.sizeLabel, contains('9×5'));
   });
 
-  testWidgets('Saved ads reopen from the library for re-export',
-      (tester) async {
+  testWidgets('Saved ads reopen from the library for re-export', (
+    tester,
+  ) async {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -677,8 +700,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // العودة للجذر ثم فتح تبويب المكتبة.
-    Navigator.of(tester.element(find.byType(Scaffold).last))
-        .popUntil((route) => route.isFirst);
+    Navigator.of(
+      tester.element(find.byType(Scaffold).last),
+    ).popUntil((route) => route.isFirst);
     await tester.pumpAndSettle();
     await tester.tap(find.text('إعلاناتي'));
     await tester.pumpAndSettle();
@@ -686,7 +710,9 @@ void main() {
     // النقر على الإعلان المحفوظ يفتح شاشة التصميم لا طريقًا مسدودًا.
     final saved = state.savedAds.single;
     await tester.tap(
-      find.byKey(ValueKey('saved-ad-${saved.createdAt.microsecondsSinceEpoch}')),
+      find.byKey(
+        ValueKey('saved-ad-${saved.createdAt.microsecondsSinceEpoch}'),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -740,8 +766,9 @@ void main() {
     expect(second.savedAds.single.brief.imageBytes, isNotEmpty);
   });
 
-  testWidgets('Template gallery browses by category and searches',
-      (tester) async {
+  testWidgets('Template gallery browses by category and searches', (
+    tester,
+  ) async {
     await _pumpApp(tester);
 
     await tester.tap(find.text('القوالب'));
@@ -765,8 +792,9 @@ void main() {
     expect(find.text('لا توجد قوالب مطابقة لبحثك'), findsOneWidget);
   });
 
-  testWidgets('Picking a gallery template preselects format and template',
-      (tester) async {
+  testWidgets('Picking a gallery template preselects format and template', (
+    tester,
+  ) async {
     await _pumpApp(tester);
     await tester.tap(find.text('القوالب'));
     await tester.pumpAndSettle();
@@ -788,37 +816,39 @@ void main() {
   });
 
   test(
-      'Template ordering puts the merchant business match first, trending as tiebreaker',
-      () {
-    // فئة الجمال تفضّل «منقسم» و«أنيق» — يجب أن يتقدّما على «جريء» رغم أن
-    // «جريء» الأكثر رواجًا عمومًا، وعلى «عرض خاص» غير المناسب لها إطلاقًا.
-    final order = orderTemplatesForBusiness(
-      TemplateCategory.post.templates,
-      BusinessCategory.beauty,
-    );
-    expect(order, [
-      AdTemplate.split,
-      AdTemplate.minimal,
-      AdTemplate.bold,
-      AdTemplate.offer,
-    ]);
+    'Template ordering puts the merchant business match first, trending as tiebreaker',
+    () {
+      // فئة الجمال تفضّل «منقسم» و«أنيق» — يجب أن يتقدّما على «جريء» رغم أن
+      // «جريء» الأكثر رواجًا عمومًا، وعلى «عرض خاص» غير المناسب لها إطلاقًا.
+      final order = orderTemplatesForBusiness(
+        TemplateCategory.post.templates,
+        BusinessCategory.beauty,
+      );
+      expect(order, [
+        AdTemplate.split,
+        AdTemplate.minimal,
+        AdTemplate.bold,
+        AdTemplate.offer,
+      ]);
 
-    // بلا نشاط مطابق (لا قالب من هذه الفئة موجّه للكافيهات)، يتصدّر
-    // الأكثر رواجًا فقط.
-    final noMatch = orderTemplatesForBusiness(
-      TemplateCategory.post.templates,
-      BusinessCategory.cafe,
-    );
-    expect(noMatch.first, AdTemplate.bold);
+      // بلا نشاط مطابق (لا قالب من هذه الفئة موجّه للكافيهات)، يتصدّر
+      // الأكثر رواجًا فقط.
+      final noMatch = orderTemplatesForBusiness(
+        TemplateCategory.post.templates,
+        BusinessCategory.cafe,
+      );
+      expect(noMatch.first, AdTemplate.bold);
 
-    // القالبان الأكثر رواجًا فقط يحملان شارة «رائج».
-    expect(AdTemplate.bold.isTrending, isTrue);
-    expect(AdTemplate.offer.isTrending, isTrue);
-    expect(AdTemplate.minimal.isTrending, isFalse);
-  });
+      // القالبان الأكثر رواجًا فقط يحملان شارة «رائج».
+      expect(AdTemplate.bold.isTrending, isTrue);
+      expect(AdTemplate.offer.isTrending, isTrue);
+      expect(AdTemplate.minimal.isTrending, isFalse);
+    },
+  );
 
-  testWidgets('Gallery shows a trending badge on the top templates',
-      (tester) async {
+  testWidgets('Gallery shows a trending badge on the top templates', (
+    tester,
+  ) async {
     await _pumpApp(tester);
     await tester.tap(find.text('القوالب'));
     await tester.pumpAndSettle();
@@ -837,13 +867,15 @@ void main() {
     );
 
     final cafe = AdGenerator.preview(briefFor(BusinessCategory.cafe));
-    final realEstate =
-        AdGenerator.preview(briefFor(BusinessCategory.realEstate));
+    final realEstate = AdGenerator.preview(
+      briefFor(BusinessCategory.realEstate),
+    );
 
     // مفردات الكافيه لا تشبه مفردات العقار — لا نص عام واحد للاثنين.
     final cafeText = cafe.map((a) => '${a.headline} ${a.body}').join(' ');
-    final estateText =
-        realEstate.map((a) => '${a.headline} ${a.body}').join(' ');
+    final estateText = realEstate
+        .map((a) => '${a.headline} ${a.body}')
+        .join(' ');
     expect(cafeText, contains('تحميص'));
     expect(estateText, contains('تشطيب'));
     expect(cafeText, isNot(contains('تشطيب')));
@@ -934,8 +966,9 @@ void main() {
       ),
     );
 
-    final seasonalText =
-        withSeason.map((a) => '${a.headline} ${a.body}').join(' ');
+    final seasonalText = withSeason
+        .map((a) => '${a.headline} ${a.body}')
+        .join(' ');
     expect(seasonalText, contains(SeasonalTheme.nationalDay.campaignPhrase));
     expect(withSeason.first.hashtags, contains('#اليوم_الوطني'));
     // مفردات النشاط تبقى كما هي، الموسم يضيف فوقها لا يستبدلها.
@@ -943,165 +976,159 @@ void main() {
     expect(withSeason.first.cta, withoutSeason.first.cta);
   });
 
-  test('Season approach detection only trusts Gregorian-anchored occasions',
-      () {
-    // اليوم الوطني (23 سبتمبر): قريب خلال الثلاثين يومًا السابقة له.
-    expect(
-      isSeasonApproaching(
-        SeasonalTheme.nationalDay,
-        DateTime(2026, 9, 1),
-      ),
-      isTrue,
-    );
-    expect(
-      isSeasonApproaching(
-        SeasonalTheme.nationalDay,
-        DateTime(2026, 9, 23),
-      ),
-      isTrue,
-    );
-    expect(
-      isSeasonApproaching(
-        SeasonalTheme.nationalDay,
-        DateTime(2026, 8, 1),
-      ),
-      isFalse,
-    );
-    expect(
-      isSeasonApproaching(
-        SeasonalTheme.nationalDay,
-        DateTime(2026, 9, 24),
-      ),
-      isFalse,
-    );
+  test(
+    'Season approach detection only trusts Gregorian-anchored occasions',
+    () {
+      // اليوم الوطني (23 سبتمبر): قريب خلال الثلاثين يومًا السابقة له.
+      expect(
+        isSeasonApproaching(SeasonalTheme.nationalDay, DateTime(2026, 9, 1)),
+        isTrue,
+      );
+      expect(
+        isSeasonApproaching(SeasonalTheme.nationalDay, DateTime(2026, 9, 23)),
+        isTrue,
+      );
+      expect(
+        isSeasonApproaching(SeasonalTheme.nationalDay, DateTime(2026, 8, 1)),
+        isFalse,
+      );
+      expect(
+        isSeasonApproaching(SeasonalTheme.nationalDay, DateTime(2026, 9, 24)),
+        isFalse,
+      );
 
-    // الجمعة البيضاء: النصف الثاني من نوفمبر تقريبًا.
-    expect(
-      isSeasonApproaching(SeasonalTheme.whiteFriday, DateTime(2026, 11, 20)),
-      isTrue,
-    );
-    expect(
-      isSeasonApproaching(SeasonalTheme.whiteFriday, DateTime(2026, 11, 5)),
-      isFalse,
-    );
+      // الجمعة البيضاء: النصف الثاني من نوفمبر تقريبًا.
+      expect(
+        isSeasonApproaching(SeasonalTheme.whiteFriday, DateTime(2026, 11, 20)),
+        isTrue,
+      );
+      expect(
+        isSeasonApproaching(SeasonalTheme.whiteFriday, DateTime(2026, 11, 5)),
+        isFalse,
+      );
 
-    // موسم الرياض: أكتوبر–مارس، يمتد عبر بداية السنة.
-    expect(
-      isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 12, 1)),
-      isTrue,
-    );
-    expect(
-      isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 2, 1)),
-      isTrue,
-    );
-    expect(
-      isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 6, 1)),
-      isFalse,
-    );
+      // موسم الرياض: أكتوبر–مارس، يمتد عبر بداية السنة.
+      expect(
+        isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 12, 1)),
+        isTrue,
+      );
+      expect(
+        isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 2, 1)),
+        isTrue,
+      );
+      expect(
+        isSeasonApproaching(SeasonalTheme.riyadhSeason, DateTime(2026, 6, 1)),
+        isFalse,
+      );
 
-    // رمضان والعيد بالتقويم الهجري المتغيّر — لا اقتراح تلقائي بلا تقويم
-    // هجري مضمَّن، تجنّبًا لادّعاء دقة غير موثوقة.
-    expect(
-      isSeasonApproaching(SeasonalTheme.ramadan, DateTime(2026, 3, 1)),
-      isFalse,
-    );
-    expect(
-      isSeasonApproaching(SeasonalTheme.eid, DateTime(2026, 3, 20)),
-      isFalse,
-    );
-  });
+      // رمضان والعيد بالتقويم الهجري المتغيّر — لا اقتراح تلقائي بلا تقويم
+      // هجري مضمَّن، تجنّبًا لادّعاء دقة غير موثوقة.
+      expect(
+        isSeasonApproaching(SeasonalTheme.ramadan, DateTime(2026, 3, 1)),
+        isFalse,
+      );
+      expect(
+        isSeasonApproaching(SeasonalTheme.eid, DateTime(2026, 3, 20)),
+        isFalse,
+      );
+    },
+  );
 
   testWidgets(
-      'Season picker threads through to the design badge and gallery flow',
-      (tester) async {
-    await _pumpApp(tester);
-    await tester.tap(find.text('أنشئ إعلانك الآن'));
-    await tester.pumpAndSettle();
+    'Season picker threads through to the design badge and gallery flow',
+    (tester) async {
+      await _pumpApp(tester);
+      await tester.tap(find.text('أنشئ إعلانك الآن'));
+      await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('اضغط لرفع صورة المنتج'),
-      -200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
-    await tester.tap(find.text('اضغط لرفع صورة المنتج'));
-    await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text('اضغط لرفع صورة المنتج'),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
+      await tester.tap(find.text('اضغط لرفع صورة المنتج'));
+      await tester.pump();
 
-    final ramadanChip = find.byKey(const ValueKey('season-ramadan'));
-    await tester.scrollUntilVisible(
-      ramadanChip,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(ramadanChip);
-    await tester.pumpAndSettle();
-    await tester.tap(ramadanChip);
-    await tester.pump();
+      final ramadanChip = find.byKey(const ValueKey('season-ramadan'));
+      await tester.scrollUntilVisible(
+        ramadanChip,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(ramadanChip);
+      await tester.pumpAndSettle();
+      await tester.tap(ramadanChip);
+      await tester.pump();
 
-    await tester.scrollUntilVisible(
-      find.text('اعرض شاشة السحر'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(find.text('اعرض شاشة السحر'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('اعرض شاشة السحر'));
-    await tester.pump();
-    final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
-    await tester.pump(total + const Duration(milliseconds: 100));
-    await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('اعرض شاشة السحر'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('اعرض شاشة السحر'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('اعرض شاشة السحر'));
+      await tester.pump();
+      final total =
+          AdGenerator.stageDuration * AdGenerator.generationStages.length;
+      await tester.pump(total + const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
-    // شارة الموسم تظهر على التصميم المولَّد.
-    expect(find.textContaining(SeasonalTheme.ramadan.label), findsWidgets);
-  });
+      // شارة الموسم تظهر على التصميم المولَّد.
+      expect(find.textContaining(SeasonalTheme.ramadan.label), findsWidgets);
+    },
+  );
 
   testWidgets(
-      'Decorative background toggle renders the category SVG pattern on '
-      'the design, off by default', (tester) async {
-    await _pumpApp(tester);
-    await tester.tap(find.text('أنشئ إعلانك الآن'));
-    await tester.pumpAndSettle();
+    'Decorative background toggle renders the category SVG pattern on '
+    'the design, off by default',
+    (tester) async {
+      await _pumpApp(tester);
+      await tester.tap(find.text('أنشئ إعلانك الآن'));
+      await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('اضغط لرفع صورة المنتج'),
-      -200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
-    await tester.tap(find.text('اضغط لرفع صورة المنتج'));
-    await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text('اضغط لرفع صورة المنتج'),
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
+      await tester.tap(find.text('اضغط لرفع صورة المنتج'));
+      await tester.pump();
 
-    final toggle =
-        find.byKey(const ValueKey('decorative-background-toggle'));
-    await tester.scrollUntilVisible(
-      toggle,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(toggle);
-    await tester.pumpAndSettle();
-    // افتراضيًا معطّلة — بلا خلفية مصمَّمة قبل التفعيل.
-    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
-    await tester.tap(toggle);
-    await tester.pump();
-    expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      final toggle = find.byKey(const ValueKey('decorative-background-toggle'));
+      await tester.scrollUntilVisible(
+        toggle,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      // افتراضيًا معطّلة — بلا خلفية مصمَّمة قبل التفعيل.
+      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
 
-    await tester.scrollUntilVisible(
-      find.text('اعرض شاشة السحر'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(find.text('اعرض شاشة السحر'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('اعرض شاشة السحر'));
-    await tester.pump();
-    final total = AdGenerator.stageDuration * AdGenerator.generationStages.length;
-    await tester.pump(total + const Duration(milliseconds: 100));
-    await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('اعرض شاشة السحر'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('اعرض شاشة السحر'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('اعرض شاشة السحر'));
+      await tester.pump();
+      final total =
+          AdGenerator.stageDuration * AdGenerator.generationStages.length;
+      await tester.pump(total + const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
-    // زخرفة الخلفية (SVG مضمَّنة) تظهر على التصميم المولَّد بعد التفعيل.
-    expect(find.byType(SvgPicture), findsWidgets);
-  });
+      // زخرفة الخلفية (SVG مضمَّنة) تظهر على التصميم المولَّد بعد التفعيل.
+      expect(find.byType(SvgPicture), findsWidgets);
+    },
+  );
 
   testWidgets('Onboarding asks for the business and stores it', (tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -1133,8 +1160,7 @@ void main() {
     expect(reloaded.businessCategory, BusinessCategory.cafe);
   });
 
-  testWidgets('Business category can be changed from settings',
-      (tester) async {
+  testWidgets('Business category can be changed from settings', (tester) async {
     final state = AppState();
     await _pumpApp(tester, state);
 
@@ -1152,50 +1178,54 @@ void main() {
   });
 
   testWidgets(
-      'Print cost calculator computes total and proceeds with the chosen selection',
-      (tester) async {
-    PrintProduct? proceedProduct;
-    int? proceedSizeIndex;
-    int? proceedQuantity;
+    'Print cost calculator computes total and proceeds with the chosen selection',
+    (tester) async {
+      PrintProduct? proceedProduct;
+      int? proceedSizeIndex;
+      int? proceedQuantity;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildAppTheme(Brightness.light),
-        home: Scaffold(
-          body: PrintCostCalculator(
-            onProceed: (product, sizeIndex, quantity) {
-              proceedProduct = product;
-              proceedSizeIndex = sizeIndex;
-              proceedQuantity = quantity;
-            },
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: L.localizationsDelegates,
+          supportedLocales: L.supportedLocales,
+          theme: buildAppTheme(Brightness.light),
+          home: Scaffold(
+            body: PrintCostCalculator(
+              onProceed: (product, sizeIndex, quantity) {
+                proceedProduct = product;
+                proceedSizeIndex = sizeIndex;
+                proceedQuantity = quantity;
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    // مطويّة افتراضيًا وتُظهر تقدير «بنر» (المنتج الأول في الكتالوج).
-    expect(find.textContaining('بنر'), findsOneWidget);
-    expect(find.byKey(const ValueKey('print-cost-proceed')), findsNothing);
+      // مطويّة افتراضيًا وتُظهر تقدير «بنر» (المنتج الأول في الكتالوج).
+      expect(find.textContaining('بنر'), findsOneWidget);
+      expect(find.byKey(const ValueKey('print-cost-proceed')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('print-cost-toggle')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('print-cost-toggle')));
+      await tester.pumpAndSettle();
 
-    // تغيير المنتج إلى كروت أعمال يحدّث التقدير والملخص فورًا.
-    await tester.tap(find.text('كروت أعمال'));
-    await tester.pumpAndSettle();
-    // 60 (سعر القياسي) + 25 توصيل، ‎×1.15 ضريبة = 97.75
-    expect(find.textContaining('97.75'), findsWidgets);
+      // تغيير المنتج إلى كروت أعمال يحدّث التقدير والملخص فورًا.
+      await tester.tap(find.text('كروت أعمال'));
+      await tester.pumpAndSettle();
+      // 60 (سعر القياسي) + 25 توصيل، ‎×1.15 ضريبة = 97.75
+      expect(find.textContaining('97.75'), findsWidgets);
 
-    await tester.tap(find.byKey(const ValueKey('print-cost-proceed')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('print-cost-proceed')));
+      await tester.pumpAndSettle();
 
-    expect(proceedProduct?.label, 'كروت أعمال');
-    expect(proceedSizeIndex, 0);
-    expect(proceedQuantity, 1);
-  });
+      expect(proceedProduct?.label, 'كروت أعمال');
+      expect(proceedSizeIndex, 0);
+      expect(proceedQuantity, 1);
+    },
+  );
 
-  testWidgets('Deleting a saved ad moves it to trash with an instant undo',
-      (tester) async {
+  testWidgets('Deleting a saved ad moves it to trash with an instant undo', (
+    tester,
+  ) async {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -1210,8 +1240,9 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
 
-    Navigator.of(tester.element(find.byType(Scaffold).last))
-        .popUntil((route) => route.isFirst);
+    Navigator.of(
+      tester.element(find.byType(Scaffold).last),
+    ).popUntil((route) => route.isFirst);
     await tester.pumpAndSettle();
     await tester.tap(find.text('إعلاناتي'));
     await tester.pumpAndSettle();
@@ -1232,8 +1263,7 @@ void main() {
     expect(state.trashedAds, isEmpty);
   });
 
-  testWidgets(
-      'Saved ad card exposes delete and copy as individually reachable '
+  testWidgets('Saved ad card exposes delete and copy as individually reachable '
       'accessibility actions, not merged into the whole card', (tester) async {
     final handle = tester.ensureSemantics();
     final state = AppState();
@@ -1247,8 +1277,9 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
 
-    Navigator.of(tester.element(find.byType(Scaffold).last))
-        .popUntil((route) => route.isFirst);
+    Navigator.of(
+      tester.element(find.byType(Scaffold).last),
+    ).popUntil((route) => route.isFirst);
     await tester.pumpAndSettle();
     await tester.tap(find.text('إعلاناتي'));
     await tester.pumpAndSettle();
@@ -1268,8 +1299,9 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('Trash screen restores an ad back to the library',
-      (tester) async {
+  testWidgets('Trash screen restores an ad back to the library', (
+    tester,
+  ) async {
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -1281,8 +1313,9 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
 
-    Navigator.of(tester.element(find.byType(Scaffold).last))
-        .popUntil((route) => route.isFirst);
+    Navigator.of(
+      tester.element(find.byType(Scaffold).last),
+    ).popUntil((route) => route.isFirst);
     await tester.pumpAndSettle();
     await tester.tap(find.text('إعلاناتي'));
     await tester.pumpAndSettle();
@@ -1303,47 +1336,50 @@ void main() {
     expect(find.text('سلة المهملات فارغة'), findsOneWidget);
   });
 
-  testWidgets('Emptying the trash asks for confirmation before deleting forever',
-      (tester) async {
-    final state = AppState();
-    await _pumpApp(tester, state);
-    await _reachMagicResults(tester);
-    await tester.ensureVisible(find.text('حفظ').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('حفظ').first);
-    await tester.pumpAndSettle();
-    // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه أولًا.
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'Emptying the trash asks for confirmation before deleting forever',
+    (tester) async {
+      final state = AppState();
+      await _pumpApp(tester, state);
+      await _reachMagicResults(tester);
+      await tester.ensureVisible(find.text('حفظ').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('حفظ').first);
+      await tester.pumpAndSettle();
+      // شريط تنبيه «تم الحفظ» يغطي أسفل الشاشة — ننتظر اختفاءه أولًا.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
 
-    Navigator.of(tester.element(find.byType(Scaffold).last))
-        .popUntil((route) => route.isFirst);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('إعلاناتي'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('حذف'));
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
+      Navigator.of(
+        tester.element(find.byType(Scaffold).last),
+      ).popUntil((route) => route.isFirst);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('إعلاناتي'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('حذف'));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('سلة المهملات'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('سلة المهملات'));
+      await tester.pumpAndSettle();
 
-    // الإلغاء لا يحذف شيئًا.
-    await tester.tap(find.text('إفراغ السلة'));
-    await tester.pumpAndSettle();
-    expect(find.text('إفراغ السلة نهائيًا؟'), findsOneWidget);
-    await tester.tap(find.text('إلغاء'));
-    await tester.pumpAndSettle();
-    expect(state.trashedAds, hasLength(1));
+      // الإلغاء لا يحذف شيئًا.
+      await tester.tap(find.text('إفراغ السلة'));
+      await tester.pumpAndSettle();
+      expect(find.text('إفراغ السلة نهائيًا؟'), findsOneWidget);
+      await tester.tap(find.text('إلغاء'));
+      await tester.pumpAndSettle();
+      expect(state.trashedAds, hasLength(1));
 
-    // التأكيد يفرغ السلة نهائيًا.
-    await tester.tap(find.text('إفراغ السلة'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('إفراغ نهائيًا'));
-    await tester.pumpAndSettle();
-    expect(state.trashedAds, isEmpty);
-    expect(find.text('سلة المهملات فارغة'), findsOneWidget);
-  });
+      // التأكيد يفرغ السلة نهائيًا.
+      await tester.tap(find.text('إفراغ السلة'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('إفراغ نهائيًا'));
+      await tester.pumpAndSettle();
+      expect(state.trashedAds, isEmpty);
+      expect(find.text('سلة المهملات فارغة'), findsOneWidget);
+    },
+  );
 
   test('Expired trash items are purged automatically on load', () async {
     final oldAd = AdGenerator.preview(
@@ -1397,8 +1433,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    final swatch =
-        find.byKey(ValueKey('brand-swatch-${SettingsScreen.brandSwatches.first}'));
+    final swatch = find.byKey(
+      ValueKey('brand-swatch-${SettingsScreen.brandSwatches.first}'),
+    );
     await tester.ensureVisible(swatch);
     await tester.pumpAndSettle();
     await tester.tap(swatch);
@@ -1410,8 +1447,9 @@ void main() {
     expect(reloaded.brandColorValue, SettingsScreen.brandSwatches.first);
   });
 
-  testWidgets('Brand font selection persists and applies to the design',
-      (tester) async {
+  testWidgets('Brand font selection persists and applies to the design', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final state = await AppState.load();
     await _pumpApp(tester, state);
@@ -1443,9 +1481,13 @@ void main() {
       format: 'منشور مربع',
       category: BusinessCategory.cafe,
     );
-    final ad = AdGenerator.preview(brief).firstWhere((a) => a.kind == AdKind.image);
+    final ad = AdGenerator.preview(
+      brief,
+    ).firstWhere((a) => a.kind == AdKind.image);
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
         theme: buildAppTheme(Brightness.light),
         home: AppStateScope(
           notifier: state,
@@ -1514,12 +1556,15 @@ void main() {
       format: 'منشور مربع',
       category: BusinessCategory.cafe,
     );
-    final ad =
-        AdGenerator.preview(brief).firstWhere((a) => a.kind == AdKind.image);
+    final ad = AdGenerator.preview(
+      brief,
+    ).firstWhere((a) => a.kind == AdKind.image);
 
     for (final template in AdTemplate.values) {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: L.localizationsDelegates,
+          supportedLocales: L.supportedLocales,
           theme: buildAppTheme(Brightness.light),
           home: AppStateScope(
             notifier: state,
@@ -1534,7 +1579,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull, reason: 'استثناء في ${t2(template)}');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'استثناء في ${t2(template)}',
+      );
       // الكسر المتوازن يُدخل أسطرًا داخل العنوان، فالمطابقة الحرفية لم
       // تعد صالحة. نقارن بعد تسوية المسافات: هذا يقبل الكسر الفنّي
       // ويظلّ يرفض العنوان المبتور — وهو الخطر الحقيقي.
@@ -1550,12 +1599,15 @@ void main() {
     }
   });
 
-  test('AdminApi لا يلمس Supabase في المُنشئ — الشاشة لا تنهار بلا خادم', () async {
-    // بناؤه وحده كان يرمي، فتسقط شاشة الإعدادات كلها لأجل مدخل إداري.
-    expect(AdminApi.new, returnsNormally);
-    // وبلا خادم مهيّأ: لا إشراف، لا انفجار.
-    expect(await AdminApi().isAdmin(), isFalse);
-  });
+  test(
+    'AdminApi لا يلمس Supabase في المُنشئ — الشاشة لا تنهار بلا خادم',
+    () async {
+      // بناؤه وحده كان يرمي، فتسقط شاشة الإعدادات كلها لأجل مدخل إداري.
+      expect(AdminApi.new, returnsNormally);
+      // وبلا خادم مهيّأ: لا إشراف، لا انفجار.
+      expect(await AdminApi().isAdmin(), isFalse);
+    },
+  );
 
   // ── بوابة جودة القصّ ──────────────────────────────────────────────
 
@@ -1729,96 +1781,102 @@ void main() {
     expect(sent!.containsKey('accent'), isFalse);
   });
 
-  test('المعاينة لا تحمل صورة المنتج أبدًا — الخادم يتجاهلها بلا صور', () async {
-    ImageStore.debugRunSynchronously = true;
-    addTearDown(() => ImageStore.debugRunSynchronously = false);
+  test(
+    'المعاينة لا تحمل صورة المنتج أبدًا — الخادم يتجاهلها بلا صور',
+    () async {
+      ImageStore.debugRunSynchronously = true;
+      addTearDown(() => ImageStore.debugRunSynchronously = false);
 
-    Map<String, dynamic>? sent;
-    final gateway = AiGateway(
-      baseUrl: 'http://test.local',
-      useSupabase: true,
-      supabaseUrl: 'http://test.local',
-      merchantId: 'merchant-test',
-      client: MockClient((req) async {
-        sent = jsonDecode(req.body) as Map<String, dynamic>;
-        return http.Response.bytes(
-          utf8.encode(_adCopyBody()),
-          200,
-          headers: {'content-type': 'application/json; charset=utf-8'},
-        );
-      }),
-    );
+      Map<String, dynamic>? sent;
+      final gateway = AiGateway(
+        baseUrl: 'http://test.local',
+        useSupabase: true,
+        supabaseUrl: 'http://test.local',
+        merchantId: 'merchant-test',
+        client: MockClient((req) async {
+          sent = jsonDecode(req.body) as Map<String, dynamic>;
+          return http.Response.bytes(
+            utf8.encode(_adCopyBody()),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      );
 
-    await gateway.generatePreview(
-      AdBrief(
-        productName: 'قهوة',
-        description: '',
-        tone: 'حماسي',
-        platform: 'سناب شات',
-        format: 'ستوري',
-        imageBytes: _fakeImage,
-      ),
-    );
-    // ميغابايتان تُرفع هباءً مع كل توليدة كانت تقطع الاتصال على إرسال
-    // الجوال الضعيف — الطلب النصي يبقى خفيفًا مهما ضخُمت القصاصة.
-    expect(sent!.containsKey('product_b64'), isFalse);
-    expect(sent!['images'], isFalse);
-  });
+      await gateway.generatePreview(
+        AdBrief(
+          productName: 'قهوة',
+          description: '',
+          tone: 'حماسي',
+          platform: 'سناب شات',
+          format: 'ستوري',
+          imageBytes: _fakeImage,
+        ),
+      );
+      // ميغابايتان تُرفع هباءً مع كل توليدة كانت تقطع الاتصال على إرسال
+      // الجوال الضعيف — الطلب النصي يبقى خفيفًا مهما ضخُمت القصاصة.
+      expect(sent!.containsKey('product_b64'), isFalse);
+      expect(sent!['images'], isFalse);
+    },
+  );
 
-  test('صورة المنتج تسافر مضغوطة في product_b64 وغيابها لا يرسل المفتاح', () async {
-    ImageStore.debugRunSynchronously = true;
-    addTearDown(() => ImageStore.debugRunSynchronously = false);
+  test(
+    'صورة المنتج تسافر مضغوطة في product_b64 وغيابها لا يرسل المفتاح',
+    () async {
+      ImageStore.debugRunSynchronously = true;
+      addTearDown(() => ImageStore.debugRunSynchronously = false);
 
-    Map<String, dynamic>? sent;
-    final gateway = AiGateway(
-      baseUrl: 'http://test.local',
-      useSupabase: true,
-      supabaseUrl: 'http://test.local',
-      merchantId: 'merchant-test',
-      client: MockClient((req) async {
-        sent = jsonDecode(req.body) as Map<String, dynamic>;
-        return http.Response.bytes(
-          utf8.encode(
-            jsonEncode({
-              'ok': true,
-              'url': 'https://x.test/ads/scene-1.png',
-              'verify': {'all_present': true},
-            }),
-          ),
-          200,
-          headers: {'content-type': 'application/json; charset=utf-8'},
-        );
-      }),
-    );
+      Map<String, dynamic>? sent;
+      final gateway = AiGateway(
+        baseUrl: 'http://test.local',
+        useSupabase: true,
+        supabaseUrl: 'http://test.local',
+        merchantId: 'merchant-test',
+        client: MockClient((req) async {
+          sent = jsonDecode(req.body) as Map<String, dynamic>;
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'ok': true,
+                'url': 'https://x.test/ads/scene-1.png',
+                'verify': {'all_present': true},
+              }),
+            ),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      );
 
-    // نداء المشهد هو الوحيد الذي يحمل الصورة — حيث تُستعمل فعلًا.
-    await gateway.generateScene(
-      AdBrief(
-        productName: 'قهوة',
-        description: '',
-        tone: 'حماسي',
-        platform: 'سناب شات',
-        format: 'ستوري',
-        imageBytes: _fakeImage,
-      ),
-      headline: 'عنوان',
-    );
-    // بايتات صالحة تصل الخادم صالحة: ترميز ثم فك بلا رمي.
-    final travelled = base64Decode(sent!['product_b64'] as String);
-    expect(travelled, isNotEmpty);
+      // نداء المشهد هو الوحيد الذي يحمل الصورة — حيث تُستعمل فعلًا.
+      await gateway.generateScene(
+        AdBrief(
+          productName: 'قهوة',
+          description: '',
+          tone: 'حماسي',
+          platform: 'سناب شات',
+          format: 'ستوري',
+          imageBytes: _fakeImage,
+        ),
+        headline: 'عنوان',
+      );
+      // بايتات صالحة تصل الخادم صالحة: ترميز ثم فك بلا رمي.
+      final travelled = base64Decode(sent!['product_b64'] as String);
+      expect(travelled, isNotEmpty);
 
-    await gateway.generateScene(
-      AdBrief(
-        productName: 'قهوة',
-        description: '',
-        tone: 'حماسي',
-        platform: 'سناب شات',
-        format: 'ستوري',
-      ),
-      headline: 'عنوان',
-    );
-    expect(sent!.containsKey('product_b64'), isFalse);
-  });
+      await gateway.generateScene(
+        AdBrief(
+          productName: 'قهوة',
+          description: '',
+          tone: 'حماسي',
+          platform: 'سناب شات',
+          format: 'ستوري',
+        ),
+        headline: 'عنوان',
+      );
+      expect(sent!.containsKey('product_b64'), isFalse);
+    },
+  );
 
   test('ضاغط الصور يقبل حدَّ عرضٍ أصغر للتمريرة الثانية', () async {
     ImageStore.debugRunSynchronously = true;
@@ -2043,6 +2101,8 @@ void main() {
       AppStateScope(
         notifier: state,
         child: MaterialApp(
+          localizationsDelegates: L.localizationsDelegates,
+          supportedLocales: L.supportedLocales,
           theme: buildAppTheme(Brightness.light),
           home: Builder(
             builder: (context) => Scaffold(
@@ -2050,10 +2110,8 @@ void main() {
                 onPressed: () async {
                   returned = await Navigator.of(context).push<GeneratedAd>(
                     MaterialPageRoute(
-                      builder: (_) => DesignEditorScreen(
-                        ad: ad,
-                        template: AdTemplate.bold,
-                      ),
+                      builder: (_) =>
+                          DesignEditorScreen(ad: ad, template: AdTemplate.bold),
                     ),
                   );
                 },
@@ -2110,6 +2168,8 @@ void main() {
       AppStateScope(
         notifier: state,
         child: MaterialApp(
+          localizationsDelegates: L.localizationsDelegates,
+          supportedLocales: L.supportedLocales,
           theme: buildAppTheme(Brightness.light),
           home: DesignEditorScreen(ad: ad, template: AdTemplate.bold),
         ),
@@ -2170,6 +2230,8 @@ void main() {
   ) async {
     final state = AppState();
     Widget host(AdBadge? badge) => MaterialApp(
+      localizationsDelegates: L.localizationsDelegates,
+      supportedLocales: L.supportedLocales,
       theme: buildAppTheme(Brightness.light),
       home: AppStateScope(
         notifier: state,
@@ -2272,8 +2334,12 @@ void main() {
 
   test('حساب الحصة: المتبقي لا يسلب، وبلا حد لا شريط تقدّم له', () {
     const p = Partner(
-      id: 'a', name: 'شريك', slug: 's',
-      quota: 100, used: 30, isActive: true,
+      id: 'a',
+      name: 'شريك',
+      slug: 's',
+      quota: 100,
+      used: 30,
+      isActive: true,
     );
     expect(p.unlimited, isFalse);
     expect(p.remaining, 70);
@@ -2281,23 +2347,35 @@ void main() {
 
     // تجاوز الحصة — يقع فعلاً حين تُخفَّض الحصة تحت المستهلك.
     const over = Partner(
-      id: 'b', name: 'شريك', slug: 's',
-      quota: 10, used: 25, isActive: true,
+      id: 'b',
+      name: 'شريك',
+      slug: 's',
+      quota: 10,
+      used: 25,
+      isActive: true,
     );
     expect(over.remaining, 0, reason: 'المتبقي لا يكون سالبًا');
     expect(over.usageRatio, 1.0, reason: 'الشريط لا يتجاوز الامتلاء');
 
     const unlimited = Partner(
-      id: 'c', name: 'شريك', slug: 's',
-      quota: -1, used: 999, isActive: true,
+      id: 'c',
+      name: 'شريك',
+      slug: 's',
+      quota: -1,
+      used: 999,
+      isActive: true,
     );
     expect(unlimited.unlimited, isTrue);
     expect(unlimited.usageRatio, isNull, reason: 'بلا حد ⇒ لا نسبة لها معنى');
 
     // حصة صفر: القسمة على صفر تعطي NaN لو لم تُعالَج.
     const zero = Partner(
-      id: 'd', name: 'شريك', slug: 's',
-      quota: 0, used: 0, isActive: true,
+      id: 'd',
+      name: 'شريك',
+      slug: 's',
+      quota: 0,
+      used: 0,
+      isActive: true,
     );
     expect(zero.usageRatio, isNull);
   });
@@ -2355,8 +2433,11 @@ void main() {
       8,
       (v) => ArtPalette.from(src, variant: v).scheme,
     ).toSet();
-    expect(schemes.length, HarmonyScheme.values.length,
-        reason: 'التنويع معطَّل — كل الإعلانات ستخرج بانسجام واحد');
+    expect(
+      schemes.length,
+      HarmonyScheme.values.length,
+      reason: 'التنويع معطَّل — كل الإعلانات ستخرج بانسجام واحد',
+    );
   });
 
   test('اللوحة الفنية: المرافق لون آخر لا درجة من الأساس', () {
@@ -2368,11 +2449,15 @@ void main() {
       Color(0xFF3355EE),
     ]) {
       final p = ArtPalette.from(src, variant: 0); // متقابل ١٨٠°
-      final d = (p.base.r - p.complement.r).abs() +
+      final d =
+          (p.base.r - p.complement.r).abs() +
           (p.base.g - p.complement.g).abs() +
           (p.base.b - p.complement.b).abs();
-      expect(d, greaterThan(0.35),
-          reason: 'المرافق يكاد يطابق الأساس للون $src');
+      expect(
+        d,
+        greaterThan(0.35),
+        reason: 'المرافق يكاد يطابق الأساس للون $src',
+      );
     }
   });
 
@@ -2380,8 +2465,11 @@ void main() {
     final p = ArtPalette.from(const Color(0xFF9A9A9A));
     // لو مرّ الرمادي كما هو لخرجت كل الطبقات رمادية والتصميم بلا هوية.
     expect(p.base, isNot(equals(p.complement)));
-    expect(ArtPalette.contrast(p.deep, p.neutral), greaterThan(3.0),
-        reason: 'العمق والحيادي متقاربان ⇒ لا عمق في الخلفية');
+    expect(
+      ArtPalette.contrast(p.deep, p.neutral),
+      greaterThan(3.0),
+      reason: 'العمق والحيادي متقاربان ⇒ لا عمق في الخلفية',
+    );
   });
 
   test('صفّ النص: الطويل يُصغَّر ليُقرأ كاملًا بدل أن يُبتر', () {
@@ -2398,8 +2486,11 @@ void main() {
       direction: TextDirection.rtl,
     );
     expect(fitted, lessThan(20.0), reason: 'لم يُصغَّر ⇒ سيُبتر بالنقاط');
-    expect(fitted, greaterThanOrEqualTo(20 * 0.62),
-        reason: 'هبط تحت حدّ القراءة');
+    expect(
+      fitted,
+      greaterThanOrEqualTo(20 * 0.62),
+      reason: 'هبط تحت حدّ القراءة',
+    );
   });
 
   test('صفّ النص: القصير يكبر ليملأ الفراغ حين يكون الارتفاع معلومًا', () {
@@ -2436,8 +2527,7 @@ void main() {
     expect(out.replaceAll('\n', ' '), text);
     final shortest = lines.map((l) => l.length).reduce(math.min);
     final longest = lines.map((l) => l.length).reduce(math.max);
-    expect(shortest / longest, greaterThan(0.45),
-        reason: 'سطر يتيم: $lines');
+    expect(shortest / longest, greaterThan(0.45), reason: 'سطر يتيم: $lines');
   });
 
   test('صفّ النص: ما يسع سطرًا واحدًا لا يُكسر', () {
@@ -2455,14 +2545,72 @@ void main() {
     );
   });
 
+  // ── تعدّد اللغات ────────────────────────────────────────────────────
+
+  test(
+    'لغة الواجهة: تُحفظ فورًا، و«اتبع الجهاز» تُمحى لا تُخزَّن نصًّا',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final state = await AppState.load();
+
+      // الافتراضي `null` = اتبع لغة الجهاز. فرضُ العربية على كل جهاز كان
+      // يُغلق التطبيق في وجه المقيم غير الناطق بها عند أول شاشة.
+      expect(state.locale, isNull);
+
+      state.setLocale(const Locale('en'));
+      expect(state.locale, const Locale('en'));
+
+      // الحفظ فوري لا مؤجّل: تغيير اللغة يُعيد بناء التطبيق، ولو تأخّر
+      // الحفظ عاد بعد الإغلاق إلى اللغة السابقة فيظنّ التاجر أن اختياره
+      // لم يُقبل.
+      final reloaded = await AppState.load();
+      expect(reloaded.locale, const Locale('en'));
+
+      reloaded.setLocale(null);
+      final again = await AppState.load();
+      expect(again.locale, isNull, reason: '«اتبع الجهاز» لم يُمحَ من التخزين');
+    },
+  );
+
+  testWidgets('الترجمة مركّبة فعلًا: النصّ يأتي من ARB لا من الشيفرة', (
+    tester,
+  ) async {
+    // اختبار وجود لا اختبار شكل: لو سقط مندوب الترجمة من التركيب لعاد
+    // `L.of` بـnull وسقطت كل شاشة — وهذا يمسك ذلك عند الجذر.
+    late L l;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        home: Builder(
+          builder: (context) {
+            l = L.of(context);
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(l.navMarket, 'السوق');
+    // الوسائط تُركَّب لا تُلصق: مفتاح بوسيط يجب أن يُخرج القيمة داخله.
+    expect(l.homeWelcome('محمد'), contains('محمد'));
+    // الجمع العربي ليس شرط `if`: صيغة المثنّى تختلف عن الجمع.
+    expect(l.trashCount(1), isNot(equals(l.trashCount(2))));
+    expect(l.trashCount(2), isNot(equals(l.trashCount(5))));
+  });
+
   // ── السوق ──────────────────────────────────────────────────────────
 
   test('دليل السوق: المطابع تدخله تلقائيًا فلا تفترق قائمتان', () {
     final printing = serviceProviders.where(
       (p) => p.kind == ServiceKind.printing,
     );
-    expect(printing.length, printShops.length,
-        reason: 'شبكة المطابع لم تُطابق ما في السوق');
+    expect(
+      printing.length,
+      printShops.length,
+      reason: 'شبكة المطابع لم تُطابق ما في السوق',
+    );
     for (final shop in printShops) {
       expect(
         printing.any((p) => p.name == shop.name && p.city == shop.city),
@@ -2508,8 +2656,11 @@ void main() {
       final prev = all[i - 1], cur = all[i];
       expect(prev.rating >= cur.rating, isTrue, reason: 'الترتيب مكسور');
       if (prev.rating == cur.rating) {
-        expect(prev.reviews >= cur.reviews, isTrue,
-            reason: 'التساوي لم يُفصل بعدد المراجعات');
+        expect(
+          prev.reviews >= cur.reviews,
+          isTrue,
+          reason: 'التساوي لم يُفصل بعدد المراجعات',
+        );
       }
     }
   });
@@ -2520,8 +2671,7 @@ void main() {
       final b = paletteForProvider(p);
       expect(a.base, b.base, reason: 'لون ${p.name} يتغيّر بين استدعاءين');
       // الشارة والزرّ يُرسمان فوق هذين، فالحبر فوقهما ليس تفصيلًا.
-      expect(ArtPalette.contrast(a.deep, a.ink),
-          greaterThanOrEqualTo(4.5));
+      expect(ArtPalette.contrast(a.deep, a.ink), greaterThanOrEqualTo(4.5));
       expect(
         ArtPalette.contrast(a.complement, ArtPalette.inkOn(a.complement)),
         greaterThanOrEqualTo(4.5),
@@ -2531,8 +2681,11 @@ void main() {
     final hues = serviceProviders
         .map((p) => paletteForProvider(p).base.toARGB32())
         .toSet();
-    expect(hues.length, greaterThan(serviceProviders.length ~/ 2),
-        reason: 'ألوان المزوّدين متكرّرة إلى حدّ يُفقد التمييز');
+    expect(
+      hues.length,
+      greaterThan(serviceProviders.length ~/ 2),
+      reason: 'ألوان المزوّدين متكرّرة إلى حدّ يُفقد التمييز',
+    );
   });
 
   testWidgets('شريط التنقّل بستّة أقسام لا يفيض على عرض جوّال', (tester) async {
@@ -2546,10 +2699,9 @@ void main() {
     final state = AppState();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
         theme: buildAppTheme(Brightness.light),
-        locale: const Locale('ar'),
-        supportedLocales: const [Locale('ar')],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         home: AppStateScope(notifier: state, child: const ShellScreen()),
       ),
     );
@@ -2559,20 +2711,26 @@ void main() {
     expect(find.text('السوق'), findsOneWidget);
   });
 
-  testWidgets('السوق: البحث يرشّح، والفارغ يعرض مخرجًا لا شاشة ميتة',
-      (tester) async {
+  testWidgets('السوق: البحث يرشّح، والفارغ يعرض مخرجًا لا شاشة ميتة', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final state = AppState();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
         theme: buildAppTheme(Brightness.light),
         home: AppStateScope(notifier: state, child: const MarketScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('متجري'), findsOneWidget,
-        reason: 'مدخل واجهة التاجر غائب عن السوق');
+    expect(
+      find.text('متجري'),
+      findsOneWidget,
+      reason: 'مدخل واجهة التاجر غائب عن السوق',
+    );
 
     await tester.enterText(find.byType(TextField), 'تصوير');
     await tester.pumpAndSettle();
@@ -2588,12 +2746,15 @@ void main() {
     expect(find.text('لا مزوّد يطابق بحثك'), findsNothing);
   });
 
-  testWidgets('متجري: يُعرض قبل ضبط الهوية، ويعرض ما حُفظ بعدها',
-      (tester) async {
+  testWidgets('متجري: يُعرض قبل ضبط الهوية، ويعرض ما حُفظ بعدها', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final state = AppState();
 
     Widget app() => MaterialApp(
+      localizationsDelegates: L.localizationsDelegates,
+      supportedLocales: L.supportedLocales,
       theme: buildAppTheme(Brightness.light),
       home: AppStateScope(notifier: state, child: const StorefrontScreen()),
     );
@@ -2641,10 +2802,7 @@ void main() {
               fit: StackFit.expand,
               children: [
                 ArtBackdrop(palette: palette, seed: 7, style: style),
-                ProductStage(
-                  palette: palette,
-                  child: const SizedBox.expand(),
-                ),
+                ProductStage(palette: palette, child: const SizedBox.expand()),
               ],
             ),
           ),

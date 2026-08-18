@@ -50,9 +50,7 @@ class ImageStore {
         : img.encodeJpg(resized, quality: 85);
 
     // لا نكبّر الحجم أبدًا: إن كان الأصل أصغر نُبقيه.
-    return encoded.length < bytes.length
-        ? Uint8List.fromList(encoded)
-        : bytes;
+    return encoded.length < bytes.length ? Uint8List.fromList(encoded) : bytes;
   }
 
   static bool _containsTransparency(img.Image image) {

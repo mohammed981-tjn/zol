@@ -125,7 +125,10 @@ class _AuthScreenState extends State<AuthScreen> {
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: _decoration('البريد الإلكتروني *', 'name@example.com'),
+              decoration: _decoration(
+                'البريد الإلكتروني *',
+                'name@example.com',
+              ),
             ),
             const SizedBox(height: 14),
             TextField(

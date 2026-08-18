@@ -196,8 +196,11 @@ class SettingsScreen extends StatelessWidget {
                 context,
                 state,
                 value: null,
-                child: Icon(Icons.format_color_reset_outlined,
-                    size: 18, color: context.textMuted),
+                child: Icon(
+                  Icons.format_color_reset_outlined,
+                  size: 18,
+                  color: context.textMuted,
+                ),
               ),
               for (final color in brandSwatches)
                 _swatch(
@@ -249,7 +252,9 @@ class SettingsScreen extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _pickLogo(context, state),
                   icon: const Icon(Icons.image_outlined, size: 18),
-                  label: Text(logo == null ? 'رفع شعار المتجر' : 'تغيير الشعار'),
+                  label: Text(
+                    logo == null ? 'رفع شعار المتجر' : 'تغيير الشعار',
+                  ),
                 ),
               ),
               if (logo != null)
@@ -431,13 +436,15 @@ class SettingsScreen extends StatelessWidget {
       state.activatePro();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم تفعيل الخطة الاحترافية 🎉 — لا علامة مائية بعد الآن'),
+          content: Text(
+            'تم تفعيل الخطة الاحترافية 🎉 — لا علامة مائية بعد الآن',
+          ),
         ),
       );
     } else if (result?.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result!.errorMessage!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result!.errorMessage!)));
     }
   }
 
@@ -483,9 +490,9 @@ class SettingsScreen extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AuthScreen()),
-                  );
+                  Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const AuthScreen()));
                 },
                 icon: const Icon(Icons.login),
                 label: const Text('تسجيل الدخول / إنشاء حساب'),
@@ -528,10 +535,7 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
-          TextButton(
-            onPressed: state.logout,
-            child: const Text('خروج'),
-          ),
+          TextButton(onPressed: state.logout, child: const Text('خروج')),
         ],
       ),
     );
@@ -566,9 +570,7 @@ class _AdminEntryState extends State<_AdminEntry> {
               subtitle: const Text('الطلبات والمطابع وسجل التوليد'),
               trailing: const Icon(Icons.chevron_left),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AdminScreen(),
-                ),
+                MaterialPageRoute<void>(builder: (_) => const AdminScreen()),
               ),
             ),
           ),

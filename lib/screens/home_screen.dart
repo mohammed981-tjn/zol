@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/zol_logo.dart';
@@ -10,6 +12,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final l = L.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.navy,
@@ -31,10 +34,10 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xl),
               const Center(child: ZolLogo(height: 92, color: Colors.white)),
               const SizedBox(height: AppSpacing.xl),
-              const Text(
-                'سوق الدعاية والإعلان الشامل',
+              Text(
+                l.homeTagline,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 25,
                   height: 1.3,
@@ -42,10 +45,10 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              const Text(
-                'من الفكرة إلى الإعلان المطبوع والمُوصَّل خلال دقائق',
+              Text(
+                l.homeSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Color(0xFFCADCFC),
                   fontSize: 15,
                   height: 1.6,
@@ -61,13 +64,13 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.auto_awesome, size: 20),
-                label: const Text('أنشئ إعلانك الآن'),
+                label: Text(l.homeCta),
               ),
               const SizedBox(height: AppSpacing.md),
-              const Text(
-                'معاينة فورية في أقل من 90 ثانية',
+              Text(
+                l.homeCtaHint,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF8B98C4), fontSize: 12),
+                style: const TextStyle(color: Color(0xFF8B98C4), fontSize: 12),
               ),
               const SizedBox(height: AppSpacing.xxl),
               Row(
@@ -75,13 +78,13 @@ class HomeScreen extends StatelessWidget {
                   _StatCard(
                     icon: Icons.collections_outlined,
                     value: '${state.savedAds.length}',
-                    label: 'إعلان محفوظ',
+                    label: l.homeStatAds,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   _StatCard(
                     icon: Icons.local_shipping_outlined,
                     value: '${state.orders.length}',
-                    label: 'طلب طباعة',
+                    label: l.homeStatOrders,
                   ),
                 ],
               ),
@@ -112,7 +115,7 @@ class _WelcomeChip extends StatelessWidget {
           border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
         ),
         child: Text(
-          'مرحبًا، $name 👋',
+          L.of(context).homeWelcome(name),
           style: const TextStyle(
             color: AppColors.gold,
             fontSize: 13.5,

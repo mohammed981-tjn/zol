@@ -56,5 +56,10 @@ class AppConfig {
   static const List<String> tones = ['حماسي', 'كوميدي', 'رسمي', 'عاطفي'];
 
   /// المنصات — يجب أن تطابق PLATFORMS في الخادم.
-  static const List<String> platforms = ['إنستغرام', 'تيك توك', 'فيسبوك', 'سناب شات'];
+  static const List<String> platforms = [
+    'إنستغرام',
+    'تيك توك',
+    'فيسبوك',
+    'سناب شات',
+  ];
 }

@@ -57,7 +57,8 @@ class ArtPalette {
     final l = hsl.l.clamp(0.28, 0.62);
     final baseHsl = _Hsl(hsl.h, s, l);
 
-    final scheme = HarmonyScheme.values[variant.abs() % HarmonyScheme.values.length];
+    final scheme =
+        HarmonyScheme.values[variant.abs() % HarmonyScheme.values.length];
 
     // زاوية المرافق حسب نوع الانسجام. المتماثل (180°) أقوى تباينًا،
     // والثلاثي (120°) أكثر مرحًا، والمنشقّ (150°) أهدأ وأكثر أناقة.

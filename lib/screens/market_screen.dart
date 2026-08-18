@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 import '../models/ad_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -38,6 +40,7 @@ class _MarketScreenState extends State<MarketScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final l = L.of(context);
     final results = filterProviders(
       kind: _kind,
       city: _city,
@@ -45,10 +48,7 @@ class _MarketScreenState extends State<MarketScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('السوق'),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: Text(l.marketTitle), centerTitle: false),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -69,13 +69,13 @@ class _MarketScreenState extends State<MarketScreen> {
                     onChanged: (_) => setState(() {}),
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
-                      hintText: 'ابحث عن مصوّر، مطبعة، مصمّم…',
+                      hintText: l.marketSearchHint,
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _search.text.isEmpty
                           ? null
                           : IconButton(
                               icon: const Icon(Icons.clear),
-                              tooltip: 'مسح البحث',
+                              tooltip: l.marketClearSearch,
                               onPressed: () {
                                 _search.clear();
                                 setState(() {});
@@ -101,10 +101,7 @@ class _MarketScreenState extends State<MarketScreen> {
                 ),
                 child: Text(
                   _kind!.hint,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: context.textMuted,
-                  ),
+                  style: TextStyle(fontSize: 12.5, color: context.textMuted),
                 ),
               ),
             ),
@@ -137,49 +134,55 @@ class _MarketScreenState extends State<MarketScreen> {
     _search.clear();
   });
 
-  Widget _kindChips() => SizedBox(
-    height: 48,
-    child: ListView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      children: [
-        _chip(
-          label: 'الكل',
-          selected: _kind == null,
-          onTap: () => setState(() => _kind = null),
-        ),
-        for (final k in ServiceKind.values)
+  Widget _kindChips() {
+    final l = L.of(context);
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        children: [
           _chip(
-            label: k.label,
-            selected: _kind == k,
-            onTap: () => setState(() => _kind = _kind == k ? null : k),
+            label: l.marketAll,
+            selected: _kind == null,
+            onTap: () => setState(() => _kind = null),
           ),
-      ],
-    ),
-  );
+          for (final k in ServiceKind.values)
+            _chip(
+              label: k.label,
+              selected: _kind == k,
+              onTap: () => setState(() => _kind = _kind == k ? null : k),
+            ),
+        ],
+      ),
+    );
+  }
 
-  Widget _cityChips() => SizedBox(
-    height: 44,
-    child: ListView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      children: [
-        _chip(
-          label: 'كل المدن',
-          selected: _city == null,
-          onTap: () => setState(() => _city = null),
-          dense: true,
-        ),
-        for (final c in providerCities)
+  Widget _cityChips() {
+    final l = L.of(context);
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        children: [
           _chip(
-            label: c,
-            selected: _city == c,
-            onTap: () => setState(() => _city = _city == c ? null : c),
+            label: l.marketAllCities,
+            selected: _city == null,
+            onTap: () => setState(() => _city = null),
             dense: true,
           ),
-      ],
-    ),
-  );
+          for (final c in providerCities)
+            _chip(
+              label: c,
+              selected: _city == c,
+              onTap: () => setState(() => _city = _city == c ? null : c),
+              dense: true,
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _chip({
     required String label,
@@ -209,15 +212,16 @@ class _StorefrontCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     final storeName = state.account?.storeName;
     final count = state.savedAds.length;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const StorefrontScreen()),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const StorefrontScreen())),
         child: Ink(
           decoration: BoxDecoration(
             gradient: context.brandGradient,
@@ -234,7 +238,9 @@ class _StorefrontCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      storeName == null ? 'متجري' : 'متجر $storeName',
+                      storeName == null
+                          ? l.storefrontMine
+                          : l.storefrontNamed(storeName),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -246,8 +252,8 @@ class _StorefrontCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       count == 0
-                          ? 'اعرض هويتك وأعمالك — ابدأ بحفظ إعلان'
-                          : 'واجهة عرضك: $count ${count == 1 ? 'إعلان' : 'إعلانات'}',
+                          ? l.storefrontEmptyHint
+                          : l.storefrontAdsCount(count),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -273,14 +279,13 @@ class _ProviderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ProviderScreen(provider: provider),
-          ),
+          MaterialPageRoute(builder: (_) => ProviderScreen(provider: provider)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -310,7 +315,7 @@ class _ProviderCard extends StatelessWidget {
                             size: 16,
                             color: context.goldOnSurface,
                             // الأيقونة وحدها لا تصل قارئ الشاشة.
-                            semanticLabel: 'موثّق',
+                            semanticLabel: L.of(context).marketVerified,
                           ),
                         ],
                       ],
@@ -336,8 +341,8 @@ class _ProviderCard extends StatelessWidget {
                 children: [
                   Text(
                     provider.onRequest
-                        ? 'حسب الطلب'
-                        : 'من ${provider.priceFrom} ر.س',
+                        ? l.marketOnRequest
+                        : l.marketPriceFrom(provider.priceFrom),
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: context.goldOnSurface,
@@ -349,7 +354,7 @@ class _ProviderCard extends StatelessWidget {
                     Icon(Icons.schedule, size: 14, color: context.textMuted),
                     const SizedBox(width: 4),
                     Text(
-                      'يردّ خلال ${provider.respondsInHours} ساعات',
+                      l.marketRespondsIn(provider.respondsInHours!),
                       style: TextStyle(
                         fontSize: 11.5,
                         color: context.textMuted,
@@ -372,9 +377,13 @@ class _Rating extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     // تقييم واحد مقروء لقارئ الشاشة بدل نجمة ورقمين متفرّقين.
     return Semantics(
-      label: 'التقييم ${provider.rating} من ٥، ${provider.reviews} مراجعة',
+      label: l.marketRatingSemantics(
+        provider.rating.toStringAsFixed(1),
+        provider.reviews,
+      ),
       excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -409,17 +418,20 @@ class _Empty extends StatelessWidget {
         children: [
           Icon(Icons.search_off, size: 44, color: context.textMuted),
           const SizedBox(height: AppSpacing.md),
-          const Text(
-            'لا مزوّد يطابق بحثك',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          Text(
+            L.of(context).marketEmptyTitle,
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
-            'جرّب مدينة أخرى أو أزل المرشّحات',
+            L.of(context).marketEmptyBody,
             style: TextStyle(color: context.textMuted, fontSize: 13),
           ),
           const SizedBox(height: AppSpacing.md),
-          OutlinedButton(onPressed: onReset, child: const Text('إزالة المرشّحات')),
+          OutlinedButton(
+            onPressed: onReset,
+            child: Text(L.of(context).marketClearFilters),
+          ),
         ],
       ),
     );

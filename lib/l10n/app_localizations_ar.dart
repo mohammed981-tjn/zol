@@ -1,0 +1,357 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Arabic (`ar`).
+class LAr extends L {
+  LAr([String locale = 'ar']) : super(locale);
+
+  @override
+  String get appTitle => 'zol';
+
+  @override
+  String get navHome => 'الرئيسية';
+
+  @override
+  String get navMarket => 'السوق';
+
+  @override
+  String get navTemplates => 'القوالب';
+
+  @override
+  String get navMyAds => 'إعلاناتي';
+
+  @override
+  String get navOrders => 'طلباتي';
+
+  @override
+  String get navSettings => 'الإعدادات';
+
+  @override
+  String get homeTagline => 'سوق الدعاية والإعلان الشامل';
+
+  @override
+  String get homeSubtitle =>
+      'من الفكرة إلى الإعلان المطبوع والمُوصَّل خلال دقائق';
+
+  @override
+  String get homeCta => 'أنشئ إعلانك الآن';
+
+  @override
+  String get homeCtaHint => 'معاينة فورية في أقل من 90 ثانية';
+
+  @override
+  String get homeStatAds => 'إعلان محفوظ';
+
+  @override
+  String get homeStatOrders => 'طلب طباعة';
+
+  @override
+  String homeWelcome(String name) {
+    return 'مرحبًا، $name 👋';
+  }
+
+  @override
+  String get templatesSearchHint => 'ابحث في القوالب — ستوري، بنر، كرت…';
+
+  @override
+  String get templatesEmpty => 'لا توجد قوالب مطابقة لبحثك';
+
+  @override
+  String get templatesKicker => 'ابدأ من قالب';
+
+  @override
+  String get templatesTitle => 'اختر الشكل الذي تريده';
+
+  @override
+  String get templatesSampleProduct => 'اسم منتجك';
+
+  @override
+  String get templatesSampleTone => 'حماسي';
+
+  @override
+  String get templatesPrintable => 'قابل للطباعة';
+
+  @override
+  String get templatesTrending => '🔥 رائج';
+
+  @override
+  String get myAdsTrash => 'سلة المهملات';
+
+  @override
+  String get myAdsEmptyTitle => 'مكتبتك فارغة';
+
+  @override
+  String get myAdsEmptyBody =>
+      'احفظ النسخ التي تعجبك من «شاشة السحر» لتجدها هنا جاهزة لإعادة الاستخدام أو الطباعة.';
+
+  @override
+  String get myAdsKicker => 'المكتبة';
+
+  @override
+  String get myAdsTitle => 'إعلاناتك المحفوظة';
+
+  @override
+  String get myAdsOpenHint => 'اضغط لفتح التصميم وإعادة تصديره أو طباعته';
+
+  @override
+  String get myAdsCopyText => 'نسخ النص';
+
+  @override
+  String get myAdsDelete => 'حذف';
+
+  @override
+  String get myAdsCopied => 'تم نسخ النص الإعلاني';
+
+  @override
+  String get myAdsMovedToTrash => 'نُقل الإعلان إلى سلة المهملات';
+
+  @override
+  String get actionUndo => 'تراجع';
+
+  @override
+  String get ordersEmptyTitle => 'لا توجد طلبات بعد';
+
+  @override
+  String get ordersEmptyBody =>
+      'عند اختيار «اطبعه وصلّه» بعد توليد إعلانك، سيظهر الطلب هنا مع خط زمني لتتبع حالته.';
+
+  @override
+  String get ordersKicker => 'التتبع';
+
+  @override
+  String get ordersTitle => 'حالة طلبات الطباعة';
+
+  @override
+  String ordersDeliverTo(String address) {
+    return 'التوصيل إلى: $address';
+  }
+
+  @override
+  String ordersShop(String shop) {
+    return 'المطبعة: $shop';
+  }
+
+  @override
+  String get ordersPaidByCard => 'مدفوع بالبطاقة ✓';
+
+  @override
+  String get ordersCashOnDelivery => 'الدفع عند الاستلام';
+
+  @override
+  String get ordersShowOnMap => 'عرض على الخريطة';
+
+  @override
+  String get ordersSimulate => 'محاكاة التقدم (تجريبي)';
+
+  @override
+  String get trashTitle => 'سلة المهملات';
+
+  @override
+  String get trashEmptyAction => 'إفراغ السلة';
+
+  @override
+  String get trashEmptyTitle => 'سلة المهملات فارغة';
+
+  @override
+  String trashEmptyBody(int days) {
+    return 'الإعلانات التي تحذفها من «إعلاناتي» تبقى هنا لمدة $days يومًا قبل حذفها نهائيًا،\nوتقدر تسترجعها في أي وقت قبل ذلك.';
+  }
+
+  @override
+  String get trashKicker => 'استعادة أو حذف نهائي';
+
+  @override
+  String trashCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count إعلانًا في السلة',
+      few: '$count إعلانات في السلة',
+      two: 'إعلانان في السلة',
+      one: 'إعلان واحد في السلة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trashConfirmTitle => 'إفراغ السلة نهائيًا؟';
+
+  @override
+  String trashConfirmBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'سيُحذف $count إعلانًا نهائيًا ولا يمكن التراجع.',
+      few: 'سيُحذف $count إعلانات نهائيًا ولا يمكن التراجع.',
+      two: 'سيُحذف إعلانان نهائيًا ولا يمكن التراجع.',
+      one: 'سيُحذف إعلان واحد نهائيًا ولا يمكن التراجع.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get actionCancel => 'إلغاء';
+
+  @override
+  String get trashConfirmAction => 'إفراغ نهائيًا';
+
+  @override
+  String get trashExpiringSoon => 'سيُحذف نهائيًا قريبًا';
+
+  @override
+  String trashExpiresIn(int days) {
+    return 'يُحذف نهائيًا خلال $days يومًا';
+  }
+
+  @override
+  String get trashRestore => 'استعادة';
+
+  @override
+  String get trashDeleteForever => 'حذف نهائي';
+
+  @override
+  String get marketTitle => 'السوق';
+
+  @override
+  String get marketSearchHint => 'ابحث عن مصوّر، مطبعة، مصمّم…';
+
+  @override
+  String get marketClearSearch => 'مسح البحث';
+
+  @override
+  String get marketAll => 'الكل';
+
+  @override
+  String get marketAllCities => 'كل المدن';
+
+  @override
+  String get marketEmptyTitle => 'لا مزوّد يطابق بحثك';
+
+  @override
+  String get marketEmptyBody => 'جرّب مدينة أخرى أو أزل المرشّحات';
+
+  @override
+  String get marketClearFilters => 'إزالة المرشّحات';
+
+  @override
+  String get marketVerified => 'موثّق';
+
+  @override
+  String marketPriceFrom(int price) {
+    return 'من $price ر.س';
+  }
+
+  @override
+  String get marketOnRequest => 'حسب الطلب';
+
+  @override
+  String marketRespondsIn(int hours) {
+    return 'يردّ خلال $hours ساعات';
+  }
+
+  @override
+  String marketRatingSemantics(String rating, int reviews) {
+    return 'التقييم $rating من ٥، $reviews مراجعة';
+  }
+
+  @override
+  String marketReviewsCount(int reviews) {
+    return '($reviews مراجعة)';
+  }
+
+  @override
+  String get storefrontMine => 'متجري';
+
+  @override
+  String storefrontNamed(String store) {
+    return 'متجر $store';
+  }
+
+  @override
+  String get storefrontEmptyHint => 'اعرض هويتك وأعمالك — ابدأ بحفظ إعلان';
+
+  @override
+  String storefrontAdsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count إعلانًا',
+      few: '$count إعلانات',
+      two: 'إعلانان',
+      one: 'إعلان واحد',
+    );
+    return 'واجهة عرضك: $_temp0';
+  }
+
+  @override
+  String get storefrontShare => 'شارك واجهتك';
+
+  @override
+  String get storefrontEmptyTitle => 'واجهتك جاهزة وتنتظر أول عمل';
+
+  @override
+  String get storefrontEmptyBody =>
+      'كل إعلان تحفظه من شاشة السحر يظهر هنا معروضًا.';
+
+  @override
+  String storefrontShowcase(int count) {
+    return 'المعروض ($count)';
+  }
+
+  @override
+  String get storefrontShareEmpty =>
+      'احفظ إعلانًا أولًا لتصير واجهتك قابلة للمشاركة';
+
+  @override
+  String storefrontSharePending(String store) {
+    return 'الرابط العام لواجهة $store قيد التجهيز';
+  }
+
+  @override
+  String storefrontHarmony(String scheme) {
+    return 'الانسجام: $scheme';
+  }
+
+  @override
+  String get storefrontBrandColor => 'لون العلامة';
+
+  @override
+  String get storefrontSupportColor => 'لون مساند';
+
+  @override
+  String get providerPrice => 'السعر';
+
+  @override
+  String get providerResponseTime => 'زمن الردّ';
+
+  @override
+  String providerResponseHours(int hours) {
+    return '~$hours ساعات';
+  }
+
+  @override
+  String get providerStatus => 'الحالة';
+
+  @override
+  String get providerWorks => 'أعمال سابقة';
+
+  @override
+  String get providerRequestQuote => 'اطلب عرض سعر';
+
+  @override
+  String get providerDisclaimer =>
+      'الدليل في مرحلته الأولى: طلبك يُحفظ ويصلك تأكيد حين يُفعَّل حساب المزوّد.';
+
+  @override
+  String providerInterestLogged(String name) {
+    return 'سجّلنا اهتمامك بـ$name';
+  }
+
+  @override
+  String providerReviewsCount(int reviews) {
+    return '($reviews مراجعة)';
+  }
+}
