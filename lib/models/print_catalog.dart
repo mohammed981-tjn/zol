@@ -10,7 +10,7 @@ class PrintSize {
 }
 
 /// شكل المجسّم المستخدم لعرض التصميم على المطبوع قبل الشراء.
-enum PrintMockup { banner, stickers, card, rollup }
+enum PrintMockup { banner, stickers, card, rollup, flyer }
 
 class PrintProduct {
   const PrintProduct({
@@ -44,6 +44,22 @@ const printCatalog = [
       PrintSize(label: '3×4 متر', unitPrice: 380),
     ],
     quantities: [1, 2, 3, 5],
+  ),
+  // الفلاير كان غائبًا عن الكتالوج بينما يذكره التطبيق في أكثر من
+  // موضع («طباعة استاندات وفلايرز وملصقات»). وبعد أن صار محرّك التصميم
+  // يرسم مقاس ‎A5‎ بنسبته الحقيقية، صار غيابه يعني أن التاجر يصمّم
+  // فلايرًا ثم لا يجد كيف يطلبه.
+  PrintProduct(
+    label: 'فلايرات',
+    icon: Icons.description_outlined,
+    unitName: 'حزمة (100 ورقة)',
+    mockup: PrintMockup.flyer,
+    sizes: [
+      PrintSize(label: 'A5 — ورق عادي', unitPrice: 120),
+      PrintSize(label: 'A5 — ورق لامع', unitPrice: 180),
+      PrintSize(label: 'A4 — ورق لامع', unitPrice: 260),
+    ],
+    quantities: [1, 2, 5, 10],
   ),
   PrintProduct(
     label: 'استيكرات',

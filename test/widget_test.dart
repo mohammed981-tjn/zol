@@ -24,6 +24,7 @@ import 'package:zol/services/ad_generator.dart';
 import 'package:zol/services/ai_gateway.dart';
 import 'package:zol/screens/create_ad/magic_screen.dart';
 import 'package:zol/screens/create_ad/design_editor_screen.dart';
+import 'package:zol/models/ad_format.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/models/business_category.dart';
 import 'package:zol/services/admin_api.dart';
@@ -2545,6 +2546,111 @@ void main() {
       ),
       text,
     );
+  });
+
+  // ── صيغ اللوحة ─────────────────────────────────────────────────────
+
+  test('الصيغ: نِسَبها من مقاسات الطباعة الحقيقية لا من تقدير', () {
+    // ما يراه التاجر في المعاينة هو ما يخرج من المطبعة — أو لا يخرج.
+    expect(AdFormat.rollUp.aspect, closeTo(85 / 200, 1e-9));
+    expect(AdFormat.businessCard.aspect, closeTo(9 / 5, 1e-9));
+    expect(AdFormat.banner.aspect, closeTo(2, 1e-9));
+    expect(AdFormat.flyer.aspect, closeTo(148 / 210, 1e-9));
+
+    // وكل صيغة مطبوعة تقابل منتجًا في الكتالوج، وإلا صمّم التاجر شيئًا
+    // لا يستطيع طلبه.
+    final catalogLabels = printCatalog.map((p) => p.label).toSet();
+    for (final f in AdFormat.values.where((f) => f.isPrint)) {
+      expect(
+        catalogLabels,
+        contains(f.printProduct),
+        reason: '${f.label} بلا منتج مقابل في كتالوج الطباعة',
+      );
+    }
+  });
+
+  test('الصيغ: تصنيف الشكل يفرز العريض من الطويل بلا تداخل', () {
+    expect(AdFormat.businessCard.aspectClass, AspectClass.wide);
+    expect(AdFormat.banner.aspectClass, AspectClass.wide);
+    expect(AdFormat.rollUp.aspectClass, AspectClass.tall);
+    expect(AdFormat.story.aspectClass, AspectClass.tall);
+    expect(AdFormat.square.aspectClass, AspectClass.square);
+    expect(AdFormat.portrait.aspectClass, AspectClass.portrait);
+    // الهامش المطبوع أوسع: سكّين القصّ لا تقع على الخطّ.
+    expect(AdFormat.rollUp.safeMargin, greaterThan(AdFormat.square.safeMargin));
+  });
+
+  test('الصيغ: النصّ المحفوظ القديم لا يكسر إعلانًا محفوظًا', () {
+    // إعلانات على أجهزة التجّار تحمل النصّ القديم؛ أي نصّ غير معروف
+    // يعود إلى المربّع لا إلى استثناء.
+    expect(adFormatFromLabel('منشور مربع'), AdFormat.square);
+    expect(adFormatFromLabel('ستوري'), AdFormat.story);
+    expect(adFormatFromLabel('ريلز'), AdFormat.story);
+    expect(adFormatFromLabel('صيغة اخترعها أحدهم'), AdFormat.square);
+    expect(adFormatFromLabel(null), AdFormat.square);
+  });
+
+  testWidgets('كل صيغة × كل قالب: تُرسم بنسبتها بلا فيضان', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState();
+    tester.view.physicalSize = const Size(1600, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    for (final format in AdFormat.values) {
+      final brief = AdBrief(
+        productName: 'قهوة مختصة',
+        description: 'حبوب إثيوبية',
+        tone: 'حماسي',
+        platform: 'إنستغرام',
+        format: format.label,
+        category: BusinessCategory.cafe,
+      );
+      final ad = AdGenerator.preview(
+        brief,
+      ).firstWhere((a) => a.kind == AdKind.image);
+
+      for (final template in AdTemplate.values) {
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: L.localizationsDelegates,
+            supportedLocales: L.supportedLocales,
+            theme: buildAppTheme(Brightness.light),
+            home: AppStateScope(
+              notifier: state,
+              child: Center(
+                child: SizedBox(
+                  width: 420,
+                  child: RepaintBoundary(
+                    key: key,
+                    child: AdDesignPreview(ad: ad, template: template),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // الفيضان يُبلَّغ استثناءً في الاختبار — وهو أشيع عطب حين تتغيّر
+        // نسبة اللوحة تحت تخطيط كُتب لنسبة أخرى.
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '${format.label} × ${t2(template)}',
+        );
+
+        final box = tester.renderObject<RenderBox>(
+          find.byKey(key),
+        );
+        expect(
+          box.size.width / box.size.height,
+          closeTo(format.aspect, 0.01),
+          reason: 'نسبة ${format.label} ليست ما وعد به الكتالوج',
+        );
+      }
+    }
   });
 
   // ── معالجة الصورة ──────────────────────────────────────────────────

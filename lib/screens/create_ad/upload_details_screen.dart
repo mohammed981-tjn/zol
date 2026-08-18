@@ -9,6 +9,7 @@ import '../../models/ad_template.dart';
 import '../../models/seasonal_theme.dart';
 import '../../services/background_remover.dart';
 import '../../services/palette_extractor.dart';
+import '../../models/ad_format.dart';
 import '../../services/photo_enhancer.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
@@ -42,7 +43,13 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   // صامتاً ينتهي بخطأ تحقّق عند التاجر.
   static const _tones = AppConfig.tones;
   static const _platforms = AppConfig.platforms;
-  static const _formats = ['منشور مربع', 'ستوري', 'ريلز'];
+
+  /// كل الصيغ التي يستطيع محرّك التصميم رسمها فعلًا — رقميّة ومطبوعة.
+  ///
+  /// كانت ثلاثًا رقميّة فقط، والتطبيق يبيع طباعة: التاجر يطلب رول أب
+  /// ولا يجد صيغته فيصمّم مربّعًا ثم يُقصّ عند المطبعة. القائمة تُشتقّ
+  /// من `AdFormat` فلا تفترق عمّا يرسمه المحرّك.
+  static final _formats = AdFormat.values.map((f) => f.label).toList();
 
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -193,6 +200,8 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
               selected: _selectedFormat,
               onSelected: (v) => setState(() => _selectedFormat = v),
             ),
+            const SizedBox(height: 8),
+            _FormatHint(format: adFormatFromLabel(_selectedFormat)),
             const SizedBox(height: 24),
             _buildSeasonPicker(),
             const SizedBox(height: 24),
@@ -537,6 +546,35 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                 ],
               ),
       ),
+    );
+  }
+}
+
+/// سطر يشرح الصيغة المختارة: مقاسها الحقيقي ومتى تُستعمل.
+///
+/// أكثر التجّار لا يعرف الفرق بين «بنر» و«رول أب» قبل أن يقف أمام
+/// المطبعة، واختيارٌ خاطئ هنا يعني ألف نسخة بمقاس لا يصلح.
+class _FormatHint extends StatelessWidget {
+  const _FormatHint({required this.format});
+  final AdFormat format;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          format.isPrint ? Icons.print_outlined : Icons.smartphone_outlined,
+          size: 15,
+          color: context.textMuted,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            '${format.sizeHint} · ${format.useWhen}',
+            style: TextStyle(fontSize: 12, color: context.textMuted),
+          ),
+        ),
+      ],
     );
   }
 }

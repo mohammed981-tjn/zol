@@ -47,6 +47,7 @@ class PrintMockupPreview extends StatelessWidget {
                 PrintMockup.stickers => _Stickers(design: _design),
                 PrintMockup.card => _BusinessCards(design: _design),
                 PrintMockup.rollup => _RollUp(design: _design),
+                PrintMockup.flyer => _Flyer(design: _design),
               },
             ),
           ),
@@ -291,6 +292,63 @@ class _RollUp extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// معاينة الفلاير: ورقتان متداخلتان بميل خفيف — كما تُعرض حزمة فلايرات
+/// على طاولة، لا ورقة واحدة معلّقة في الفراغ.
+class _Flyer extends StatelessWidget {
+  const _Flyer({required this.design});
+  final Widget design;
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      // ‎A5‎ بنسبته الحقيقية، هي نفسها التي يرسم بها محرّك التصميم.
+      aspectRatio: 148 / 210,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.rotate(
+            angle: -0.07,
+            child: FractionallySizedBox(
+              widthFactor: 0.94,
+              heightFactor: 0.94,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              foregroundDecoration: BoxDecoration(
+                border: Border.all(color: Colors.white, width: 3),
+              ),
+              child: design,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

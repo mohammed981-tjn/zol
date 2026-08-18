@@ -1,7 +1,9 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/ad_badge.dart';
+import '../models/ad_format.dart';
 import '../models/ad_template.dart';
 import '../models/brand_font.dart';
 import '../theme/art_palette.dart';
@@ -32,12 +34,11 @@ class AdDesignPreview extends StatelessWidget {
   /// علامة الخطة المجانية المائية (تُزال في الخطة الاحترافية).
   final bool showWatermark;
 
+  /// صيغة اللوحة — منها تُشتقّ النسبة والهامش ومقياس الحرف.
+  AdFormat get format => adFormatFromLabel(ad.brief.format);
+
   /// نسبة العرض إلى الارتفاع حسب صيغة الإعلان.
-  double get aspectRatio => switch (ad.brief.format) {
-    'منشور مربع' => 1,
-    'ستوري' => 9 / 16,
-    _ => 9 / 16,
-  };
+  double get aspectRatio => format.aspect;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +55,7 @@ class AdDesignPreview extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final spec = _Spec(
+            format: format,
             width: constraints.maxWidth,
             height: constraints.maxHeight,
             palette: palette,
@@ -68,19 +70,30 @@ class AdDesignPreview extends StatelessWidget {
               children: [
                 DefaultTextStyle.merge(
                   style: TextStyle(fontFamily: spec.fontFamily),
-                  child: switch (template) {
-                    AdTemplate.bold => _BoldLayout(spec: spec),
-                    AdTemplate.split => _SplitLayout(spec: spec),
-                    AdTemplate.poster => _PosterLayout(spec: spec),
-                    AdTemplate.spotlight => _SpotlightLayout(spec: spec),
-                    AdTemplate.minimal => _MinimalLayout(spec: spec),
-                    AdTemplate.offer => _OfferLayout(spec: spec),
-                    AdTemplate.testimonial => _TestimonialLayout(spec: spec),
-                    AdTemplate.frame => _FrameLayout(spec: spec),
-                    AdTemplate.urgency => _UrgencyLayout(spec: spec),
-                    AdTemplate.circular => _CircularLayout(spec: spec),
-                    AdTemplate.studio => _StudioLayout(spec: spec),
-                  },
+                  // اللوحة العريضة (كرت أعمال، بنر) تُوجَّه إلى تخطيط
+                  // أفقي مهما كان القالب المختار. القوالب الأحد عشر كلها
+                  // أعمدة مكدّسة صُمّمت لمربّع: كدسُها في كرت ‎9×5‎ يعطي
+                  // شرائح مضغوطة لا تصميمًا. وهوية القالب لا تضيع —
+                  // تنتقل إلى نمط الخلفية والتشكيل داخل التخطيط الأفقي.
+                  child: spec.shape == AspectClass.wide
+                      ? _WideLayout(spec: spec, template: template)
+                      : spec.isStand
+                      ? _StandLayout(spec: spec, template: template)
+                      : switch (template) {
+                          AdTemplate.bold => _BoldLayout(spec: spec),
+                          AdTemplate.split => _SplitLayout(spec: spec),
+                          AdTemplate.poster => _PosterLayout(spec: spec),
+                          AdTemplate.spotlight => _SpotlightLayout(spec: spec),
+                          AdTemplate.minimal => _MinimalLayout(spec: spec),
+                          AdTemplate.offer => _OfferLayout(spec: spec),
+                          AdTemplate.testimonial => _TestimonialLayout(
+                            spec: spec,
+                          ),
+                          AdTemplate.frame => _FrameLayout(spec: spec),
+                          AdTemplate.urgency => _UrgencyLayout(spec: spec),
+                          AdTemplate.circular => _CircularLayout(spec: spec),
+                          AdTemplate.studio => _StudioLayout(spec: spec),
+                        },
                 ),
                 // خلفية مصمَّمة اختيارية: زخرفة زاوية مستوحاة من النشاط
                 // (نمط قوالب Canva الجاهزة) بدل التدرّج المسطّح وحده —
@@ -153,6 +166,7 @@ class AdDesignPreview extends StatelessWidget {
 /// مواصفات الرسم المشتركة بين القوالب.
 class _Spec {
   _Spec({
+    required this.format,
     required this.width,
     required this.height,
     required this.palette,
@@ -161,6 +175,7 @@ class _Spec {
     this.fontFamily,
   });
 
+  final AdFormat format;
   final double width;
   final double height;
   final AdPalette palette;
@@ -182,8 +197,20 @@ class _Spec {
   /// خط العلامة (Brand Kit) — null يعني اعتماد خط الواجهة الافتراضي.
   final String? fontFamily;
 
-  /// عامل القياس: التصميم مرسوم لعرض 400 نقطة.
-  double get s => width / 400;
+  /// عامل القياس: التصميم مرسوم لعرض ٤٠٠ نقطة، مضروبًا في معامل
+  /// الصيغة — الرول أب يُقرأ من ثلاثة أمتار والكرت من ثلاثين سنتيمترًا،
+  /// فحرفٌ بنسبة واحدة من العرض لا يصلح لهما معًا.
+  double get s => (width / 400) * format.typeScale;
+
+  /// الهامش الآمن بالنقاط: كسرٌ من **أصغر** ضلع لا من العرض، وإلا صار
+  /// هامش الرول أب الجانبي هزيلًا وهامش الكرت العلوي مفرطًا.
+  double get safe => math.min(width, height) * format.safeMargin;
+
+  AspectClass get shape => format.aspectClass;
+
+  /// لوحة بالغة الطول (رول أب) تحتاج تكوينًا مستقلًّا لا قالبًا مربّعًا
+  /// ممدودًا — كما تحتاج اللوحة العريضة.
+  bool get isStand => format.aspect < 0.5;
 
   Uint8List? get image => ad.brief.imageBytes;
   String get headline => ad.headline;
@@ -1437,6 +1464,220 @@ class _StudioLayout extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── تخطيط اللوحات العريضة (كرت أعمال، بنر) ───────────────────────────
+//
+// الكرت ليس منشورًا صغيرًا والبنر ليس منشورًا ممدودًا. على لوحة عرضها
+// ضعف ارتفاعها، العمود المكدّس يعطي ثلاثة أشرطة رفيعة فوق بعضها: عنوان
+// مبتور، صورة مسحوقة، وزرّ بلا مكان. التكوين الصحيح أفقيّ — كتلة نصّية
+// إلى جانب المنتج، كما يُصمَّم كل كرت وكل لوحة طريق.
+//
+// وهذه ليست قالبًا ثاني عشر بل **صنف تخطيط**: القوالب الأحد عشر تمرّ
+// منه محتفظةً بشخصيّتها عبر نمط الخلفية، فلا ينفجر العدد إلى ثمانية
+// وثمانين تخطيطًا.
+class _WideLayout extends StatelessWidget {
+  const _WideLayout({required this.spec, required this.template});
+  final _Spec spec;
+  final AdTemplate template;
+
+  /// شخصية القالب في اللوحة العريضة: نمط الخلفية وحده يكفي للتمييز،
+  /// وتغيير التكوين لكل قالب على سطح ضيّق يُنتج فوضى لا تنوّعًا.
+  BackdropStyle get _style => switch (template) {
+    AdTemplate.bold || AdTemplate.studio => BackdropStyle.mesh,
+    AdTemplate.spotlight || AdTemplate.poster => BackdropStyle.spotlight,
+    AdTemplate.offer || AdTemplate.urgency => BackdropStyle.arcs,
+    AdTemplate.split || AdTemplate.circular => BackdropStyle.strata,
+    _ => BackdropStyle.paper,
+  };
+
+  bool get _light => _style == BackdropStyle.paper;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spec.s;
+    final pad = spec.safe;
+    final on = _light ? spec.art.onInk : spec.art.ink;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ArtBackdrop(palette: spec.art, seed: spec.seed, style: _style),
+        Padding(
+          padding: EdgeInsets.all(pad),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // النصّ أولًا في اتجاه القراءة العربية (يمين)، فالعين تقع
+              // على الرسالة قبل الصورة.
+              Expanded(
+                flex: 6,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      spec.productName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: spec.art.complement,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11 * s,
+                        letterSpacing: 1.2 * s,
+                      ),
+                    ),
+                    SizedBox(height: 5 * s),
+                    Flexible(
+                      child: ArtText(
+                        spec.headline,
+                        textAlign: TextAlign.start,
+                        maxLines: 3,
+                        style: TextStyle(
+                          color: on,
+                          fontWeight: FontWeight.w900,
+                          // ٤٫٩٪ من العرض — النسبة المقيسة في بنر كانفا
+                          // حقيقي، لا رقمًا مختارًا بالذوق.
+                          fontSize: spec.width * 0.049,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 9 * s),
+                    _Cta(spec: spec),
+                  ],
+                ),
+              ),
+              SizedBox(width: pad),
+              // المنتج غير مركزي — كما في تشريح كانفا: يشغل نحو ٤٢٪ من
+              // العرض ويترك للنصّ مساحة تتنفّس بدل أن يتقاسما المنتصف.
+              Expanded(
+                flex: 4,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10 * s),
+                  child: ProductStage(
+                    palette: spec.art,
+                    halo: !_light,
+                    shadowOpacity: _light ? 0.18 : 0.36,
+                    child: spec.product(fit: BoxFit.cover),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── تخطيط الاستاند (رول أب) ──────────────────────────────────────────
+//
+// لوحة بنسبة ‎85:200‎ ليست منشورًا ممدودًا. القوالب المربّعة تضع المنتج
+// في `Expanded` فيبتلع كل ارتفاع زائد: على مربّع لا يُلاحَظ، وعلى استاند
+// بطول مترين يعني صورةً تحتلّ سبعين بالمئة ونصًّا هامشيًّا في الطرفين.
+//
+// وهذا عكس ما يُصمَّم به الاستاند. الاستاند يُقرأ من ثلاثة أمتار وواقفًا،
+// فالترتيب من الأعلى: عنوان كبير عند مستوى النظر، ثم المنتج يسنده، ثم
+// دعوةٌ للفعل في الأسفل حيث تصل العين أخيرًا. النِّسَب ثابتة (٣٤٪ /
+// ٤٤٪ / ٢٢٪) فلا يبتلع أحدها الآخر مهما طالت اللوحة.
+class _StandLayout extends StatelessWidget {
+  const _StandLayout({required this.spec, required this.template});
+  final _Spec spec;
+  final AdTemplate template;
+
+  BackdropStyle get _style => switch (template) {
+    AdTemplate.minimal ||
+    AdTemplate.frame ||
+    AdTemplate.testimonial ||
+    AdTemplate.circular => BackdropStyle.paper,
+    AdTemplate.offer || AdTemplate.urgency => BackdropStyle.arcs,
+    AdTemplate.split => BackdropStyle.strata,
+    AdTemplate.spotlight || AdTemplate.poster => BackdropStyle.spotlight,
+    _ => BackdropStyle.mesh,
+  };
+
+  bool get _light => _style == BackdropStyle.paper;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spec.s;
+    final on = _light ? spec.art.onInk : spec.art.ink;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ArtBackdrop(palette: spec.art, seed: spec.seed, style: _style),
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: spec.safe,
+            vertical: spec.safe * 1.2,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 34,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      spec.productName,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: spec.art.complement,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13 * s,
+                        letterSpacing: 1.6 * s,
+                      ),
+                    ),
+                    SizedBox(height: 8 * s),
+                    // العنوان يملأ ما أُفرِد له: `ArtText` يكبر حين يكون
+                    // الارتفاع معلومًا، وهنا هو معلوم بحكم النِّسَب.
+                    Expanded(
+                      child: ArtText(
+                        spec.headline,
+                        maxLines: 3,
+                        style: TextStyle(
+                          color: on,
+                          fontWeight: FontWeight.w900,
+                          fontSize: spec.width * 0.075,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 44,
+                child: ProductStage(
+                  palette: spec.art,
+                  halo: !_light,
+                  shadowOpacity: _light ? 0.18 : 0.4,
+                  child: spec.product(),
+                ),
+              ),
+              Expanded(
+                flex: 22,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _Cta(spec: spec),
+                    SizedBox(height: 8 * s),
+                    _hashtagLine(spec, on),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

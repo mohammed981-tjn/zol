@@ -26,7 +26,7 @@ void main() {
     'lib/screens/admin_screen.dart': 76,
     'lib/screens/create_ad/execute_screen.dart': 37,
     'lib/screens/settings_screen.dart': 35,
-    'lib/screens/create_ad/upload_details_screen.dart': 29,
+    'lib/screens/create_ad/upload_details_screen.dart': 26,
     'lib/screens/auth_screen.dart': 21,
     'lib/screens/create_ad/magic_screen.dart': 20,
     'lib/screens/onboarding_screen.dart': 16,
@@ -41,7 +41,7 @@ void main() {
     // محرك التصميم: نصوصه تُرسم **داخل الإعلان** لا في الواجهة («عرض
     // خاص»، «لفترة محدودة»)، فلغتها لغة الجمهور لا لغة التاجر. تُحسم
     // في الدفعة الثالثة مع لغة الإعلان المولَّد، لا هنا.
-    'lib/widgets/ad_design_preview.dart': 4,
+    'lib/widgets/ad_design_preview.dart': 2,
 
     // نبرة العيّنة في معرض القوالب — نصّ محتوى للسبب نفسه.
     'lib/screens/templates_screen.dart': 1,
