@@ -84,14 +84,41 @@ jobs:
       - name: بناء النسخة
         run: flutter build apk --release --build-number=${{ github.run_number }}
 
+      # البصمة هي الفرق بين تحديثٍ يُثبَّت وتحديثٍ يرفضه أندرويد بـ«لم يتم
+      # التثبيت». وأندرويد لا يقبل تحديثًا موقَّعًا بمفتاح غير مفتاح النسخة
+      # المثبَّتة — لا رسالةَ تشرح ذلك، بل فشلٌ صامت يظنّه التاجر عطبًا في
+      # الملفّ.
+      #
+      # وهذه الخطوة كانت **لا تفحص شيئًا**: النجمة في `build-tools/*/apksigner`
+      # تتوسّع إلى أكثر من إصدار مثبَّت، فيصير أوّلها أمرًا وبقيّتها وسائط،
+      # فيردّ «Unsupported command» ويبتلعه `|| true`. مررنا بثمانية وستّين
+      # بناءً ونحن نظنّ أننا نتحقّق.
       - name: التحقق من البصمة
+        id: fingerprint
         run: |
+          set -o pipefail
           APK=build/app/outputs/flutter-apk/app-release.apk
-          "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "$APK" \
-            | grep -i "SHA-256\|Signer #1 certificate DN" || true
+
+          # أحدث إصدار مثبَّت من أدوات البناء، محدَّدًا لا مُوسَّعًا.
+          SIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null \
+                   | sort -V | tail -n 1)
+          if [ -z "$SIGNER" ]; then
+            echo "::error::apksigner غير موجود — لا يمكن التحقق من البصمة."
+            exit 1
+          fi
+          echo "الأداة: $SIGNER"
+
+          # بلا `|| true`: فشلُ الفحص عطلٌ يجب أن يُرى لا أن يُبتلع.
+          "$SIGNER" verify --print-certs "$APK" > certs.txt
+          grep -i "Signer #1 certificate SHA-256\|Signer #1 certificate DN" certs.txt
+
+          SHA=$(grep -i "Signer #1 certificate SHA-256" certs.txt \
+                | head -n1 | sed 's/.*: *//')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
           echo "versionCode: ${{ github.run_number }}"
+
           if [ "${{ steps.signing.outputs.signed }}" != "true" ]; then
-            echo "::warning::البصمة أعلاه عابرة — تتغيّر في كل بناء حتى تُضاف أسرار المفتاح."
+            echo "::warning::البصمة أعلاه عابرة — تتغيّر في كل بناء حتى تُضاف أسرار المفتاح، ولن يُثبَّت التحديث فوق نسخة سابقة."
           fi
 
       - uses: actions/upload-artifact@v4
@@ -109,9 +136,15 @@ jobs:
         run: |
           APK="zol-${{ github.run_number }}.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "$APK"
+          # البصمة في وصف الإصدار: حين يفشل التثبيت فوق نسخة قديمة يكون
+          # السبب غالبًا اختلافها، ومقارنتها بما على الجهاز
+          # (`adb shell dumpsys package com.zol.app | grep -i signature`
+          # أو أي قارئ APK) تحسم السبب في دقيقة بدل تخمينٍ طويل.
           gh release create "$TAG" "$APK" \
             --title "zol — بناء ${{ github.run_number }}" \
-            --notes "versionCode ${{ github.run_number }} · من ${GITHUB_SHA:0:7} — نزّل $APK وثبّته مباشرة." \
+            --notes "$(printf 'versionCode %s · من %s\n\nبصمة التوقيع (SHA-256):\n`%s`\n\nإن فشل التثبيت فوق نسخة مثبَّتة فبصمتها مختلفة — أزل القديمة ثم ثبّت هذه.' \
+              "${{ github.run_number }}" "${GITHUB_SHA:0:7}" \
+              "${{ steps.fingerprint.outputs.sha256 }}")" \
             --latest
 
       # صفحة الإصدارات تُنظَّف مع كل بناء: ستّون نسخة متراكمة تُربك من
