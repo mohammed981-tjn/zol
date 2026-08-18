@@ -7,6 +7,7 @@ import '../models/brand_font.dart';
 import '../theme/art_palette.dart';
 import 'art_backdrop.dart';
 import 'art_text.dart';
+import 'product_image.dart';
 import '../models/generated_ad.dart';
 import '../models/seasonal_theme.dart';
 import '../state/app_state.dart';
@@ -200,7 +201,15 @@ class _Spec {
         ),
       );
     }
-    final img = Image.memory(bytes, fit: fit);
+    // المعالجة هنا لا في كل قالب: نقطة واحدة تمرّ منها كل صورة في كل
+    // تصميم، فلا يبقى قالب بصورة خام ولا تُنسى واحدة عند إضافة قالب.
+    final img = ProductImage(
+      palette: art,
+      // الشعارات والرسوم المسطّحة لا تُرفع تباينًا ولا تُعتَّم أطرافها:
+      // الشكل المصمَّم أصلًا يُشوَّه بذلك ولا يتحسّن. والصورة الفوتوغرافية
+      // هي وحدها التي تحتاج أن تُدمج في ضوء المشهد.
+      child: Image.memory(bytes, fit: fit),
+    );
     if (!ad.brief.hasProductTransform) return img;
     // تحويل التاجر من المحرر: الإزاحة كسور من الإطار لا بكسلات، فيبقى
     // ما ضبطه في المعاينة مطابقًا له في التصدير عالي الدقة.

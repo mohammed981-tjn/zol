@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +35,7 @@ import 'package:zol/screens/storefront_screen.dart';
 import 'package:zol/screens/shell_screen.dart';
 import 'package:zol/theme/app_palette_source.dart';
 import 'package:zol/l10n/app_localizations.dart';
+import 'package:zol/widgets/product_image.dart';
 import 'package:zol/theme/art_palette.dart';
 import 'package:zol/widgets/art_backdrop.dart';
 import 'package:zol/widgets/art_text.dart';
@@ -2543,6 +2545,93 @@ void main() {
       ),
       text,
     );
+  });
+
+  // ── معالجة الصورة ──────────────────────────────────────────────────
+
+  testWidgets('معالجة الصورة: تُحسّنها ولا تكذب على لون المنتج', (tester) async {
+    // اللون الحقيقي للمنتج ليس عنصر تصميم يُتصرَّف فيه: تاجرٌ يبيع قميصًا
+    // أزرق لا يقبل أن يخرج في إعلانه بنفسجيًّا. هذا الاختبار يقيس ذلك
+    // عددًا لا ذوقًا — ولولاه لبقي «الثنائي اللوني» الجميل يشوّه البضاعة.
+    final palette = ArtPalette.from(const Color(0xFFB03030)); // علامة حمراء
+
+    Future<List<int>> render(List<int> rgb, double grade) async {
+      final src = img.Image(width: 40, height: 40);
+      img.fill(src, color: img.ColorRgb8(rgb[0], rgb[1], rgb[2]));
+      late ui.Image decoded;
+      await tester.runAsync(() async {
+        final codec = await ui.instantiateImageCodec(
+          Uint8List.fromList(img.encodePng(src)),
+        );
+        decoded = (await codec.getNextFrame()).image;
+      });
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: Center(
+            child: RepaintBoundary(
+              key: key,
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: ProductImage(
+                  palette: palette,
+                  grade: grade,
+                  vignette: false,
+                  child: RawImage(image: decoded, fit: BoxFit.fill),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final boundary =
+          key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      late List<int> out;
+      await tester.runAsync(() async {
+        final image = await boundary.toImage(pixelRatio: 1.0);
+        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final px = data!.buffer.asUint8List();
+        const i = (20 * 40 + 20) * 4;
+        out = [px[i], px[i + 1], px[i + 2]];
+        image.dispose();
+      });
+      return out;
+    }
+
+    /// أي القنوات هي المسيطرة — هوية اللون في أبسط صورها.
+    int dominant(List<int> c) {
+      var best = 0;
+      for (var i = 1; i < 3; i++) {
+        if (c[i] > c[best]) best = i;
+      }
+      return best;
+    }
+
+    for (final sample in [
+      [40, 90, 200], // أزرق
+      [40, 160, 90], // أخضر
+      [120, 80, 50], // بنّي
+    ]) {
+      final plain = await render(sample, 0);
+      final graded = await render(sample, 0.55);
+
+      expect(
+        dominant(graded),
+        dominant(plain),
+        reason: 'الصبغ قلب هوية اللون: $sample صار $graded',
+      );
+      // وانحرافٌ محدود في كل قناة: «قريب» ليس رأيًا بل عدد.
+      for (var i = 0; i < 3; i++) {
+        expect(
+          (graded[i] - plain[i]).abs(),
+          lessThan(32),
+          reason: 'انحراف مفرط في القناة $i للعيّنة $sample',
+        );
+      }
+    }
   });
 
   // ── تعدّد اللغات ────────────────────────────────────────────────────
