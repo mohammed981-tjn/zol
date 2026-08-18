@@ -28,6 +28,8 @@ import 'package:zol/screens/create_ad/design_editor_screen.dart';
 import 'package:zol/models/ad_format.dart';
 import 'package:zol/services/spec_doctor.dart';
 import 'package:zol/models/design_spec.dart';
+import 'package:zol/theme/spec_palette.dart';
+import 'package:zol/widgets/spec_renderer.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/models/business_category.dart';
 import 'package:zol/services/admin_api.dart';
@@ -2769,6 +2771,203 @@ void main() {
     expect(b.rect.h, closeTo(a.rect.h, 1e-9));
   });
 
+  testWidgets('العارض يحترم الإحداثيات الكسريّة في كل صيغة', (tester) async {
+    // هذا هو ادّعاء المواصفة كلّها: عنصر عند ‎0.5‎ يقع في منتصف اللوحة
+    // سواء كانت كرتًا أو رول أب. لو كُسر هذا لاحتجنا مواصفة لكل صيغة،
+    // وضاع سبب وجود الإحداثيات الكسريّة.
+    const canvasKey = ValueKey('canvas');
+    for (final format in [
+      AdFormat.square,
+      AdFormat.businessCard,
+      AdFormat.rollUp,
+    ]) {
+      final spec = DesignSpec(
+        format: format,
+        backdrop: SpecBackdrop.mesh,
+        elements: const [
+          DesignElement(
+            role: ElementRole.headline,
+            rect: SpecRect(0.25, 0.5, 0.5, 0.2),
+            text: 'عنوان',
+            align: SpecAlign.center,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: Center(
+            child: SizedBox(
+              key: canvasKey,
+              width: 400,
+              child: SpecRenderer(
+                spec: spec,
+                brandColor: const Color(0xFFB03030),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: format.label);
+
+      // مركز النصّ المرسوم = مركز المستطيل في المواصفة، بأي نسبة.
+      final canvas = tester.getRect(find.byKey(canvasKey));
+      final text = tester.getRect(find.text('عنوان'));
+      final fx = (text.center.dx - canvas.left) / canvas.width;
+      final fy = (text.center.dy - canvas.top) / canvas.height;
+
+      expect(fx, closeTo(0.5, 0.02), reason: 'الأفقي انزاح في ${format.label}');
+      expect(fy, closeTo(0.6, 0.02), reason: 'الرأسي انزاح في ${format.label}');
+    }
+  });
+
+  testWidgets('العارض يرسم كل دور بلا استثناء وبلا فيضان', (tester) async {
+    final photo = _solidPng(120, 90, 70);
+    const spec = DesignSpec(
+      format: AdFormat.portrait,
+      backdrop: SpecBackdrop.paper,
+      elements: [
+        DesignElement(
+          role: ElementRole.shape,
+          rect: SpecRect(0.06, 0.06, 0.88, 0.30),
+          fill: ColorRole.base,
+        ),
+        DesignElement(
+          role: ElementRole.logo,
+          rect: SpecRect(0.06, 0.06, 0.12, 0.08),
+        ),
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.08, 0.40, 0.84, 0.12),
+          text: 'قهوة مختصة تفتح نهارك',
+          align: SpecAlign.center,
+        ),
+        DesignElement(
+          role: ElementRole.subhead,
+          rect: SpecRect(0.08, 0.53, 0.84, 0.06),
+          text: 'حبوب إثيوبية محمّصة',
+          align: SpecAlign.center,
+        ),
+        DesignElement(
+          role: ElementRole.product,
+          rect: SpecRect(0.18, 0.60, 0.64, 0.22),
+        ),
+        DesignElement(
+          role: ElementRole.badge,
+          rect: SpecRect(0.70, 0.08, 0.22, 0.06),
+          text: 'جديد',
+          fill: ColorRole.complement,
+          align: SpecAlign.center,
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.30, 0.84, 0.40, 0.07),
+          text: 'اطلب الآن',
+          fill: ColorRole.complement,
+          align: SpecAlign.center,
+        ),
+        DesignElement(
+          role: ElementRole.tags,
+          rect: SpecRect(0.08, 0.92, 0.84, 0.05),
+          text: '#قهوة #الرياض',
+          align: SpecAlign.center,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: SizedBox(
+            width: 400,
+            child: SpecRenderer(
+              spec: spec,
+              brandColor: const Color(0xFF2E6BB8),
+              product: photo,
+              logo: photo,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+
+    // الكسر المتوازن يُدخل أسطرًا داخل العنوان، فنقارن بعد تسوية
+    // المسافات: يقبل الكسر الفنّي ويظلّ يرفض النصّ المبتور.
+    final rendered = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
+        .toSet();
+    expect(rendered, contains('قهوة مختصة تفتح نهارك'));
+    expect(rendered, contains('اطلب الآن'));
+    expect(rendered, contains('جديد'));
+    expect(rendered, contains('#قهوة #الرياض'));
+  });
+
+  testWidgets('ما يخرج من الطبيب يُرسم بلا علّة — الحلقة مغلقة',
+      (tester) async {
+    // مواصفة كما قد يُخرجها نموذج: عنصر خارج الحافّة، ولون لا يُقرأ،
+    // ونصّان متغطّيان. الطبيب يُصلح، والعارض يرسم المُصلَح.
+    const raw = DesignSpec(
+      format: AdFormat.story,
+      backdrop: SpecBackdrop.paper,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(-0.1, -0.05, 0.9, 0.18),
+          text: 'عرض نهاية الأسبوع',
+          color: ColorRole.neutral, // فاتح فوق فاتح
+        ),
+        DesignElement(
+          role: ElementRole.subhead,
+          rect: SpecRect(0.05, 0.02, 0.9, 0.14), // يغطّي العنوان
+          text: 'خصم يستحقّ الزيارة',
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.30, 0.85, 0.40, 0.07),
+          text: 'اطلب الآن',
+          fill: ColorRole.complement,
+          align: SpecAlign.center,
+        ),
+      ],
+    );
+
+    const brand = Color(0xFF1BC47D);
+    final report = SpecDoctor.review(raw, brandColor: brand);
+    expect(report.usable, isTrue, reason: report.blocking.join(' / '));
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: SizedBox(
+            width: 360,
+            child: SpecRenderer(spec: report.spec, brandColor: brand),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // والحبر المرسوم مقروء فعلًا — لا اسمًا.
+    final art = ArtPalette.from(brand);
+    for (final e in report.spec.elements.where((e) => e.isText)) {
+      final behind = backgroundBehind(e, report.spec, art);
+      expect(
+        ArtPalette.contrast(behind, resolveColorRole(e.color, art, behind: behind)),
+        greaterThanOrEqualTo(SpecDoctor.minContrast),
+        reason: 'نصّ غير مقروء وصل العارض: ${e.text}',
+      );
+    }
+  });
+
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────
 
   test('الهجرة تمنع المزوّد من اعتماد نفسه وتوثيق نفسه', () {
@@ -3472,4 +3671,12 @@ class _FakeBrandSync implements BrandSync {
     pushed++;
     return true;
   }
+}
+
+
+/// صورة صلبة صغيرة للاختبارات — أرخص من ملفّ على القرص وأوضح في القراءة.
+Uint8List _solidPng(int r, int g, int b) {
+  final image = img.Image(width: 24, height: 24);
+  img.fill(image, color: img.ColorRgb8(r, g, b));
+  return Uint8List.fromList(img.encodePng(image));
 }

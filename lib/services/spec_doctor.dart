@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../models/ad_format.dart';
 import '../models/design_spec.dart';
 import '../theme/art_palette.dart';
+import '../theme/spec_palette.dart';
 
 /// طبيب المواصفة — الحارس بين النموذج اللغوي والتاجر.
 ///
@@ -57,8 +58,8 @@ class SpecDoctor {
 
       // ٢) الحبر يُقرأ فوق ما تحته فعلًا.
       if (e.isText) {
-        final behind = _behind(e, spec, art);
-        final ink = _resolve(e.color, art, behind: behind);
+        final behind = backgroundBehind(e, spec, art);
+        final ink = resolveColorRole(e.color, art, behind: behind);
         final ratio = ArtPalette.contrast(behind, ink);
         if (ratio < minContrast) {
           issues.add(
@@ -152,21 +153,6 @@ class SpecDoctor {
 
     return SpecReport(spec: spec.withElements(fixed), issues: issues);
   }
-
-  /// اللون الذي يقع خلف العنصر فعلًا: لوحه إن كان له لوح، وإلا الخلفية.
-  static Color _behind(DesignElement e, DesignSpec spec, ArtPalette art) {
-    if (e.fill != null) return _resolve(e.fill!, art);
-    return spec.backdrop.isLight ? art.neutral : art.deep;
-  }
-
-  static Color _resolve(ColorRole role, ArtPalette art, {Color? behind}) =>
-      switch (role) {
-        ColorRole.base => art.base,
-        ColorRole.deep => art.deep,
-        ColorRole.complement => art.complement,
-        ColorRole.neutral => art.neutral,
-        ColorRole.auto => ArtPalette.inkOn(behind ?? art.deep),
-      };
 
   static bool _sameRect(SpecRect a, SpecRect b) =>
       (a.x - b.x).abs() < 1e-9 &&
