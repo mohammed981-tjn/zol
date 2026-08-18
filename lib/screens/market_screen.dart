@@ -5,7 +5,9 @@ import '../l10n/app_localizations.dart';
 import '../models/ad_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../services/provider_directory.dart';
 import 'provider_screen.dart';
+import 'provider_signup_screen.dart';
 import 'storefront_screen.dart';
 
 /// السوق — التبويب الذي كان ناقصًا.
@@ -31,6 +33,23 @@ class _MarketScreenState extends State<MarketScreen> {
   ServiceKind? _kind;
   String? _city;
 
+  /// الدليل المعروض: يبدأ بالمحلّي فيُرسَم السوق فورًا، ثم يُستبدل بما
+  /// على الخادم حين يصل. انتظارُ الشبكة قبل الرسم يعطي شاشة فارغة في
+  /// تبويب رئيسي، والمحلّيون حقيقيون على كل حال.
+  List<ServiceProvider> _providers = serviceProviders;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final list = await ProviderDirectory.approved();
+    if (!mounted) return;
+    setState(() => _providers = list);
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -45,10 +64,27 @@ class _MarketScreenState extends State<MarketScreen> {
       kind: _kind,
       city: _city,
       query: _search.text,
+      source: _providers,
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.marketTitle), centerTitle: false),
+      appBar: AppBar(
+        title: Text(l.marketTitle),
+        centerTitle: false,
+        actions: [
+          TextButton.icon(
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ProviderSignupScreen()),
+              );
+              // العودة من التسجيل قد تعني إدراجًا جديدًا معتمَدًا.
+              await _refresh();
+            },
+            icon: const Icon(Icons.add_business_outlined, size: 18),
+            label: Text(l.marketJoin),
+          ),
+        ],
+      ),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -172,7 +208,7 @@ class _MarketScreenState extends State<MarketScreen> {
             onTap: () => setState(() => _city = null),
             dense: true,
           ),
-          for (final c in providerCities)
+          for (final c in providerCitiesOf(_providers))
             _chip(
               label: c,
               selected: _city == c,

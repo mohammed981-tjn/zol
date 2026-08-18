@@ -88,6 +88,11 @@ class ServiceProvider {
   final int? respondsInHours;
 
   bool get onRequest => priceFrom <= 0;
+
+  /// مزوّد جديد بلا طلبات بعد. يُعرض بلا نجوم — ونجومٌ تُمنح ابتداءً
+  /// تجعل التقييم كلّه بلا معنى، لأن التاجر لا يفرّق حينها بين مزوّد
+  /// خدَم مئتين ومزوّد سجّل أمس.
+  bool get unrated => reviews <= 0;
 }
 
 /// دليل الإطلاق.
@@ -218,19 +223,22 @@ final List<ServiceProvider> serviceProviders = [
 
 /// المدن التي فيها مزوّدون — تُشتقّ ولا تُكتب، فلا تظهر مدينة فارغة في
 /// المرشّح ولا تغيب مدينة أُضيف فيها مزوّد.
-List<String> get providerCities {
-  final cities = serviceProviders.map((p) => p.city).toSet().toList()..sort();
+List<String> providerCitiesOf(List<ServiceProvider> list) {
+  final cities = list.map((p) => p.city).toSet().toList()..sort();
   return cities;
 }
+
+List<String> get providerCities => providerCitiesOf(serviceProviders);
 
 /// تصفية الدليل. كل المعايير اختيارية وتتراكم.
 List<ServiceProvider> filterProviders({
   ServiceKind? kind,
   String? city,
   String query = '',
+  List<ServiceProvider>? source,
 }) {
   final q = query.trim();
-  return serviceProviders.where((p) {
+  return (source ?? serviceProviders).where((p) {
       if (kind != null && p.kind != kind) return false;
       if (city != null && p.city != city) return false;
       if (q.isEmpty) return true;

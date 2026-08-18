@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -33,6 +34,7 @@ import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/models/ad_service.dart';
 import 'package:zol/screens/market_screen.dart';
 import 'package:zol/screens/provider_screen.dart';
+import 'package:zol/screens/provider_signup_screen.dart';
 import 'package:zol/screens/storefront_screen.dart';
 import 'package:zol/screens/shell_screen.dart';
 import 'package:zol/theme/app_palette_source.dart';
@@ -2547,6 +2549,108 @@ void main() {
       ),
       text,
     );
+  });
+
+  // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────
+
+  test('الهجرة تمنع المزوّد من اعتماد نفسه وتوثيق نفسه', () {
+    // هذه ليست تفصيلة نصّية بل الخاصيّة الأمنية المركزية للسوق: سياسة
+    // «عدّل صفّك» لا تستطيع منع تعديل **عمود بعينه**، فبلا الحارس يرسل
+    // أي مزوّد {status:'approved', verified:true} من أي أداة HTTP
+    // فيعتمد نفسه — وتصير المراجعة كلها زينة.
+    final sql = File(
+      'supabase/migrations/20260818000000_service_providers.sql',
+    ).readAsStringSync();
+
+    expect(sql, contains('service_provider_guard'));
+    // الحارس يعيد ما يملكه المشرف وحده إلى قيمه السابقة لغير المشرف.
+    expect(sql, contains('new.status      := old.status;'));
+    expect(sql, contains('new.verified    := old.verified;'));
+    expect(sql, contains('new.owner_id    := old.owner_id;'));
+
+    // والإدراج الجديد يبدأ معلّقًا مهما أُرسل.
+    expect(sql, contains("new.status   := 'pending';"));
+    expect(sql, contains('new.verified := false;'));
+
+    // والقراءة العامّة للمعتمَدين وحدهم.
+    expect(sql, contains("using (status = 'approved')"));
+
+    // ومراجعة المشرف عبر دالة تفحص الصلاحية أولًا.
+    expect(sql, contains('review_service_provider'));
+    expect(sql, contains('is_platform_admin()'));
+    expect(sql, contains("'admin_only'"));
+  });
+
+  test('المزوّد الجديد يُعرض بلا نجوم لا بنجوم ممنوحة', () {
+    // نجومٌ تُمنح ابتداءً تُفقد التقييم معناه: لا يفرّق التاجر حينها بين
+    // مزوّد خدَم مئتين ومزوّد سجّل أمس.
+    const fresh = ServiceProvider(
+      id: 'x',
+      name: 'مزوّد جديد',
+      kind: ServiceKind.design,
+      city: 'الرياض',
+      tagline: 'تصميم هويات',
+      priceFrom: 0,
+      rating: 0,
+      reviews: 0,
+      works: [],
+    );
+    expect(fresh.unrated, isTrue);
+    expect(fresh.onRequest, isTrue);
+
+    final seeded = serviceProviders.first;
+    expect(seeded.unrated, isFalse, reason: 'المزوّدون المحلّيون لهم تقييم');
+  });
+
+  test('التصفية تعمل على أي مصدر لا على القائمة المحلّية وحدها', () {
+    // بدون ذلك يقرأ السوق من الخادم ثم يصفّي القائمة المحلّية، فيختفي
+    // كل مزوّد مسجَّل من نتائج البحث بلا أن يظهر عطل.
+    const extra = ServiceProvider(
+      id: 'srv-1',
+      name: 'مطبعة الوادي',
+      kind: ServiceKind.printing,
+      city: 'أبها',
+      tagline: 'طباعة رقمية سريعة',
+      priceFrom: 30,
+      rating: 0,
+      reviews: 0,
+      works: [],
+    );
+    final merged = [...serviceProviders, extra];
+
+    expect(providerCitiesOf(merged), contains('أبها'));
+    expect(
+      filterProviders(query: 'الوادي', source: merged).single.id,
+      'srv-1',
+    );
+    // والمصدر الافتراضي يبقى المحلّي كما كان.
+    expect(filterProviders(query: 'الوادي'), isEmpty);
+  });
+
+  testWidgets('التسجيل بلا حساب يقول ذلك ولا يعرض نموذجًا لا يُرسَل',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: const ProviderSignupScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.text('سجّل حسابك أولًا لتسجيل خدمتك في السوق'),
+      findsOneWidget,
+    );
+    expect(find.text('أرسل للمراجعة'), findsNothing);
   });
 
   // ── ربط الكتالوج بالسوق ────────────────────────────────────────────

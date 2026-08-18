@@ -369,4 +369,95 @@ class LAr extends L {
 
   @override
   String get printWhichDesign => 'أيّ تصميم تطبع؟';
+
+  @override
+  String get marketNewProvider => 'جديد — بلا تقييمات بعد';
+
+  @override
+  String get providerSignupTitle => 'سجّل خدمتك في السوق';
+
+  @override
+  String get providerSignupIntro =>
+      'اعرض خدمتك على تجّار zol. التسجيل مجاني، والمراجعة بشرية وتستغرق يومًا أو يومين — لا يظهر إدراجك في السوق قبلها.';
+
+  @override
+  String get providerSignupKind => 'نوع الخدمة';
+
+  @override
+  String get providerSignupName => 'اسم النشاط';
+
+  @override
+  String get providerSignupNameError => 'اكتب اسمًا من حرفين على الأقل';
+
+  @override
+  String get providerSignupCity => 'المدينة';
+
+  @override
+  String get providerSignupCityError => 'اكتب اسم المدينة';
+
+  @override
+  String get providerSignupTagline => 'ماذا تقدّم؟';
+
+  @override
+  String get providerSignupTaglineHelp =>
+      'سطر واحد يقول ما تجيده — لا شعارًا تسويقيًّا';
+
+  @override
+  String get providerSignupTaglineError =>
+      'اكتب عشرة أحرف على الأقل ليفهم التاجر خدمتك';
+
+  @override
+  String get providerSignupPrice => 'أقلّ سعر بالريال (اختياري)';
+
+  @override
+  String get providerSignupPriceHelp =>
+      'اتركه فارغًا إن كانت خدمتك «حسب الطلب»';
+
+  @override
+  String get providerSignupPriceError => 'اكتب رقمًا صحيحًا';
+
+  @override
+  String get providerSignupHours => 'زمن الردّ بالساعات (اختياري)';
+
+  @override
+  String get providerSignupHoursHelp => 'متوسط ما تستغرقه للردّ على طلب';
+
+  @override
+  String get providerSignupHoursError => 'اكتب عدد ساعات بين ١ و٧٢٠';
+
+  @override
+  String get providerSignupWorks => 'أعمال سابقة (اختياري)';
+
+  @override
+  String get providerSignupWorksHelp =>
+      'عنوان كل عمل في سطر — حتى اثني عشر عملًا';
+
+  @override
+  String get providerSignupSubmit => 'أرسل للمراجعة';
+
+  @override
+  String get providerSignupReviewNote =>
+      'التوثيق (الشارة الذهبية) يُمنح بعد مراجعة سجلك التجاري، ولا يُطلب من هنا.';
+
+  @override
+  String get providerSignupSent => 'وصل طلبك — سنراجعه ونبلغك';
+
+  @override
+  String get providerSignupDuplicate =>
+      'لديك إدراج بهذا النوع من الخدمة بالفعل';
+
+  @override
+  String get providerSignupFailed =>
+      'تعذّر الإرسال — تحقّق من اتصالك وحاول مجددًا';
+
+  @override
+  String get providerSignupNeedsAccount =>
+      'سجّل حسابك أولًا لتسجيل خدمتك في السوق';
+
+  @override
+  String get providerSignupOneListing =>
+      'إدراج واحد لكل نوع خدمة. لتعديل بياناتك أو إضافة نوع آخر، راسلنا من الإعدادات.';
+
+  @override
+  String get marketJoin => 'سجّل خدمتك';
 }

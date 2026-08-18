@@ -674,6 +674,168 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'أيّ تصميم تطبع؟'**
   String get printWhichDesign;
+
+  /// No description provided for @marketNewProvider.
+  ///
+  /// In ar, this message translates to:
+  /// **'جديد — بلا تقييمات بعد'**
+  String get marketNewProvider;
+
+  /// No description provided for @providerSignupTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل خدمتك في السوق'**
+  String get providerSignupTitle;
+
+  /// No description provided for @providerSignupIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'اعرض خدمتك على تجّار zol. التسجيل مجاني، والمراجعة بشرية وتستغرق يومًا أو يومين — لا يظهر إدراجك في السوق قبلها.'**
+  String get providerSignupIntro;
+
+  /// No description provided for @providerSignupKind.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع الخدمة'**
+  String get providerSignupKind;
+
+  /// No description provided for @providerSignupName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم النشاط'**
+  String get providerSignupName;
+
+  /// No description provided for @providerSignupNameError.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب اسمًا من حرفين على الأقل'**
+  String get providerSignupNameError;
+
+  /// No description provided for @providerSignupCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'المدينة'**
+  String get providerSignupCity;
+
+  /// No description provided for @providerSignupCityError.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب اسم المدينة'**
+  String get providerSignupCityError;
+
+  /// No description provided for @providerSignupTagline.
+  ///
+  /// In ar, this message translates to:
+  /// **'ماذا تقدّم؟'**
+  String get providerSignupTagline;
+
+  /// No description provided for @providerSignupTaglineHelp.
+  ///
+  /// In ar, this message translates to:
+  /// **'سطر واحد يقول ما تجيده — لا شعارًا تسويقيًّا'**
+  String get providerSignupTaglineHelp;
+
+  /// No description provided for @providerSignupTaglineError.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب عشرة أحرف على الأقل ليفهم التاجر خدمتك'**
+  String get providerSignupTaglineError;
+
+  /// No description provided for @providerSignupPrice.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقلّ سعر بالريال (اختياري)'**
+  String get providerSignupPrice;
+
+  /// No description provided for @providerSignupPriceHelp.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتركه فارغًا إن كانت خدمتك «حسب الطلب»'**
+  String get providerSignupPriceHelp;
+
+  /// No description provided for @providerSignupPriceError.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب رقمًا صحيحًا'**
+  String get providerSignupPriceError;
+
+  /// No description provided for @providerSignupHours.
+  ///
+  /// In ar, this message translates to:
+  /// **'زمن الردّ بالساعات (اختياري)'**
+  String get providerSignupHours;
+
+  /// No description provided for @providerSignupHoursHelp.
+  ///
+  /// In ar, this message translates to:
+  /// **'متوسط ما تستغرقه للردّ على طلب'**
+  String get providerSignupHoursHelp;
+
+  /// No description provided for @providerSignupHoursError.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب عدد ساعات بين ١ و٧٢٠'**
+  String get providerSignupHoursError;
+
+  /// No description provided for @providerSignupWorks.
+  ///
+  /// In ar, this message translates to:
+  /// **'أعمال سابقة (اختياري)'**
+  String get providerSignupWorks;
+
+  /// No description provided for @providerSignupWorksHelp.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوان كل عمل في سطر — حتى اثني عشر عملًا'**
+  String get providerSignupWorksHelp;
+
+  /// No description provided for @providerSignupSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرسل للمراجعة'**
+  String get providerSignupSubmit;
+
+  /// No description provided for @providerSignupReviewNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'التوثيق (الشارة الذهبية) يُمنح بعد مراجعة سجلك التجاري، ولا يُطلب من هنا.'**
+  String get providerSignupReviewNote;
+
+  /// No description provided for @providerSignupSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصل طلبك — سنراجعه ونبلغك'**
+  String get providerSignupSent;
+
+  /// No description provided for @providerSignupDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'لديك إدراج بهذا النوع من الخدمة بالفعل'**
+  String get providerSignupDuplicate;
+
+  /// No description provided for @providerSignupFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر الإرسال — تحقّق من اتصالك وحاول مجددًا'**
+  String get providerSignupFailed;
+
+  /// No description provided for @providerSignupNeedsAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل حسابك أولًا لتسجيل خدمتك في السوق'**
+  String get providerSignupNeedsAccount;
+
+  /// No description provided for @providerSignupOneListing.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدراج واحد لكل نوع خدمة. لتعديل بياناتك أو إضافة نوع آخر، راسلنا من الإعدادات.'**
+  String get providerSignupOneListing;
+
+  /// No description provided for @marketJoin.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل خدمتك'**
+  String get marketJoin;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
