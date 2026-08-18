@@ -158,12 +158,13 @@ class DesignElement {
       role == ElementRole.tags;
 
   DesignElement copyWith({
+    ElementRole? role,
     SpecRect? rect,
     ColorRole? color,
     ColorRole? fill,
     double? sizeFactor,
   }) => DesignElement(
-    role: role,
+    role: role ?? this.role,
     rect: rect ?? this.rect,
     text: text,
     color: color ?? this.color,

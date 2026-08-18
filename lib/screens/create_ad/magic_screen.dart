@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/ad_brief.dart';
+import '../../models/ad_format.dart';
 import '../../models/ad_template.dart';
+import '../../models/design_spec.dart';
 import '../../models/generated_ad.dart';
 import '../../config/app_config.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/generation.dart';
 import '../../services/ad_generator.dart';
 import '../../services/ai_gateway.dart';
+import '../../services/design_wish_service.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ad_design_preview.dart';
@@ -36,6 +40,9 @@ class MagicScreen extends StatefulWidget {
   /// القالب القادم من معرض القوالب (إن وُجد).
   final AdTemplate? initialTemplate;
 
+  /// منفذ اختباري لخدمة الأمنيات — على نمط [debugGatewayOverride].
+  static DesignWishService Function()? debugWishServiceOverride;
+
   @override
   State<MagicScreen> createState() => _MagicScreenState();
 }
@@ -46,6 +53,9 @@ class _MagicScreenState extends State<MagicScreen> {
       MagicScreen.debugGatewayOverride?.call() ??
       AiGateway(baseUrl: AppConfig.orchestratorUrl);
 
+  late final DesignWishService _wishes =
+      MagicScreen.debugWishServiceOverride?.call() ?? DesignWishService();
+
   List<GeneratedAd>? _ads;
   GatewayException? _error;
   int _stage = 0;
@@ -53,6 +63,16 @@ class _MagicScreenState extends State<MagicScreen> {
 
   /// فهارس البطاقات التي يجري توليد مشهدها السحابي الآن.
   final Set<int> _sceneLoading = {};
+
+  /// نصّ الأمنية وحالتها.
+  final TextEditingController _wishText = TextEditingController();
+  late AdFormat _wishFormat = adFormatFromLabel(widget.brief.format);
+  bool _wishBusy = false;
+
+  /// ملاحظات الطبيب على آخر تخطيط مولَّد. تُعرض للتاجر لا تُبتلع: تصميمٌ
+  /// أُصلح خلسةً يجعل التاجر يظنّ الذكاء معصومًا، فإذا أخطأ يومًا لم يعرف
+  /// أن عليه أن ينظر.
+  List<String> _wishNotes = const [];
 
   @override
   void initState() {
@@ -65,8 +85,15 @@ class _MagicScreenState extends State<MagicScreen> {
     if (widget.gateway == null && MagicScreen.debugGatewayOverride == null) {
       _gateway.dispose();
     }
+    if (MagicScreen.debugWishServiceOverride == null) _wishes.dispose();
+    _wishText.dispose();
+    _pages.dispose();
     super.dispose();
   }
+
+  /// المتحكّم يعيش مع الحالة لا مع كل بناء: إنشاؤه داخل `build` كان يُعيد
+  /// العرض إلى البطاقة الأولى مع كل `setState`.
+  final PageController _pages = PageController(viewportFraction: 0.88);
 
   /// النص والصورة يأتيان من المنسّق الخلفي وحده — المفاتيح لا تسكن
   /// التطبيق. شريط المراحل يعمل بالتوازي مع الطلب الحقيقي لا قبله،
@@ -184,6 +211,98 @@ class _MagicScreenState extends State<MagicScreen> {
     }
   }
 
+  /// ينفّذ ما كتبه التاجر: النموذج يُخرج **تخطيطًا** لا نصًّا، والطبيب
+  /// يفحصه، والعارض يرسمه. هذه هي النقلة من «املأ الحقول» إلى «قل ما
+  /// تريد» — وهي التي كانت تفصلنا عن كانفا.
+  Future<void> _runWish() async {
+    final text = _wishText.text.trim();
+    if (text.isEmpty || _wishBusy) return;
+    FocusScope.of(context).unfocus();
+
+    final state = AppStateScope.of(context);
+    final brandArgb =
+        state.brandColorValue ??
+        widget.brief.brandColor ??
+        widget.brief.paletteColor ??
+        0xFF2C6BED;
+
+    setState(() {
+      _wishBusy = true;
+      _wishNotes = const [];
+    });
+
+    try {
+      final result = await _wishes.design(
+        DesignWish(
+          text: text,
+          format: _wishFormat,
+          product: widget.brief.productName,
+          brandName: widget.brief.brandName,
+          tone: widget.brief.tone,
+          hasImage: widget.brief.hasProductImage,
+        ),
+        brandColor: Color(brandArgb),
+        hasLogo: state.brandLogoBytes != null,
+      );
+      if (!mounted) return;
+
+      final made = [for (final d in result.designs) _adFromDesign(d)];
+      setState(() {
+        _wishBusy = false;
+        // تتقدّم على بطاقات القوالب: هي ما طلبه التاجر بنصّه، وتلك
+        // افتراضاتنا حين لم يطلب.
+        _ads = [...made, ...?_ads];
+        _selectedCard = 0;
+        _wishNotes = [
+          for (final i in result.designs.first.report.issues) i.toString(),
+        ];
+      });
+      if (_pages.hasClients) _pages.jumpToPage(0);
+    } on DesignWishException catch (e) {
+      if (!mounted) return;
+      setState(() => _wishBusy = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _wishBusy = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(L.of(context).wishFailed)));
+    }
+  }
+
+  /// يحوّل التخطيط إلى إعلان تعرفه بقية الشاشات.
+  ///
+  /// النصّ يُستخرج من عناصر المواصفة نفسها لا يُطلب ثانيةً: النموذج كتبه
+  /// وهو يرى مكانه، ونصٌّ كُتب لموضعه أصدق من نصٍّ كُتب ثم حُشر فيه.
+  GeneratedAd _adFromDesign(WishDesign d) {
+    final spec = d.spec;
+    String? textOf(ElementRole r) {
+      final t = spec.firstOf(r)?.text?.trim();
+      return (t == null || t.isEmpty) ? null : t;
+    }
+
+    final tags = textOf(ElementRole.tags);
+    return GeneratedAd(
+      brief: widget.brief.copyWith(format: spec.format.label),
+      kind: AdKind.image,
+      headline: textOf(ElementRole.headline) ?? widget.brief.productName,
+      body: textOf(ElementRole.subhead) ?? widget.brief.description,
+      hashtags: tags == null
+          ? const []
+          : tags
+                .split(RegExp(r'\s+'))
+                .where((t) => t.isNotEmpty)
+                .toList(growable: false),
+      cta: textOf(ElementRole.cta) ?? L.of(context).wishDefaultCta,
+      angle: spec.note,
+      createdAt: DateTime.now(),
+      spec: spec,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ads = _ads;
@@ -201,11 +320,28 @@ class _MagicScreenState extends State<MagicScreen> {
         ],
       ),
       body: SafeArea(
-        child: switch ((ads, _error)) {
-          (_, final GatewayException e) => _buildError(e),
-          (final List<GeneratedAd> list, _) => _buildResults(list),
-          _ => _buildGenerating(),
-        },
+        child: Column(
+          children: [
+            Expanded(
+              child: switch ((ads, _error)) {
+                (_, final GatewayException e) => _buildError(e),
+                (final List<GeneratedAd> list, _) => _buildResults(list),
+                _ => _buildGenerating(),
+              },
+            ),
+            // صندوق الأمنية ثابت في كل الحالات — حتى حين يفشل التوليد
+            // الأول. من وقف أمام جدار يحتاج بابًا، لا زرَّ إعادةٍ يعيده
+            // إلى الجدار نفسه.
+            _WishBar(
+              controller: _wishText,
+              format: _wishFormat,
+              busy: _wishBusy,
+              notes: _wishNotes,
+              onFormat: (f) => setState(() => _wishFormat = f),
+              onSubmit: _runWish,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -378,7 +514,7 @@ class _MagicScreenState extends State<MagicScreen> {
         Expanded(
           child: PageView.builder(
             itemCount: ads.length,
-            controller: PageController(viewportFraction: 0.88),
+            controller: _pages,
             onPageChanged: (i) => setState(() => _selectedCard = i),
             itemBuilder: (context, i) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -478,6 +614,117 @@ class _MagicScreenState extends State<MagicScreen> {
           isDigital: isDigital,
           initialTemplate: widget.initialTemplate,
         ),
+      ),
+    );
+  }
+}
+
+/// صندوق «اكتب ما تريد» — قلب النقلة.
+///
+/// كل ما قبله في هذه الشاشة كان اختيارًا من قائمة أعددناها: قالبًا من
+/// أحد عشر، ونبرةً من خمس. وهذا الصندوق يقلب العلاقة: التاجر يقول، ونحن
+/// ننفّذ — وهو ما يفعله كانفا، والفرق أنّ ما يخرج هنا **تخطيط مفحوص**
+/// بالتباين والهامش لا صورة نأمل أن تكون صحيحة.
+class _WishBar extends StatelessWidget {
+  const _WishBar({
+    required this.controller,
+    required this.format,
+    required this.busy,
+    required this.notes,
+    required this.onFormat,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final AdFormat format;
+  final bool busy;
+  final List<String> notes;
+  final ValueChanged<AdFormat> onFormat;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        border: Border(top: BorderSide(color: context.hairline)),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (notes.isNotEmpty) ...[
+            // ما وجده الطبيب معروضٌ لا مبتلَع: التاجر يستحق أن يعرف أن
+            // العنوان أُزيح أو أن لونًا غُيّر ليُقرأ.
+            for (final n in notes.take(3))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  n,
+                  style: TextStyle(fontSize: 11.5, color: context.textMuted),
+                ),
+              ),
+            const SizedBox(height: 4),
+          ],
+          SizedBox(
+            height: 34,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (final f in AdFormat.values)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6),
+                    child: ChoiceChip(
+                      label: Text(f.label, style: const TextStyle(fontSize: 12)),
+                      selected: f == format,
+                      onSelected: busy ? null : (_) => onFormat(f),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  enabled: !busy,
+                  minLines: 1,
+                  maxLines: 3,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => onSubmit(),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: L.of(context).wishHint,
+                    prefixIcon: const Icon(Icons.auto_awesome, size: 20),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 48,
+                width: 48,
+                child: busy
+                    ? const Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        ),
+                      )
+                    : IconButton.filled(
+                        tooltip: L.of(context).wishRun,
+                        onPressed: onSubmit,
+                        icon: const Icon(Icons.arrow_upward),
+                      ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

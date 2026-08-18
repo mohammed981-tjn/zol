@@ -27,6 +27,7 @@ import 'package:zol/screens/create_ad/magic_screen.dart';
 import 'package:zol/screens/create_ad/design_editor_screen.dart';
 import 'package:zol/models/ad_format.dart';
 import 'package:zol/services/spec_doctor.dart';
+import 'package:zol/services/design_wish_service.dart';
 import 'package:zol/models/design_spec.dart';
 import 'package:zol/theme/spec_palette.dart';
 import 'package:zol/widgets/spec_renderer.dart';
@@ -2966,6 +2967,245 @@ void main() {
         reason: 'نصّ غير مقروء وصل العارض: ${e.text}',
       );
     }
+  });
+
+
+  // ── أمنية التاجر: يكتب فيُنفَّذ ───────────────────────────────────────
+
+  /// ردّ حقيقي من دالة `ad-design` المنشورة، منقولًا كما وصل — بما فيه
+  /// خطؤها: اسم العلامة في دور `logo`. الاختبار على مخرَج مصنوع يدويًّا
+  /// يفحص خيالنا عن النموذج لا النموذج.
+  String liveDesignBody({bool broken = false}) => jsonEncode({
+    'ok': true,
+    'model': 'gemini-3.5-flash',
+    'ms': 8258,
+    'designs': [
+      {
+        'backdrop': 'paper',
+        'variant': 2,
+        'note': 'تخطيط طولي فاخر لرول أب مقهى',
+        'elements': [
+          {
+            'role': 'logo',
+            'rect': {'x': 0.3, 'y': 0.08, 'w': 0.4, 'h': 0.06},
+            'text': 'بن الرياض',
+            'color': 'deep',
+            'align': 'center',
+            'maxLines': 1,
+            'sizeFactor': 0.04,
+            'weight': 700,
+          },
+          {
+            'role': 'headline',
+            'rect': broken
+                ? {'x': 0.1, 'y': 0.30, 'w': 0.8, 'h': 0.40}
+                : {'x': 0.1, 'y': 0.16, 'w': 0.8, 'h': 0.08},
+            'text': 'مذاق الفخامة والهدوء',
+            'color': 'deep',
+            'align': 'center',
+            'maxLines': 1,
+            'sizeFactor': 0.07,
+            'weight': 800,
+          },
+          {
+            'role': 'subhead',
+            'rect': broken
+                ? {'x': 0.1, 'y': 0.32, 'w': 0.8, 'h': 0.40}
+                : {'x': 0.1, 'y': 0.26, 'w': 0.8, 'h': 0.06},
+            'text': 'تجربة استثنائية لكل كوب',
+            'color': 'base',
+            'align': 'center',
+            'maxLines': 1,
+            'sizeFactor': 0.04,
+            'weight': 600,
+          },
+          {
+            'role': 'product',
+            'rect': {'x': 0.15, 'y': 0.42, 'w': 0.7, 'h': 0.30},
+            'align': 'center',
+          },
+          {
+            'role': 'cta',
+            'rect': {'x': 0.25, 'y': 0.85, 'w': 0.5, 'h': 0.06},
+            'text': 'اطلبها الآن',
+            'color': 'auto',
+            'fill': 'deep',
+            'align': 'center',
+            'maxLines': 1,
+            'sizeFactor': 0.04,
+            'weight': 700,
+          },
+        ],
+      },
+    ],
+  });
+
+  DesignWishService wishService(
+    MockClient client, {
+    Duration timeout = const Duration(seconds: 5),
+  }) => DesignWishService(
+    client: client,
+    supabaseUrl: 'http://test.local',
+    supabaseAnonKey: 'anon',
+    merchantId: 'merchant-test',
+    timeout: timeout,
+  );
+
+  test('الأمنية تصير تخطيطًا مفحوصًا لا نصًّا', () async {
+    var calls = 0;
+    final service = wishService(
+      MockClient((req) async {
+        calls++;
+        final sent = jsonDecode(req.body) as Map<String, dynamic>;
+        // ما كتبه التاجر يسافر كما كتبه، والنسبة رقمًا لا اسمًا: النموذج
+        // لا يعرف كم عرض «رول أب» ويعرف أن ٠٫٤٢ لوحة طويلة.
+        expect(sent['wish'], 'استاند رول لمقهى بخصم ٣٠٪');
+        expect(sent['aspect'], closeTo(AdFormat.rollUp.aspect, 1e-9));
+        expect(sent['merchant_id'], 'merchant-test');
+        return http.Response.bytes(utf8.encode(liveDesignBody()), 200);
+      }),
+    );
+
+    final result = await service.design(
+      const DesignWish(
+        text: 'استاند رول لمقهى بخصم ٣٠٪',
+        format: AdFormat.rollUp,
+        hasImage: true,
+      ),
+      brandColor: const Color(0xFF6B4A2F),
+    );
+
+    expect(calls, 1, reason: 'نداء واحد يكفي حين يصلح المخرَج من أوّله');
+    expect(result.designs, isNotEmpty);
+    final first = result.designs.first;
+    expect(first.usable, isTrue, reason: first.report.blocking.join(' / '));
+
+    // الصيغة من التاجر لا من النموذج — هو من اختار اللوحة التي سيُطبع
+    // عليها، وحقل `format` في الردّ تخمينٌ قد يخالفها.
+    expect(first.spec.format, AdFormat.rollUp);
+
+    // وكل عنصر داخل الهامش الآمن للطباعة بعد مرور الطبيب.
+    const margin = 0.062;
+    for (final e in first.spec.elements) {
+      expect(e.rect.x, greaterThanOrEqualTo(margin - 1e-9));
+      expect(e.rect.y, greaterThanOrEqualTo(margin - 1e-9));
+      expect(e.rect.right, lessThanOrEqualTo(1 - margin + 1e-9));
+      expect(e.rect.bottom, lessThanOrEqualTo(1 - margin + 1e-9));
+    }
+  });
+
+  test('اسم العلامة في مكان الشعار لا يختفي من الإعلان', () async {
+    // النموذج يظنّ الشعار كلمةً فيضع اسم العلامة في دور `logo`. والعارض
+    // لا يرسم ذلك الدور إلا صورة، فبلا الطبيب يضيع اسم التاجر من إعلانه
+    // بصمت — وهو أسوأ من عطل ظاهر لأنه لا يُرى.
+    final service = wishService(
+      MockClient(
+        (req) async => http.Response.bytes(utf8.encode(liveDesignBody()), 200),
+      ),
+    );
+
+    final result = await service.design(
+      const DesignWish(text: 'رول أب', format: AdFormat.rollUp),
+      brandColor: const Color(0xFF6B4A2F),
+      hasLogo: false,
+    );
+
+    final spec = result.designs.first.spec;
+    expect(
+      spec.elements.any(
+        (e) => e.isText && (e.text ?? '').contains('بن الرياض'),
+      ),
+      isTrue,
+      reason: 'اسم العلامة بقي في دور لا يُرسم',
+    );
+    expect(
+      result.designs.first.report.issues.any(
+        (i) => i.code == SpecIssueCode.textAsLogo && i.repaired,
+      ),
+      isTrue,
+      reason: 'الإصلاح تمّ بلا إبلاغ — والتاجر يستحق أن يعرف',
+    );
+  });
+
+  test('التخطيط المعطوب يُعاد طلبه مرّة واحدة لا بلا نهاية', () async {
+    var calls = 0;
+    final service = wishService(
+      MockClient((req) async {
+        calls++;
+        final sent = jsonDecode(req.body) as Map<String, dynamic>;
+        if (calls > 1) {
+          // المحاولة الثانية تُشدَّد لا تُعاد كما هي.
+          expect(sent['wish'], contains('باعد بين الكتل'));
+        }
+        return http.Response.bytes(
+          utf8.encode(liveDesignBody(broken: calls == 1)),
+          200,
+        );
+      }),
+    );
+
+    final result = await service.design(
+      const DesignWish(text: 'رول أب', format: AdFormat.rollUp),
+      brandColor: const Color(0xFF6B4A2F),
+    );
+
+    expect(calls, 2, reason: 'محاولتان: واحدة تفشل وواحدة تنجح');
+    expect(result.attempts, 2);
+    expect(result.designs.first.usable, isTrue);
+  });
+
+  testWidgets('شاشة السحر: يكتب ما يريد فيُرسم تخطيطه هو', (tester) async {
+    MagicScreen.debugWishServiceOverride = () => wishService(
+      MockClient(
+        (req) async => http.Response.bytes(utf8.encode(liveDesignBody()), 200),
+      ),
+    );
+    addTearDown(() => MagicScreen.debugWishServiceOverride = null);
+
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: MagicScreen(
+            brief: AdBrief(
+              productName: 'قهوة مختصة',
+              description: 'حبّ مختار',
+              tone: 'فخم',
+              platform: 'إنستغرام',
+              format: 'ستوري',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).last,
+      'استاند رول لمقهى بخصم ٣٠٪',
+    );
+    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pumpAndSettle();
+
+    // البطاقة الأولى صارت تخطيط التاجر، ومرسومة بعارض المواصفة لا
+    // بأحد القوالب الأحد عشر.
+    expect(find.byType(SpecRenderer), findsWidgets);
+
+    // النصّ يُكسر كسرًا متوازنًا فيدخله سطرٌ جديد — المقارنة على النصّ
+    // بعد توحيد المسافات لا على شكله المرسوم.
+    final drawn = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
+        .toList();
+    expect(
+      drawn.any((t) => t.contains('مذاق الفخامة')),
+      isTrue,
+      reason: 'عنوان التخطيط المولَّد لم يصل إلى الشاشة: $drawn',
+    );
   });
 
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────

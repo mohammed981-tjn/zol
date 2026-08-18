@@ -836,6 +836,30 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'سجّل خدمتك'**
   String get marketJoin;
+
+  /// No description provided for @wishHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب ما تريد… مثال: استاند رول بخصم ٣٠٪ وفخم'**
+  String get wishHint;
+
+  /// No description provided for @wishRun.
+  ///
+  /// In ar, this message translates to:
+  /// **'نفّذ'**
+  String get wishRun;
+
+  /// No description provided for @wishFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تنفيذ الطلب. حاول مجددًا.'**
+  String get wishFailed;
+
+  /// No description provided for @wishDefaultCta.
+  ///
+  /// In ar, this message translates to:
+  /// **'اطلب الآن'**
+  String get wishDefaultCta;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

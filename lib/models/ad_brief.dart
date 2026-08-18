@@ -100,6 +100,7 @@ class AdBrief {
   };
 
   AdBrief copyWith({
+    String? format,
     Uint8List? imageBytes,
     double? productScale,
     double? productDx,
@@ -109,7 +110,7 @@ class AdBrief {
     description: description,
     tone: tone,
     platform: platform,
-    format: format,
+    format: format ?? this.format,
     category: category,
     imageBytes: imageBytes ?? this.imageBytes,
     paletteColor: paletteColor,

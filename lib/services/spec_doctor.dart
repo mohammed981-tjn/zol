@@ -30,7 +30,14 @@ class SpecDoctor {
   /// عطل — والحدّ بينهما رقم لا رأي.
   static const maxTextOverlap = 0.06;
 
-  static SpecReport review(DesignSpec spec, {required Color brandColor}) {
+  /// [hasLogo] هل يملك التاجر شعارًا مرفوعًا؟ يحسم مصير عنصر `logo`:
+  /// بلا صورة لا يرسم العارض شيئًا، فاسم العلامة الذي وضعه النموذج نصًّا
+  /// في ذلك العنصر يختفي من التصميم بصمت.
+  static SpecReport review(
+    DesignSpec spec, {
+    required Color brandColor,
+    bool hasLogo = false,
+  }) {
     final art = ArtPalette.from(brandColor, variant: spec.variant);
     final margin = spec.format.safeMargin;
     final issues = <SpecIssue>[];
@@ -38,6 +45,24 @@ class SpecDoctor {
 
     for (var i = 0; i < spec.elements.length; i++) {
       var e = spec.elements[i];
+
+      // ٠) شعارٌ بلا صورة يحمل نصًّا. النموذج يفعلها كثيرًا: يضع اسم
+      //    العلامة في دور `logo` ظنًّا أن الشعار كلمة. والعارض لا يرسم
+      //    دور الشعار إلا صورةً، فيضيع اسم التاجر من إعلانه — وهو أسوأ
+      //    من عطلٍ ظاهر لأنه لا يُرى.
+      if (e.role == ElementRole.logo &&
+          !hasLogo &&
+          (e.text ?? '').trim().isNotEmpty) {
+        issues.add(
+          SpecIssue(
+            code: SpecIssueCode.textAsLogo,
+            element: i,
+            message: 'اسم العلامة وُضع في مكان الشعار — حُوّل إلى نصّ ظاهر',
+            repaired: true,
+          ),
+        );
+        e = e.copyWith(role: ElementRole.badge);
+      }
 
       // ١) داخل الهامش الآمن. على المطبوع هذا ليس تجميلًا: سكّين القصّ
       //    لا تقع على الخطّ، وشعارٌ على الحافّة يخرج مقصوصًا في ألف نسخة.
@@ -173,6 +198,7 @@ class SpecDoctor {
 }
 
 enum SpecIssueCode {
+  textAsLogo,
   outsideSafeArea,
   lowContrast,
   overlap,

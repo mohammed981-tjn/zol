@@ -460,4 +460,16 @@ class LAr extends L {
 
   @override
   String get marketJoin => 'سجّل خدمتك';
+
+  @override
+  String get wishHint => 'اكتب ما تريد… مثال: استاند رول بخصم ٣٠٪ وفخم';
+
+  @override
+  String get wishRun => 'نفّذ';
+
+  @override
+  String get wishFailed => 'تعذّر تنفيذ الطلب. حاول مجددًا.';
+
+  @override
+  String get wishDefaultCta => 'اطلب الآن';
 }

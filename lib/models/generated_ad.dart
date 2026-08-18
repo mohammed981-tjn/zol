@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ad_brief.dart';
+import 'design_spec.dart';
 
 enum AdKind { video, image, copy }
 
@@ -30,6 +31,7 @@ class GeneratedAd {
     this.cta = 'اطلب الآن',
     this.imageUrl,
     this.imageVerified,
+    this.spec,
   });
 
   final AdBrief brief;
@@ -60,6 +62,13 @@ class GeneratedAd {
   /// هل دقّق القارئ الآلي حروف الصورة ووجدها سليمة؟
   final bool? imageVerified;
 
+  /// تخطيط مولَّد بالذكاء بدل قوالب Dart الأحد عشر.
+  ///
+  /// حين يوجد يتقدّم على محرّك القوالب في كل مكان يُرسم فيه الإعلان —
+  /// المعاينة والمحرّر والتصدير — بحقنة واحدة في [AdDesignPreview]. ولو
+  /// وُصل في كل شاشة على حدة لاختلف ما يراه التاجر عمّا يُطبع له.
+  final DesignSpec? spec;
+
   String get shareText => '$headline\n$body\n${hashtags.join(' ')}';
 
   GeneratedAd copyWith({
@@ -69,6 +78,7 @@ class GeneratedAd {
     String? headline,
     String? body,
     String? cta,
+    DesignSpec? spec,
   }) => GeneratedAd(
     brief: brief ?? this.brief,
     kind: kind,
@@ -81,6 +91,7 @@ class GeneratedAd {
     cta: cta ?? this.cta,
     imageUrl: imageUrl ?? this.imageUrl,
     imageVerified: imageVerified ?? this.imageVerified,
+    spec: spec ?? this.spec,
   );
 
   Map<String, dynamic> toJson() => {
@@ -94,6 +105,7 @@ class GeneratedAd {
     'cta': cta,
     if (imageUrl != null) 'imageUrl': imageUrl,
     if (imageVerified != null) 'imageVerified': imageVerified,
+    if (spec != null) 'spec': spec!.toJson(),
     'createdAt': createdAt.toIso8601String(),
   };
 
@@ -108,6 +120,9 @@ class GeneratedAd {
     cta: json['cta'] as String? ?? 'اطلب الآن',
     imageUrl: json['imageUrl'] as String?,
     imageVerified: json['imageVerified'] as bool?,
+    spec: json['spec'] is Map
+        ? DesignSpec.fromJson((json['spec'] as Map).cast<String, dynamic>())
+        : null,
     createdAt:
         DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
   );

@@ -6,10 +6,12 @@ import '../models/ad_badge.dart';
 import '../models/ad_format.dart';
 import '../models/ad_template.dart';
 import '../models/brand_font.dart';
+import '../models/design_spec.dart';
 import '../theme/art_palette.dart';
 import 'art_backdrop.dart';
 import 'art_text.dart';
 import 'product_image.dart';
+import 'spec_renderer.dart';
 import '../models/generated_ad.dart';
 import '../models/seasonal_theme.dart';
 import '../state/app_state.dart';
@@ -43,6 +45,27 @@ class AdDesignPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+
+    // تخطيطٌ ركّبه الذكاء يتقدّم على القوالب الأحد عشر.
+    //
+    // الحقنة هنا لا في كل شاشة على حدة: المعاينة والمحرّر والتصدير
+    // والحفظ كلّها تمرّ بهذا العارض، فوصلُه مرّةً يعني أن ما رآه التاجر
+    // في شاشة السحر هو نفسه ما يخرج من المطبعة. ولو وُصل في الشاشات
+    // فرادى لاختلف المعروض عن المطبوع أوّلَ شاشةٍ نُسيت.
+    final generated = ad.spec;
+    if (generated != null) {
+      return _GeneratedLayout(
+        ad: ad,
+        spec: generated,
+        brandColor: Color(
+          state.brandColorValue ?? ad.brief.brandColor ?? 0xFF2C6BED,
+        ),
+        logo: state.brandLogoBytes,
+        fontFamily: state.brandFont?.family,
+        showWatermark: showWatermark,
+      );
+    }
+
     final palette = AdPalette.resolve(
       brandColor: state.brandColorValue,
       seasonColor: ad.brief.season?.colorValue,
@@ -159,6 +182,67 @@ class AdDesignPreview extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// غلاف التخطيط المولَّد: العارض، وعليه العلامة المائية وحدها.
+///
+/// لا شارة موسم ولا شارة عرض ولا زخرفة ركن — كلّها هنا **داخل** المواصفة
+/// إن أرادها النموذج، وحقنُها من الخارج فوق تكوينٍ لم يحسب لها مكانًا هو
+/// بالضبط ما يُنتج التصاميم المزدحمة.
+class _GeneratedLayout extends StatelessWidget {
+  const _GeneratedLayout({
+    required this.ad,
+    required this.spec,
+    required this.brandColor,
+    required this.showWatermark,
+    this.logo,
+    this.fontFamily,
+  });
+
+  final GeneratedAd ad;
+  final DesignSpec spec;
+  final Color brandColor;
+  final bool showWatermark;
+  final Uint8List? logo;
+  final String? fontFamily;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final s = c.maxWidth / 400;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(18 * s),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              SpecRenderer(
+                spec: spec,
+                brandColor: brandColor,
+                product: ad.brief.imageBytes,
+                logo: logo,
+                fontFamily: fontFamily,
+              ),
+              if (showWatermark)
+                Positioned(
+                  bottom: 8 * s,
+                  left: 12 * s,
+                  child: Text(
+                    'zol ✦',
+                    style: TextStyle(
+                      color: (spec.backdrop.isLight ? Colors.black : Colors.white)
+                          .withValues(alpha: 0.42),
+                      fontSize: 10 * s,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
