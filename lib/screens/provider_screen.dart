@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 
 import '../models/ad_service.dart';
+import 'create_ad/execute_screen.dart';
+import '../state/app_state.dart';
+import '../models/print_catalog.dart';
+import '../models/generated_ad.dart';
 import '../theme/app_palette_source.dart';
 import '../theme/app_theme.dart';
 import '../theme/art_palette.dart';
@@ -133,22 +137,30 @@ class ProviderScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  for (final work in provider.works)
-                    _WorkTile(title: work, art: art),
+                  if (provider.kind == ServiceKind.printing)
+                    // مزوّد الطباعة وحده يعرض كتالوجًا حقيقيًّا بأسعار
+                    // فعلية وزرّ يطلب — بقيّة الأصناف تنتظر لوحة تسجيل
+                    // المزوّدين على الخادم، ولا نُظهر لها ما لا نملكه.
+                    _PrintCatalogList(art: art)
+                  else
+                    for (final work in provider.works)
+                      _WorkTile(title: work, art: art),
                   const SizedBox(height: AppSpacing.xl),
-                  FilledButton.icon(
-                    onPressed: () => _requestQuote(context),
-                    icon: const Icon(Icons.send_outlined),
-                    label: Text(l.providerRequestQuote),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    // الصدق أهم من إيهام الجاهزية: الطلب لا يصل المزوّد
-                    // حتى تُوصَل لوحة المزوّدين على الخادم، وإخفاء ذلك
-                    // يجعل التاجر ينتظر ردًّا لا يأتي.
-                    l.providerDisclaimer,
-                    style: TextStyle(fontSize: 12, color: context.textMuted),
-                  ),
+                  if (provider.kind != ServiceKind.printing) ...[
+                    FilledButton.icon(
+                      onPressed: () => _requestQuote(context),
+                      icon: const Icon(Icons.send_outlined),
+                      label: Text(l.providerRequestQuote),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      // الصدق أهم من إيهام الجاهزية: الطلب لا يصل المزوّد
+                      // حتى تُوصَل لوحة المزوّدين على الخادم، وإخفاء ذلك
+                      // يجعل التاجر ينتظر ردًّا لا يأتي.
+                      l.providerDisclaimer,
+                      style: TextStyle(fontSize: 12, color: context.textMuted),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xl),
                 ],
               ),
@@ -283,6 +295,204 @@ class _WorkTile extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
         ],
+      ),
+    );
+  }
+}
+
+/// كتالوج الطباعة الحقيقي داخل صفحة المزوّد.
+///
+/// هذا ما يجعل أوّل صنف في السوق حقيقيًّا بلا خادم: الأسعار والمقاسات
+/// والكميّات هي التي يحسب بها التطبيق الفاتورة فعلًا (`print_catalog`)،
+/// لا قائمة عرضٍ موازية تُكتب هنا وتتقادم. وكل صفّ يفتح مسار الطلب
+/// نفسه الذي يفتحه زرّ «اطبعه وصلّه» — بالمنتج والمقاس مُختارَين سلفًا.
+class _PrintCatalogList extends StatelessWidget {
+  const _PrintCatalogList({required this.art});
+  final ArtPalette art;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final product in printCatalog)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: _ProductBlock(product: product, art: art),
+          ),
+        Text(
+          // «لكل وحدة» لا «لكل بنر»: وحدة القياس تختلف بين منتج وآخر
+          // (بنر واحد مقابل حزمة خمسين استيكرًا)، وكل بطاقة تعرض وحدتها.
+          L
+              .of(context)
+              .printPricesNote(
+                formatPrice(deliveryFee),
+                (vatRate * 100).round(),
+              ),
+          style: TextStyle(fontSize: 12, color: context.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProductBlock extends StatelessWidget {
+  const _ProductBlock({required this.product, required this.art});
+  final PrintProduct product;
+  final ArtPalette art;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: context.hairline),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(product.icon, size: 18, color: art.base),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  product.label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              Text(
+                product.unitName,
+                style: TextStyle(fontSize: 11.5, color: context.textMuted),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (var i = 0; i < product.sizes.length; i++)
+            _SizeRow(product: product, sizeIndex: i),
+        ],
+      ),
+    );
+  }
+}
+
+class _SizeRow extends StatelessWidget {
+  const _SizeRow({required this.product, required this.sizeIndex});
+  final PrintProduct product;
+  final int sizeIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = product.sizes[sizeIndex];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(size.label, style: const TextStyle(fontSize: 13)),
+          ),
+          Text(
+            formatPrice(size.unitPrice),
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: context.goldOnSurface,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          TextButton(
+            onPressed: () => _order(context),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            child: Text(
+              L.of(context).printOrder,
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// الطباعة تحتاج تصميمًا. المكتبة هي مصدره الوحيد، فإن كانت فارغة
+  /// نقول ذلك صراحةً بدل فتح شاشة طلب بلا ما يُطبَع فيها.
+  void _order(BuildContext context) {
+    final state = AppStateScope.of(context);
+    final printable = state.savedAds
+        .where((a) => a.kind == AdKind.image)
+        .toList();
+
+    if (printable.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(L.of(context).printNeedsDesign)));
+      return;
+    }
+
+    if (printable.length == 1) {
+      _push(context, printable.first);
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Text(
+                L.of(context).printWhichDesign,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: printable.length,
+                itemBuilder: (context, i) => ListTile(
+                  leading: const Icon(Icons.image_outlined),
+                  title: Text(
+                    printable[i].headline,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(printable[i].brief.productName),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _push(context, printable[i]);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _push(BuildContext context, GeneratedAd ad) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ExecuteScreen(
+          ad: ad,
+          isDigital: false,
+          initialProduct: product,
+          initialSizeIndex: sizeIndex,
+        ),
       ),
     );
   }

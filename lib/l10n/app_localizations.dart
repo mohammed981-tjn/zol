@@ -650,6 +650,30 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'({reviews} مراجعة)'**
   String providerReviewsCount(int reviews);
+
+  /// No description provided for @printPricesNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأسعار لكل وحدة قبل التوصيل ({delivery}) وضريبة القيمة المضافة {vat}٪.'**
+  String printPricesNote(String delivery, int vat);
+
+  /// No description provided for @printOrder.
+  ///
+  /// In ar, this message translates to:
+  /// **'اطلب'**
+  String get printOrder;
+
+  /// No description provided for @printNeedsDesign.
+  ///
+  /// In ar, this message translates to:
+  /// **'صمّم إعلانًا واحفظه أولًا — الطباعة تحتاج تصميمًا'**
+  String get printNeedsDesign;
+
+  /// No description provided for @printWhichDesign.
+  ///
+  /// In ar, this message translates to:
+  /// **'أيّ تصميم تطبع؟'**
+  String get printWhichDesign;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

@@ -32,6 +32,7 @@ import 'package:zol/models/template_category.dart';
 import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/models/ad_service.dart';
 import 'package:zol/screens/market_screen.dart';
+import 'package:zol/screens/provider_screen.dart';
 import 'package:zol/screens/storefront_screen.dart';
 import 'package:zol/screens/shell_screen.dart';
 import 'package:zol/theme/app_palette_source.dart';
@@ -2546,6 +2547,121 @@ void main() {
       ),
       text,
     );
+  });
+
+  // ── ربط الكتالوج بالسوق ────────────────────────────────────────────
+
+  test('مزوّد الطباعة: سعره وأعماله من الكتالوج لا من أرقام مكتوبة', () {
+    // رقمٌ يُكتب في ملفّ الدليل ينفصل عن التسعير الفعلي بعد أول تعديل،
+    // فيرى التاجر «من ٤٥ ر.س» في السوق ثم يُطالَب بغيرها عند الطلب.
+    final catalogMin = printCatalog
+        .expand((p) => p.sizes)
+        .map((z) => z.unitPrice)
+        .reduce((a, b) => a < b ? a : b);
+
+    final printers = serviceProviders.where(
+      (p) => p.kind == ServiceKind.printing,
+    );
+    expect(printers, isNotEmpty);
+    for (final p in printers) {
+      expect(
+        p.priceFrom,
+        catalogMin.round(),
+        reason: 'سعر ${p.name} لا يطابق أدنى سعر في الكتالوج',
+      );
+      expect(
+        p.works,
+        printCatalog.map((c) => c.label).toList(),
+        reason: 'أعمال ${p.name} لا تطابق ما يطبعه الكتالوج فعلًا',
+      );
+    }
+  });
+
+  testWidgets('صفحة المطبعة تعرض الكتالوج الحقيقي بأسعاره', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState();
+    final printer = serviceProviders.firstWhere(
+      (p) => p.kind == ServiceKind.printing,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: ProviderScreen(provider: printer),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // كل منتج في الكتالوج معروض باسمه، وكل مقاس بسعره الفعلي.
+    for (final product in printCatalog) {
+      expect(
+        find.text(product.label),
+        findsWidgets,
+        reason: '${product.label} غائب عن صفحة المطبعة',
+      );
+      for (final size in product.sizes) {
+        expect(
+          find.text(size.label),
+          findsWidgets,
+          reason: 'مقاس ${size.label} غائب',
+        );
+      }
+    }
+
+    // ووعدُ «عرض سعر» المؤجَّل لا يظهر هنا: المطبعة عندها طلب حقيقي.
+    expect(find.text('اطلب عرض سعر'), findsNothing);
+    expect(find.text('اطلب'), findsWidgets);
+  });
+
+  testWidgets('طلب الطباعة بلا تصميم محفوظ يقول ذلك ولا يفتح شاشة فارغة',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState();
+    final printer = serviceProviders.firstWhere(
+      (p) => p.kind == ServiceKind.printing,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: ProviderScreen(provider: printer),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('اطلب').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('صمّم إعلانًا واحفظه أولًا — الطباعة تحتاج تصميمًا'),
+      findsOneWidget,
+      reason: 'فتح مسار طلب بلا ما يُطبَع فيه',
+    );
+  });
+
+  test('كل صيغة مطبوعة تجد منتجها في الكتالوج باسمه', () {
+    // هذا ما يجعل الاختيار التلقائي ممكنًا: من صمّم رول أب يجد «رول أب»
+    // مختارًا عند الطباعة لا «بنر». ولو تغيّر اسم منتج في الكتالوج ولم
+    // يُحدَّث هنا، لعاد الاختيار صامتًا إلى أول منتج في القائمة.
+    for (final f in AdFormat.values.where((f) => f.isPrint)) {
+      final match = printCatalog.where((p) => p.label == f.printProduct);
+      expect(
+        match.length,
+        1,
+        reason: 'صيغة ${f.label} لا تقابل منتجًا واحدًا بالضبط',
+      );
+    }
   });
 
   // ── صيغ اللوحة ─────────────────────────────────────────────────────

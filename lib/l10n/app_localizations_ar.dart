@@ -354,4 +354,19 @@ class LAr extends L {
   String providerReviewsCount(int reviews) {
     return '($reviews مراجعة)';
   }
+
+  @override
+  String printPricesNote(String delivery, int vat) {
+    return 'الأسعار لكل وحدة قبل التوصيل ($delivery) وضريبة القيمة المضافة $vat٪.';
+  }
+
+  @override
+  String get printOrder => 'اطلب';
+
+  @override
+  String get printNeedsDesign =>
+      'صمّم إعلانًا واحفظه أولًا — الطباعة تحتاج تصميمًا';
+
+  @override
+  String get printWhichDesign => 'أيّ تصميم تطبع؟';
 }

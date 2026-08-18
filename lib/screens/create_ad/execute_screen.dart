@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../models/ad_template.dart';
 import '../../models/generated_ad.dart';
 import '../../models/payment_result.dart';
+import '../../models/ad_format.dart';
 import '../../models/print_catalog.dart';
 import '../../models/print_order.dart';
 import '../../models/print_shop.dart';
@@ -54,7 +55,24 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   /// التعديل على التصدير والحفظ والطباعة معًا لا على المعاينة وحدها.
   late GeneratedAd _ad = widget.ad;
 
-  late PrintProduct _product = widget.initialProduct ?? printCatalog.first;
+  /// المنتج المبدئي: ما جاء من الحاسبة أو من صفحة المطبعة، وإلا **ما
+  /// يقابل صيغة التصميم نفسه**.
+  ///
+  /// من صمّم استاند رول أب كان يجد «بنر» مختارًا فيطبع بمقاس آخر ثم
+  /// يكتشف الفرق بعد التسليم. الصيغة تعرف منتجها في الكتالوج بالاسم،
+  /// فلا داعي أن يطابقهما التاجر يدويًّا.
+  late PrintProduct _product =
+      widget.initialProduct ?? _productForFormat() ?? printCatalog.first;
+
+  PrintProduct? _productForFormat() {
+    final wanted = adFormatFromLabel(widget.ad.brief.format).printProduct;
+    if (wanted == null) return null;
+    for (final p in printCatalog) {
+      if (p.label == wanted) return p;
+    }
+    return null;
+  }
+
   late int _sizeIndex = widget.initialSizeIndex ?? 0;
   late int _quantity = widget.initialQuantity ?? _product.quantities.first;
   final _addressController = TextEditingController();

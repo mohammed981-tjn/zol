@@ -1,3 +1,4 @@
+import 'print_catalog.dart';
 import 'print_shop.dart';
 
 /// دليل مزوّدي خدمات الدعاية — الجزء الذي كان اسمًا بلا مسمّى.
@@ -103,10 +104,13 @@ final List<ServiceProvider> serviceProviders = [
       kind: ServiceKind.printing,
       city: s.city,
       tagline: 'طباعة استاندات وفلايرز وملصقات — تسليم داخل المدينة',
-      priceFrom: 45,
+      // السعر والأعمال من كتالوج الطباعة الحقيقي لا من أرقام مكتوبة
+      // هنا. رقمٌ يُكتب في ملفّ الدليل ينفصل عن التسعير الفعلي بعد أول
+      // تعديل، فيرى التاجر «من ٤٥ ر.س» ثم يُطالَب بغيرها عند الطلب.
+      priceFrom: printCatalogMinPrice,
       rating: 4.6,
       reviews: 128,
-      works: ['استاند رول أب', 'فلاير A5', 'ملصق واجهة'],
+      works: printCatalogLabels,
       verified: true,
       respondsInHours: 3,
     ),
@@ -242,3 +246,18 @@ List<ServiceProvider> filterProviders({
       return byRating != 0 ? byRating : b.reviews.compareTo(a.reviews);
     });
 }
+
+
+/// أدنى سعر وحدة في كتالوج الطباعة — «من كذا ر.س» في بطاقة المزوّد.
+///
+/// يُحسب ولا يُكتب: كل تعديل على الكتالوج ينعكس في السوق تلقائيًّا، فلا
+/// يعد الدليلُ بسعرٍ لا يجده التاجر عند الطلب.
+int get printCatalogMinPrice => printCatalog
+    .expand((p) => p.sizes)
+    .map((z) => z.unitPrice)
+    .reduce((a, b) => a < b ? a : b)
+    .round();
+
+/// ما تطبعه المطابع فعلًا — من الكتالوج نفسه لا من قائمة موازية.
+List<String> get printCatalogLabels =>
+    printCatalog.map((p) => p.label).toList();
