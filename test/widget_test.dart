@@ -26,6 +26,8 @@ import 'package:zol/services/ai_gateway.dart';
 import 'package:zol/screens/create_ad/magic_screen.dart';
 import 'package:zol/screens/create_ad/design_editor_screen.dart';
 import 'package:zol/models/ad_format.dart';
+import 'package:zol/services/spec_doctor.dart';
+import 'package:zol/models/design_spec.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/models/business_category.dart';
 import 'package:zol/services/admin_api.dart';
@@ -2549,6 +2551,222 @@ void main() {
       ),
       text,
     );
+  });
+
+  // ── مواصفة التصميم وطبيبها ─────────────────────────────────────────
+
+  test('المواصفة تنجو من مخرَج نموذج فوضوي بلا استثناء', () {
+    // النموذج اللغوي يخترع أسماء حقول ويُسقط أخرى. إسقاط تصميم كامل
+    // بسبب كلمة أهون من إسقاطه بلا سبب مفهوم — فكل مجهول يعود إلى قيمة
+    // آمنة، والمدقّق يُبلّغ بعدها.
+    final spec = DesignSpec.fromJson({
+      'format': 'صيغة لا وجود لها',
+      'backdrop': 'قوس قزح',
+      'elements': [
+        {'role': 'title', 'text': 'عنوان'}, // دور مخترَع
+        {'role': 'cta', 'rect': {'x': 0.1, 'y': 0.8}}, // أبعاد ناقصة
+        'ليس كائنًا أصلًا',
+      ],
+    });
+
+    expect(spec.format, AdFormat.square, reason: 'صيغة مجهولة ⇒ الأسلم');
+    expect(spec.backdrop, SpecBackdrop.mesh);
+    expect(spec.elements.length, 2, reason: 'ما ليس كائنًا يُهمَل لا يُسقط');
+    expect(spec.elements.first.role, ElementRole.shape, reason: 'دور مجهول');
+  });
+
+  test('الطبيب يعيد ما خرج عن الهامش الآمن — وهو قصّ حقيقي لا تجميل', () {
+    // على المطبوع: عنصر على الحافّة يخرج مقصوصًا في ألف نسخة.
+    const spec = DesignSpec(
+      format: AdFormat.rollUp, // مطبوع ⇒ هامش أوسع
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.0, 0.0, 0.9, 0.2), // ملاصق للحافّة
+          text: 'عنوان',
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.3, 0.85, 0.4, 0.1),
+          text: 'اطلب',
+        ),
+      ],
+    );
+
+    final report = SpecDoctor.review(spec, brandColor: const Color(0xFFB03030));
+    final margin = AdFormat.rollUp.safeMargin;
+
+    for (final e in report.spec.elements) {
+      expect(e.rect.x, greaterThanOrEqualTo(margin - 1e-9),
+          reason: '${e.role} تجاوز الحافّة اليمنى');
+      expect(e.rect.y, greaterThanOrEqualTo(margin - 1e-9));
+      expect(e.rect.right, lessThanOrEqualTo(1 - margin + 1e-9));
+      expect(e.rect.bottom, lessThanOrEqualTo(1 - margin + 1e-9));
+    }
+    expect(
+      report.issues.any((i) => i.code == SpecIssueCode.outsideSafeArea),
+      isTrue,
+      reason: 'أُصلح بلا إبلاغ — والإصلاح الصامت يُخفي نموذجًا يُخطئ دائمًا',
+    );
+  });
+
+  test('الطبيب يرفض حبرًا لا يُقرأ ويستبدله بالمحسوب', () {
+    // النموذج يطلب «حياديًّا فاتحًا» فوق خلفية فاتحة: جميل في وصفه،
+    // غير مقروء على الورق.
+    const spec = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.paper, // خلفية فاتحة
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.1, 0.1, 0.8, 0.2),
+          text: 'عنوان',
+          color: ColorRole.neutral, // فاتح فوق فاتح
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.3, 0.7, 0.4, 0.1),
+          text: 'اطلب',
+        ),
+      ],
+    );
+
+    final report = SpecDoctor.review(spec, brandColor: const Color(0xFF2E6BB8));
+    expect(report.spec.elements.first.color, ColorRole.auto);
+    expect(
+      report.issues.any((i) => i.code == SpecIssueCode.lowContrast),
+      isTrue,
+    );
+
+    // وبعد الإصلاح يتحقّق التباين فعلًا لا اسمًا.
+    final art = ArtPalette.from(const Color(0xFF2E6BB8));
+    expect(
+      ArtPalette.contrast(art.neutral, ArtPalette.inkOn(art.neutral)),
+      greaterThanOrEqualTo(SpecDoctor.minContrast),
+    );
+  });
+
+  test('الطبيب ينزل النصّ المغطّي ويعترف حين لا يستطيع', () {
+    const overlapping = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.1, 0.10, 0.8, 0.20),
+          text: 'عنوان',
+        ),
+        DesignElement(
+          role: ElementRole.subhead,
+          rect: SpecRect(0.1, 0.15, 0.8, 0.20), // يغطّي العنوان
+          text: 'ثانوي',
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.3, 0.80, 0.4, 0.10),
+          text: 'اطلب',
+        ),
+      ],
+    );
+
+    final report = SpecDoctor.review(
+      overlapping,
+      brandColor: const Color(0xFFB03030),
+    );
+    final head = report.spec.elements[0].rect;
+    final sub = report.spec.elements[1].rect;
+    expect(
+      head.overlapRatio(sub),
+      lessThanOrEqualTo(SpecDoctor.maxTextOverlap),
+      reason: 'بقي التغطّي بعد الإصلاح',
+    );
+
+    // وحين لا يوجد فراغ: يُبلّغ ولا يدّعي. مدقّقٌ يزعم الإصلاح دائمًا
+    // يُمرّر تصميمًا مكسورًا وهو يبتسم.
+    const cramped = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.05, 0.05, 0.9, 0.85),
+          text: 'عنوان ضخم',
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.05, 0.10, 0.9, 0.80),
+          text: 'اطلب',
+        ),
+      ],
+    );
+    final second = SpecDoctor.review(
+      cramped,
+      brandColor: const Color(0xFFB03030),
+    );
+    expect(second.usable, isFalse);
+    expect(second.blocking, isNotEmpty);
+  });
+
+  test('الطبيب يمنع إعلانًا بلا رسالة أو بلا دعوة', () {
+    const spec = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.product,
+          rect: SpecRect(0.1, 0.1, 0.8, 0.8),
+        ),
+      ],
+    );
+    final report = SpecDoctor.review(spec, brandColor: const Color(0xFFB03030));
+    final codes = report.issues.map((i) => i.code).toSet();
+    expect(codes, contains(SpecIssueCode.missingHeadline));
+    expect(codes, contains(SpecIssueCode.missingCta));
+    expect(report.usable, isFalse, reason: 'يُعاد الطلب لا يُعرض ناقصًا');
+  });
+
+  test('المواصفة تدور ذهابًا وإيابًا عبر JSON بلا فقد', () {
+    // الرحلة الحقيقية: النموذج ⇒ JSON ⇒ التطبيق ⇒ حفظ ⇒ إعادة فتح.
+    const original = DesignSpec(
+      format: AdFormat.businessCard,
+      backdrop: SpecBackdrop.strata,
+      variant: 3,
+      note: 'تكوين أفقي: النصّ يمينًا والمنتج يسارًا',
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.08, 0.2, 0.5, 0.3),
+          text: 'قهوة مختصة',
+          color: ColorRole.complement,
+          fill: ColorRole.deep,
+          align: SpecAlign.end,
+          maxLines: 3,
+          sizeFactor: 0.049,
+          weight: 900,
+        ),
+      ],
+    );
+
+    final round = DesignSpec.fromJson(
+      jsonDecode(jsonEncode(original.toJson())) as Map<String, dynamic>,
+    );
+    expect(round.format, original.format);
+    expect(round.backdrop, original.backdrop);
+    expect(round.variant, original.variant);
+    expect(round.note, original.note);
+
+    final a = original.elements.first, b = round.elements.first;
+    expect(b.role, a.role);
+    expect(b.text, a.text);
+    expect(b.color, a.color);
+    expect(b.fill, a.fill);
+    expect(b.align, a.align);
+    expect(b.maxLines, a.maxLines);
+    expect(b.sizeFactor, a.sizeFactor);
+    expect(b.weight, a.weight);
+    expect(b.rect.x, closeTo(a.rect.x, 1e-9));
+    expect(b.rect.h, closeTo(a.rect.h, 1e-9));
   });
 
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────
