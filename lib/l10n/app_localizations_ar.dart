@@ -343,12 +343,7 @@ class LAr extends L {
 
   @override
   String get providerDisclaimer =>
-      'الدليل في مرحلته الأولى: طلبك يُحفظ ويصلك تأكيد حين يُفعَّل حساب المزوّد.';
-
-  @override
-  String providerInterestLogged(String name) {
-    return 'سجّلنا اهتمامك بـ$name';
-  }
+      'طلبك يصل المزوّد المسجَّل مباشرة. ومزوّدو شبكة المطابع تصلهم رسالتك من زرّ «أرسله بنفسك».';
 
   @override
   String providerReviewsCount(int reviews) {
@@ -580,4 +575,54 @@ class LAr extends L {
 
   @override
   String get wishPresetRamadan => 'عرض رمضان';
+
+  @override
+  String get quoteSheetTitle => 'اطلب تسعيرة';
+
+  @override
+  String get quoteNeedLabel => 'ما الذي تحتاجه؟';
+
+  @override
+  String get quoteNeedHelp =>
+      'اكتب المطلوب بوضوح: الكمّية والمقاس والموعد إن وُجد';
+
+  @override
+  String get quoteNeedError => 'اكتب عشرة أحرف على الأقل ليفهم المزوّد طلبك';
+
+  @override
+  String get quoteBudgetLabel => 'الميزانية التقريبية بالريال (اختياري)';
+
+  @override
+  String get quoteContactLabel => 'كيف يردّ عليك؟';
+
+  @override
+  String get quoteContactHelp =>
+      'رقم واتساب أو بريد — بلا وسيلة ردّ لا تصلك تسعيرة';
+
+  @override
+  String get quoteContactError => 'اكتب رقمًا أو بريدًا صحيحًا';
+
+  @override
+  String get quoteSend => 'أرسل الطلب';
+
+  @override
+  String get quoteShare => 'أرسله بنفسك';
+
+  @override
+  String get quoteDelivered => 'وصل طلبك إلى المزوّد';
+
+  @override
+  String get quoteOffline =>
+      'تعذّر الإرسال عبر التطبيق — أرسِله بنفسك من الزرّ أدناه';
+
+  @override
+  String get quoteNeedsAccount =>
+      'سجّل حسابك أوّلًا ليُنسب الطلب إليك ويصلك الردّ';
+
+  @override
+  String get quoteNotRoutable =>
+      'هذا المزوّد من شبكة المطابع ولا يستقبل عبر التطبيق — انسخ الطلب وأرسله إليه';
+
+  @override
+  String get quoteCopied => 'نُسخ نصّ الطلب';
 }

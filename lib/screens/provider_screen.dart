@@ -11,6 +11,7 @@ import '../theme/app_palette_source.dart';
 import '../theme/app_theme.dart';
 import '../theme/art_palette.dart';
 import '../widgets/art_backdrop.dart';
+import '../widgets/quote_request_sheet.dart';
 
 /// صفحة المزوّد — «كيف يعرض الشريك أعماله».
 ///
@@ -172,9 +173,12 @@ class ProviderScreen extends StatelessWidget {
   }
 
   void _requestQuote(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(L.of(context).providerInterestLogged(provider.name)),
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => QuoteRequestSheet(
+        provider: provider,
+        merchantName: AppStateScope.of(context).account?.storeName,
       ),
     );
   }

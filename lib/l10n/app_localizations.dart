@@ -636,14 +636,8 @@ abstract class L {
   /// No description provided for @providerDisclaimer.
   ///
   /// In ar, this message translates to:
-  /// **'الدليل في مرحلته الأولى: طلبك يُحفظ ويصلك تأكيد حين يُفعَّل حساب المزوّد.'**
+  /// **'طلبك يصل المزوّد المسجَّل مباشرة. ومزوّدو شبكة المطابع تصلهم رسالتك من زرّ «أرسله بنفسك».'**
   String get providerDisclaimer;
-
-  /// No description provided for @providerInterestLogged.
-  ///
-  /// In ar, this message translates to:
-  /// **'سجّلنا اهتمامك بـ{name}'**
-  String providerInterestLogged(String name);
 
   /// No description provided for @providerReviewsCount.
   ///
@@ -1070,6 +1064,96 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'عرض رمضان'**
   String get wishPresetRamadan;
+
+  /// No description provided for @quoteSheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اطلب تسعيرة'**
+  String get quoteSheetTitle;
+
+  /// No description provided for @quoteNeedLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما الذي تحتاجه؟'**
+  String get quoteNeedLabel;
+
+  /// No description provided for @quoteNeedHelp.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب المطلوب بوضوح: الكمّية والمقاس والموعد إن وُجد'**
+  String get quoteNeedHelp;
+
+  /// No description provided for @quoteNeedError.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب عشرة أحرف على الأقل ليفهم المزوّد طلبك'**
+  String get quoteNeedError;
+
+  /// No description provided for @quoteBudgetLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الميزانية التقريبية بالريال (اختياري)'**
+  String get quoteBudgetLabel;
+
+  /// No description provided for @quoteContactLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'كيف يردّ عليك؟'**
+  String get quoteContactLabel;
+
+  /// No description provided for @quoteContactHelp.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم واتساب أو بريد — بلا وسيلة ردّ لا تصلك تسعيرة'**
+  String get quoteContactHelp;
+
+  /// No description provided for @quoteContactError.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب رقمًا أو بريدًا صحيحًا'**
+  String get quoteContactError;
+
+  /// No description provided for @quoteSend.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرسل الطلب'**
+  String get quoteSend;
+
+  /// No description provided for @quoteShare.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرسله بنفسك'**
+  String get quoteShare;
+
+  /// No description provided for @quoteDelivered.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصل طلبك إلى المزوّد'**
+  String get quoteDelivered;
+
+  /// No description provided for @quoteOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر الإرسال عبر التطبيق — أرسِله بنفسك من الزرّ أدناه'**
+  String get quoteOffline;
+
+  /// No description provided for @quoteNeedsAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل حسابك أوّلًا ليُنسب الطلب إليك ويصلك الردّ'**
+  String get quoteNeedsAccount;
+
+  /// No description provided for @quoteNotRoutable.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المزوّد من شبكة المطابع ولا يستقبل عبر التطبيق — انسخ الطلب وأرسله إليه'**
+  String get quoteNotRoutable;
+
+  /// No description provided for @quoteCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'نُسخ نصّ الطلب'**
+  String get quoteCopied;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

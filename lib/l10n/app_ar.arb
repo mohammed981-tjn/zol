@@ -215,15 +215,7 @@
   "providerStatus": "الحالة",
   "providerWorks": "أعمال سابقة",
   "providerRequestQuote": "اطلب عرض سعر",
-  "providerDisclaimer": "الدليل في مرحلته الأولى: طلبك يُحفظ ويصلك تأكيد حين يُفعَّل حساب المزوّد.",
-  "providerInterestLogged": "سجّلنا اهتمامك بـ{name}",
-  "@providerInterestLogged": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "providerDisclaimer": "طلبك يصل المزوّد المسجَّل مباشرة. ومزوّدو شبكة المطابع تصلهم رسالتك من زرّ «أرسله بنفسك».",
   "providerReviewsCount": "({reviews} مراجعة)",
   "@providerReviewsCount": {
     "placeholders": {
@@ -311,5 +303,20 @@
   "wishPresetNewItem": "وصل منتج جديد",
   "wishPresetHiring": "نطلب موظفين",
   "wishPresetDelivery": "توصيل مجاني اليوم",
-  "wishPresetRamadan": "عرض رمضان"
+  "wishPresetRamadan": "عرض رمضان",
+  "quoteSheetTitle": "اطلب تسعيرة",
+  "quoteNeedLabel": "ما الذي تحتاجه؟",
+  "quoteNeedHelp": "اكتب المطلوب بوضوح: الكمّية والمقاس والموعد إن وُجد",
+  "quoteNeedError": "اكتب عشرة أحرف على الأقل ليفهم المزوّد طلبك",
+  "quoteBudgetLabel": "الميزانية التقريبية بالريال (اختياري)",
+  "quoteContactLabel": "كيف يردّ عليك؟",
+  "quoteContactHelp": "رقم واتساب أو بريد — بلا وسيلة ردّ لا تصلك تسعيرة",
+  "quoteContactError": "اكتب رقمًا أو بريدًا صحيحًا",
+  "quoteSend": "أرسل الطلب",
+  "quoteShare": "أرسله بنفسك",
+  "quoteDelivered": "وصل طلبك إلى المزوّد",
+  "quoteOffline": "تعذّر الإرسال عبر التطبيق — أرسِله بنفسك من الزرّ أدناه",
+  "quoteNeedsAccount": "سجّل حسابك أوّلًا ليُنسب الطلب إليك ويصلك الردّ",
+  "quoteNotRoutable": "هذا المزوّد من شبكة المطابع ولا يستقبل عبر التطبيق — انسخ الطلب وأرسله إليه",
+  "quoteCopied": "نُسخ نصّ الطلب"
 }

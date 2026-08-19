@@ -40,6 +40,8 @@ import 'package:zol/widgets/ad_design_preview.dart';
 import 'package:zol/models/ad_service.dart';
 import 'package:zol/screens/market_screen.dart';
 import 'package:zol/screens/provider_screen.dart';
+import 'package:zol/services/quote_requests.dart';
+import 'package:zol/widgets/quote_request_sheet.dart';
 import 'package:zol/screens/provider_signup_screen.dart';
 import 'package:zol/screens/storefront_screen.dart';
 import 'package:zol/screens/shell_screen.dart';
@@ -3511,6 +3513,151 @@ void main() {
       findsOneWidget,
       reason: 'التكبير لم يصل عارض المواصفة',
     );
+  });
+
+
+  // ── طلب التسعير: الطريق الذي كان مسدودًا ─────────────────────────────
+
+  test('طلب التسعير: نصّه يحمل ما يقرّر به المزوّد أوّلًا', () {
+    const p = ServiceProvider(
+      id: 'print-net',
+      name: 'مطابع الرياض',
+      kind: ServiceKind.printing,
+      city: 'الرياض',
+      tagline: 'طباعة سريعة',
+      priceFrom: 120,
+      rating: 0,
+      reviews: 0,
+      works: [],
+    );
+
+    final text = QuoteRequests.compose(
+      provider: p,
+      need: 'خمسمئة كرت أعمال بورق مطفي',
+      contact: '0500000000',
+      merchantName: 'بُنّ الرياض',
+      budgetSar: 400,
+    );
+
+    // المزوّد يقرّر بالخدمة والمدينة إن كان الطلب له أصلًا.
+    expect(text.indexOf('الرياض'), lessThan(text.indexOf('المطلوب')));
+    expect(text, contains('خمسمئة كرت أعمال'));
+    expect(text, contains('٤٠٠ ريال'.replaceAll('٤٠٠', '400')));
+    expect(text, contains('0500000000'));
+    expect(text, contains('بُنّ الرياض'));
+  });
+
+  test('طلب التسعير: مزوّد الكتالوج المحلّي لا يُدّعى أنه استقبل', () async {
+    // معرّفات الكتالوج ليست UUID، وهي علامة أنه لا صفّ له على الخادم.
+    // ادّعاءُ الوصول هنا يجعل التاجر ينتظر ردًّا مستحيلًا.
+    const local = ServiceProvider(
+      id: 'print-net',
+      name: 'مطابع الرياض',
+      kind: ServiceKind.printing,
+      city: 'الرياض',
+      tagline: 'طباعة سريعة',
+      priceFrom: 120,
+      rating: 0,
+      reviews: 0,
+      works: [],
+    );
+    expect(QuoteRequests.isRoutable(local), isFalse);
+
+    final result = await QuoteRequests.send(
+      provider: local,
+      body: 'خمسمئة كرت أعمال',
+      contact: '0500000000',
+    );
+    expect(result.outcome, QuoteOutcome.notRoutable);
+    expect(result.delivered, isFalse);
+
+    const remote = ServiceProvider(
+      id: '3f1c2b7a-8d4e-4a19-9f22-5b6c7d8e9f01',
+      name: 'استوديو',
+      kind: ServiceKind.design,
+      city: 'جدة',
+      tagline: 'تصميم هوية',
+      priceFrom: 900,
+      rating: 0,
+      reviews: 0,
+      works: [],
+    );
+    expect(QuoteRequests.isRoutable(remote), isTrue);
+  });
+
+  testWidgets('طلب التسعير: لا يُرسل ناقصًا، ويخرج نصًّا يصل بيد التاجر', (
+    tester,
+  ) async {
+    String? shared;
+    const p = ServiceProvider(
+      id: 'print-net',
+      name: 'مطابع الرياض',
+      kind: ServiceKind.printing,
+      city: 'الرياض',
+      tagline: 'طباعة سريعة',
+      priceFrom: 120,
+      rating: 0,
+      reviews: 0,
+      works: [],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: Scaffold(
+          body: QuoteRequestSheet(
+            provider: p,
+            merchantName: 'بُنّ الرياض',
+            debugShare: (t) => shared = t,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // طلبٌ بلا وسيلة ردّ لا تصله تسعيرة — فلا يُرسل صامتًا.
+    await tester.tap(find.text('أرسل الطلب'));
+    await tester.pumpAndSettle();
+    expect(find.text('اكتب عشرة أحرف على الأقل ليفهم المزوّد طلبك'), findsOne);
+    expect(find.text('اكتب رقمًا أو بريدًا صحيحًا'), findsOne);
+
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'خمسمئة كرت أعمال بورق مطفي',
+    );
+    await tester.enterText(find.byType(TextFormField).last, '0500000000');
+    await tester.pumpAndSettle();
+
+    // «أرسله بنفسك» ظاهر دائمًا لا عند الفشل وحده: هو الطريق العامل
+    // اليوم لأكثر المزوّدين.
+    await tester.tap(find.text('أرسله بنفسك'));
+    await tester.pumpAndSettle();
+
+    expect(shared, isNotNull, reason: 'الزرّ لم يُخرج نصًّا يرسله التاجر');
+    expect(shared, contains('خمسمئة كرت أعمال'));
+    expect(shared, contains('0500000000'));
+  });
+
+  test('هجرة طلبات التسعير: لا يقرأها ثالث ولا يبدّل المزوّد ما طُلب', () {
+    final sql = File(
+      'supabase/migrations/20260819000000_quote_requests.sql',
+    ).readAsStringSync();
+
+    // لا سياسة قراءة عامّة: نصّ الطلب فيه ميزانية التاجر وهاتفه.
+    expect(sql, isNot(contains('for select\n  using (status')));
+    expect(sql, contains('quote_requests_read_own'));
+    expect(sql, contains('quote_requests_read_addressed'));
+
+    // والحارس يمنع المزوّد من إعادة كتابة ما طُلب منه ثم الاحتجاج به.
+    expect(sql, contains('quote_request_guard'));
+    expect(sql, contains('new.body        := old.body;'));
+    expect(sql, contains('new.budget_sar  := old.budget_sar;'));
+    expect(sql, contains('new.merchant_id := old.merchant_id;'));
+
+    // والإرسال إلى معتمَد وحده: طلبٌ إلى مزوّد معلَّق لا يقرأه أحد.
+    expect(sql, contains("p.status = 'approved'"));
   });
 
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────
