@@ -414,6 +414,28 @@ class _Rating extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = L.of(context);
+
+    // بلا مراجعات لا نجوم. كان يُعرض «★ ٠٫٠ (٠)» فيقرؤه التاجر تقييمًا
+    // سيّئًا لا غيابَ تقييم، ويُدفن المزوّد الجديد قبل أن يبدأ. والشارة
+    // تقول الحقيقة: جديد، ولمّا يُقيَّم.
+    if (provider.unrated) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: context.scheme.primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Text(
+          l.marketNewProvider,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: context.scheme.primary,
+          ),
+        ),
+      );
+    }
+
     // تقييم واحد مقروء لقارئ الشاشة بدل نجمة ورقمين متفرّقين.
     return Semantics(
       label: l.marketRatingSemantics(

@@ -35,7 +35,7 @@ void main() {
     'lib/screens/payment/payment_flow.dart': 6,
     'lib/screens/order_map_screen.dart': 5,
     'lib/widgets/print_cost_calculator.dart': 4,
-    'lib/widgets/print_mockup.dart': 2,
+    'lib/widgets/print_mockup.dart': 1,
 
     // محرك التصميم: نصوصه تُرسم **داخل الإعلان** لا في الواجهة («عرض
     // خاص»، «لفترة محدودة»)، فلغتها لغة الجمهور لا لغة التاجر. تُحسم

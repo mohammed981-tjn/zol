@@ -61,6 +61,7 @@ class ServiceProvider {
     required this.works,
     this.verified = false,
     this.respondsInHours,
+    this.usesPlatformCatalog = false,
   });
 
   final String id;
@@ -86,6 +87,19 @@ class ServiceProvider {
 
   /// متوسط زمن الردّ بالساعات. `null` يعني غير معلوم بعد.
   final int? respondsInHours;
+
+  /// هل كتالوج المنصّة كتالوجُ هذا المزوّد فعلًا؟
+  ///
+  /// علَمٌ صريح لا استدلالٌ من الصنف. الصنف «طباعة» يشترك فيه طرفان
+  /// مختلفان تمامًا: شبكةُ المطابع الخمس التي نعرف أسعارها وإحداثياتها
+  /// ونوجّه إليها الطلب المدفوع، ومزوّدٌ سجّل نفسه بسعره هو. وعرضُ
+  /// كتالوج المنصّة على صفحة الثاني يبيع أسعارًا ليست أسعاره، ثم يُسند
+  /// الطلب إلى مطبعة أخرى — فلا هو باع ولا التاجر اشترى ممّن اختار.
+  ///
+  /// ويبقى `false` لكل مزوّد يأتي من الخادم: لا إحداثيات له في الجدول،
+  /// ولا قناة تُبلّغه بطلب. وطلبٌ مدفوع بالبطاقة إلى جهة لا تُبلَّغ خسارةُ
+  /// مالٍ لا تناقضُ أرقام.
+  final bool usesPlatformCatalog;
 
   bool get onRequest => priceFrom <= 0;
 
@@ -113,11 +127,12 @@ final List<ServiceProvider> serviceProviders = [
       // هنا. رقمٌ يُكتب في ملفّ الدليل ينفصل عن التسعير الفعلي بعد أول
       // تعديل، فيرى التاجر «من ٤٥ ر.س» ثم يُطالَب بغيرها عند الطلب.
       priceFrom: printCatalogMinPrice,
-      rating: 4.6,
-      reviews: 128,
+      rating: 0,
+      reviews: 0,
       works: printCatalogLabels,
       verified: true,
       respondsInHours: 3,
+      usesPlatformCatalog: true,
     ),
   ),
   const ServiceProvider(
@@ -127,8 +142,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'الرياض',
     tagline: 'هوية بصرية كاملة: شعار ودليل ألوان وخطوط جاهزة للتطبيق',
     priceFrom: 1200,
-    rating: 4.8,
-    reviews: 64,
+    rating: 0,
+    reviews: 0,
     works: ['هوية مقهى تخصصي', 'شعار عيادة أسنان', 'دليل ألوان متجر أزياء'],
     verified: true,
     respondsInHours: 6,
@@ -140,8 +155,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'جدة',
     tagline: 'تصميم عربي بخطّ يدوي — لمن يريد هوية لا تشبه القوالب',
     priceFrom: 800,
-    rating: 4.7,
-    reviews: 41,
+    rating: 0,
+    reviews: 0,
     works: ['شعار مطعم شعبي', 'قائمة طعام مخطوطة'],
     respondsInHours: 12,
   ),
@@ -152,8 +167,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'الرياض',
     tagline: 'تصوير منتجات بخلفية بيضاء معزولة — جاهزة للرفع مباشرة',
     priceFrom: 35,
-    rating: 4.9,
-    reviews: 210,
+    rating: 0,
+    reviews: 0,
     works: ['٣٠ منتج عناية', 'تشكيلة عطور', 'حلويات بإضاءة طبيعية'],
     verified: true,
     respondsInHours: 2,
@@ -165,8 +180,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'الدمام',
     tagline: 'تصوير مشهدي للمأكولات — الطبق كما يُشتهى لا كما هو',
     priceFrom: 60,
-    rating: 4.5,
-    reviews: 87,
+    rating: 0,
+    reviews: 0,
     works: ['قائمة مطعم بحري', 'مقهى مختص'],
     respondsInHours: 8,
   ),
@@ -177,8 +192,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'جدة',
     tagline: 'مقاطع ١٥ ثانية للسناب والتيك توك من صورك الحالية',
     priceFrom: 250,
-    rating: 4.4,
-    reviews: 53,
+    rating: 0,
+    reviews: 0,
     works: ['ريل افتتاح فرع', 'إعلان عرض نهاية الأسبوع'],
     respondsInHours: 5,
   ),
@@ -189,8 +204,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'الرياض',
     tagline: 'إدارة ميزانية إعلانك على سناب وتيك توك وتقرير أسبوعي',
     priceFrom: 0, // حسب الميزانية
-    rating: 4.6,
-    reviews: 38,
+    rating: 0,
+    reviews: 0,
     works: ['حملة مطعم — ٣٫٢ ضعف عائد', 'إطلاق متجر أزياء'],
     verified: true,
     respondsInHours: 4,
@@ -202,8 +217,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'بريدة',
     tagline: 'لوحة المحل من التصميم إلى التركيب — مع رخصة البلدية',
     priceFrom: 900,
-    rating: 4.3,
-    reviews: 26,
+    rating: 0,
+    reviews: 0,
     works: ['واجهة صيدلية', 'ستيكر سيارة توصيل'],
     respondsInHours: 24,
   ),
@@ -214,8 +229,8 @@ final List<ServiceProvider> serviceProviders = [
     city: 'الرياض',
     tagline: 'أكواب وأقلام وأكياس بشعارك — من ٥٠ قطعة',
     priceFrom: 6,
-    rating: 4.5,
-    reviews: 94,
+    rating: 0,
+    reviews: 0,
     works: ['أكواب مقهى', 'أكياس متجر', 'تيشيرتات فريق'],
     respondsInHours: 10,
   ),
@@ -247,11 +262,28 @@ List<ServiceProvider> filterProviders({
           p.kind.label.contains(q) ||
           p.works.any((w) => w.contains(q));
     }).toList()
-    // الأعلى تقييمًا أولًا، وعند التساوي الأكثر مراجعات: تقييم ٥٫٠ من
-    // مراجعتين ليس أفضل من ٤٫٨ من مئتين.
+    // الترتيب على ما نعرفه حقًّا.
+    //
+    // كان على التقييم: الأعلى نجومًا أوّلًا. والنجوم كانت **مكتوبة في
+    // هذا الملفّ** — «٤٫٩ من ٢١٠ مراجعة» لمزوّد لم يبِع شيئًا قطّ. فكان
+    // الترتيبُ ترتيبًا بأرقام اخترعناها، والعرضُ إيهامًا بسوق قائم.
+    //
+    // فبقي ما نعرفه: التوثيق (راجعناه بأنفسنا)، ثم سرعة الردّ (يقولها
+    // المزوّد ويُحاسَب عليها)، ثم السعر. والتقييم يبقى في الترتيب أوّلًا
+    // ليعمل من تلقائه يوم توجد مراجعات حقيقية.
     ..sort((a, b) {
-      final byRating = b.rating.compareTo(a.rating);
-      return byRating != 0 ? byRating : b.reviews.compareTo(a.reviews);
+      if (a.unrated != b.unrated) return a.unrated ? 1 : -1;
+      if (!a.unrated) {
+        final byRating = b.rating.compareTo(a.rating);
+        if (byRating != 0) return byRating;
+        final byReviews = b.reviews.compareTo(a.reviews);
+        if (byReviews != 0) return byReviews;
+      }
+      if (a.verified != b.verified) return a.verified ? -1 : 1;
+      final ah = a.respondsInHours ?? 1 << 20;
+      final bh = b.respondsInHours ?? 1 << 20;
+      if (ah != bh) return ah.compareTo(bh);
+      return a.priceFrom.compareTo(b.priceFrom);
     });
 }
 

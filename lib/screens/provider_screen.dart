@@ -138,16 +138,20 @@ class ProviderScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  if (provider.kind == ServiceKind.printing)
-                    // مزوّد الطباعة وحده يعرض كتالوجًا حقيقيًّا بأسعار
-                    // فعلية وزرّ يطلب — بقيّة الأصناف تنتظر لوحة تسجيل
-                    // المزوّدين على الخادم، ولا نُظهر لها ما لا نملكه.
+                  if (provider.usesPlatformCatalog)
+                    // الكتالوج لمن هو كتالوجه فعلًا — شبكة المطابع التي
+                    // نعرف أسعارها وإحداثياتها ونوجّه إليها الطلب المدفوع.
+                    //
+                    // وكان الشرط على **الصنف**: فأي مزوّد يسجّل نفسه
+                    // «طباعة» تُعرض صفحتُه بأسعار المنصّة لا بأسعاره،
+                    // وتُهمَل أعماله التي كتبها، ثم يذهب الطلب إلى مطبعة
+                    // أخرى — فلا هو باع ولا التاجر اشترى ممّن اختار.
                     _PrintCatalogList(art: art)
                   else
                     for (final work in provider.works)
                       _WorkTile(title: work, art: art),
                   const SizedBox(height: AppSpacing.xl),
-                  if (provider.kind != ServiceKind.printing) ...[
+                  if (!provider.usesPlatformCatalog) ...[
                     FilledButton.icon(
                       onPressed: () => _requestQuote(context),
                       icon: const Icon(Icons.send_outlined),

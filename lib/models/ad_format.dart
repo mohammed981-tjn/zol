@@ -165,6 +165,14 @@ extension AdFormatInfo on AdFormat {
 /// كسرها: أي نصّ غير معروف يعود إلى المربّع وهو أسلم الصيغ.
 AdFormat adFormatFromLabel(String? label) {
   if (label == null) return AdFormat.square;
+
+  // الاسم البرمجي أوّلًا. التسمية المعروضة تُترجَم يومًا، وإعلانٌ محفوظ
+  // على جهاز تاجر يحمل تسميةً بلغةٍ بدّلها صاحبه لا يجد نفسه في الجدول
+  // فيسقط إلى «مربّع» — وتضيع صيغته وتُطبع على لوحة أخرى. فيُقبل
+  // الاسمان: البرمجي لأنه لا يتغيّر، والتسمية لأنها محفوظة على الأجهزة.
+  for (final f in AdFormat.values) {
+    if (f.name == label) return f;
+  }
   for (final f in AdFormat.values) {
     if (f.label == label) return f;
   }

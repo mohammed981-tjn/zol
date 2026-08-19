@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ad_template.dart';
+import '../models/ad_format.dart';
 import '../models/generated_ad.dart';
 import '../models/print_catalog.dart';
 import 'ad_design_preview.dart';
@@ -84,7 +85,13 @@ class _FittedDesign extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ratio = ad.brief.format == 'منشور مربع' ? 1.0 : 9 / 16;
+    // النسبة من الصيغة نفسها لا من مقارنة نصّية بقيمتين.
+    //
+    // كانت `format == 'منشور مربع' ? 1.0 : 9/16`: كل ما ليس مربّعًا
+    // يُرسم ٩:١٦. فيوافق التاجر على رول أب ‎85×200‎ رآه بنسبة الستوري،
+    // وعلى كرت ‎9×5‎ رآه طوليًّا — ثم يأتيه المطبوع على غير ما رأى. وهي
+    // أيضًا مقارنة بنصّ عربي محفور تنكسر بأول ترجمة.
+    final ratio = adFormatFromLabel(ad.brief.format).aspect;
     return FittedBox(
       fit: BoxFit.cover,
       clipBehavior: Clip.hardEdge,

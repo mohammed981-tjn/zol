@@ -4080,8 +4080,80 @@ void main() {
     expect(fresh.unrated, isTrue);
     expect(fresh.onRequest, isTrue);
 
-    final seeded = serviceProviders.first;
-    expect(seeded.unrated, isFalse, reason: 'المزوّدون المحلّيون لهم تقييم');
+    // ولا مزوّد في الدليل يحمل تقييمًا كتبناه نحن.
+    //
+    // كان هذا الاختبار يشترط العكس — أن للمزوّدين المحلّيين تقييمًا —
+    // فكان يحرس الأرقام المخترعة بدل أن يمنعها: «٤٫٩ من ٢١٠ مراجعة»
+    // لمزوّد لم يبِع شيئًا قطّ.
+    for (final p in serviceProviders) {
+      expect(
+        p.unrated,
+        isTrue,
+        reason: 'تقييم مكتوب في الملفّ لمزوّد لم يُقيَّم: ${p.name}',
+      );
+    }
+
+    // والترتيب لا ينهار بلا تقييمات: يبقى محدَّدًا ويقدّم الموثّق.
+    final ordered = filterProviders(kind: ServiceKind.printing);
+    expect(ordered, isNotEmpty);
+    for (var i = 1; i < ordered.length; i++) {
+      if (ordered[i - 1].verified != ordered[i].verified) {
+        expect(
+          ordered[i - 1].verified,
+          isTrue,
+          reason: 'غير الموثّق تقدّم على الموثّق',
+        );
+      }
+    }
+  });
+
+
+  testWidgets('مزوّد طباعة مسجَّل لا تُباع أسعار المنصّة باسمه', (tester) async {
+    // الشرط كان على **الصنف**: فأيّ مزوّد يسجّل نفسه «طباعة» تُعرض صفحته
+    // بكتالوج المنصّة وأسعارها، وتُهمَل أعماله التي كتبها، ثم يُسند الطلب
+    // إلى إحدى المطابع الخمس — فلا هو باع ولا التاجر اشترى ممّن اختار.
+    final state = AppState();
+    const registered = ServiceProvider(
+      id: '3f1c2b7a-8d4e-4a19-9f22-5b6c7d8e9f01',
+      name: 'مطبعة الوادي',
+      kind: ServiceKind.printing,
+      city: 'أبها',
+      tagline: 'طباعة رقمية سريعة داخل أبها',
+      priceFrom: 30,
+      rating: 0,
+      reviews: 0,
+      works: ['كروت لمطعم', 'لوحة محل'],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: const ProviderScreen(provider: registered),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // أعماله هو تُعرض…
+    expect(find.text('كروت لمطعم'), findsOneWidget);
+    // …ولا يُعرض كتالوج المنصّة على صفحته.
+    for (final product in printCatalog) {
+      expect(
+        find.text(product.label),
+        findsNothing,
+        reason: 'كتالوج المنصّة معروض على صفحة مزوّد ليس صاحبه',
+      );
+    }
+    // وله مسار تواصل: زرّ التسعيرة كان محجوبًا عن كل صنف «طباعة».
+    expect(find.text('اطلب عرض سعر'), findsOneWidget);
+
+    // وشبكة المطابع نفسها ما زالت تعرض الكتالوج — العلَم لا الصنف.
+    final network = serviceProviders.firstWhere((p) => p.usesPlatformCatalog);
+    expect(network.kind, ServiceKind.printing);
   });
 
   test('التصفية تعمل على أي مصدر لا على القائمة المحلّية وحدها', () {
