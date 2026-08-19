@@ -25,5 +25,24 @@ Color resolveColorRole(ColorRole role, ArtPalette art, {Color? behind}) =>
 /// داكنة فمرّ أبيضَ على أبيض.
 Color backgroundBehind(DesignElement e, DesignSpec spec, ArtPalette art) {
   if (e.fill != null) return resolveColorRole(e.fill!, art);
+
+  // لوحٌ **سابق** في القائمة يقع تحت هذا العنصر هو ما تحت الحروف فعلًا،
+  // لا الخلفية العامّة. العارض يرسم بترتيب القائمة (اللاحق فوق السابق)،
+  // فشريطٌ حياديّ رُسم قبل نصٍّ حياديّ يعطي حياديًّا على حياديّ — ويمرّ
+  // الفحصَ لأنه قاس اللون على خلفيةٍ لا يراها المشاهد أصلًا.
+  final mine = spec.elements.indexOf(e);
+  final upto = mine < 0 ? spec.elements.length : mine;
+  Color? beneath;
+  for (var i = 0; i < upto; i++) {
+    final other = spec.elements[i];
+    if (other.fill == null) continue;
+    // تغطيةٌ جزئية لا تكفي للحكم: الحرف قد يقع خارج اللوح. نأخذ اللوح
+    // الذي يبتلع العنصر ابتلاعًا يكاد يكون تامًّا.
+    if (other.rect.overlapRatio(e.rect) >= 0.9) {
+      beneath = resolveColorRole(other.fill!, art);
+    }
+  }
+  if (beneath != null) return beneath;
+
   return spec.backdrop.isLight ? art.neutral : art.deep;
 }

@@ -3745,6 +3745,294 @@ void main() {
     expect(sql, contains("p.status = 'approved'"));
   });
 
+
+  // ── ما كشفه الفحص الشامل ────────────────────────────────────────────
+
+  test('الطبيب يمسح حتى الاستقرار: إزاحةٌ تُحدث تداخلًا جديدًا لا تُهمَل', () {
+    // المسح المفرد كان يمرّ على الأزواج بالترتيب ويُعدّل أثناء مروره:
+    // عنصرٌ أُنزل يهبط فوق عنصرٍ فُحص قبله، والزوج لا يُزار ثانيةً —
+    // فيخرج التقرير «صالح» والتداخل باقٍ.
+    const spec = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.1, 0.10, 0.8, 0.12),
+          text: 'العنوان',
+        ),
+        DesignElement(
+          role: ElementRole.subhead,
+          rect: SpecRect(0.1, 0.12, 0.8, 0.12), // يغطّي العنوان
+          text: 'السطر الثانوي',
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.1, 0.26, 0.8, 0.12), // حيث سيهبط الثانوي
+          text: 'اطلب الآن',
+        ),
+      ],
+    );
+
+    final report = SpecDoctor.review(spec, brandColor: const Color(0xFF2C6BED));
+
+    // الثابتة: **إمّا** ألّا يبقى تداخل، **وإمّا** أن يُبلَّغ عنه بلا
+    // إصلاح فيُعاد الطلب. ما لا يجوز هو الثالث: تقرير «صالح» فوق تصميم
+    // متداخل — وهو ما كان يقع.
+    final texts = report.spec.elements.where((e) => e.isText).toList();
+    var residual = 0.0;
+    for (var i = 0; i < texts.length; i++) {
+      for (var j = i + 1; j < texts.length; j++) {
+        final r = texts[i].rect.overlapRatio(texts[j].rect);
+        if (r > residual) residual = r;
+      }
+    }
+    if (residual > SpecDoctor.maxTextOverlap) {
+      expect(
+        report.usable,
+        isFalse,
+        reason:
+            'تقرير «صالح» وفيه تداخل باقٍ '
+            '(${(residual * 100).round()}٪)',
+      );
+    }
+
+    // ولا يمرّ الاختبار فارغًا: المدخل متداخل فعلًا، فلا بدّ من بلاغ.
+    expect(
+      report.issues.any((i) => i.code == SpecIssueCode.overlap),
+      isTrue,
+      reason: 'مدخلٌ متداخل ولا بلاغ تداخل — الفحص لم يعمل أصلًا',
+    );
+  });
+
+  test('الطبيب يرى الحاجب لا النصّ وحده: صورة فوق عنوان تُبلَّغ', () {
+    // `shape` بلوح معتم و`product` بصورة معتمة يدفنان العنوان دفنًا
+    // تامًّا، والعارض يرسم بترتيب القائمة. مدقّقٌ يفحص النصّ ضدّ النصّ
+    // فقط يُجيز تصميمًا لا يُرى عنوانه.
+    const spec = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.1, 0.12, 0.8, 0.16),
+          text: 'عنوان مدفون',
+        ),
+        DesignElement(
+          role: ElementRole.product,
+          rect: SpecRect(0.1, 0.12, 0.8, 0.5), // فوقه تمامًا
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.3, 0.80, 0.4, 0.08),
+          text: 'اطلب الآن',
+        ),
+      ],
+    );
+
+    final report = SpecDoctor.review(spec, brandColor: const Color(0xFF2C6BED));
+    expect(
+      report.issues.any((i) => i.code == SpecIssueCode.overlap),
+      isTrue,
+      reason: 'المنتج يدفن العنوان والمدقّق ساكت',
+    );
+
+    // وإن أُصلح فالنصّ هو الذي يُزاح، لا الحاجب: موضع المنتج تكوينٌ
+    // قصده النموذج.
+    final product = report.spec.firstOf(ElementRole.product)!;
+    expect(product.rect.y, closeTo(0.12, 1e-9));
+  });
+
+  test('التباين يُقاس على ما تحت الحروف: لوحٌ سابق يُحسب', () {
+    // شريطٌ حياديّ رُسم قبل نصٍّ حياديّ يعطي حياديًّا على حياديّ، وكان
+    // الفحص يقيس على خلفيةٍ لا يراها المشاهد أصلًا فيمرّ.
+    const spec = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.shape,
+          rect: SpecRect(0.05, 0.10, 0.90, 0.20),
+          fill: ColorRole.neutral,
+        ),
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.08, 0.12, 0.84, 0.16),
+          text: 'عنوان فوق شريط',
+          color: ColorRole.neutral,
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.3, 0.80, 0.4, 0.08),
+          text: 'اطلب الآن',
+        ),
+      ],
+    );
+
+    const brand = Color(0xFF2C6BED);
+    final art = ArtPalette.from(brand);
+    final headline = spec.elements[1];
+    expect(
+      backgroundBehind(headline, spec, art),
+      art.neutral,
+      reason: 'الخلفية المحسوبة ليست اللوح الذي تحت الحروف',
+    );
+
+    // والطبيب يمسك النتيجة: حياديّ على حياديّ لا يُقرأ.
+    final report = SpecDoctor.review(spec, brandColor: brand);
+    final drawn = report.spec.elements[1];
+    final behind = backgroundBehind(drawn, report.spec, art);
+    expect(
+      ArtPalette.contrast(behind, resolveColorRole(drawn.color, art, behind: behind)),
+      greaterThanOrEqualTo(SpecDoctor.minContrast),
+    );
+  });
+
+  test('sizeFactor مقيَّد: النموذج يظنّها نقاطًا أحيانًا', () {
+    final huge = DesignElement.fromJson({
+      'role': 'headline',
+      'rect': {'x': 0.1, 'y': 0.1, 'w': 0.8, 'h': 0.2},
+      'text': 'عنوان',
+      'sizeFactor': 12, // ظنّها نقاطًا
+    });
+    expect(huge.sizeFactor, lessThanOrEqualTo(0.22));
+
+    final tiny = DesignElement.fromJson({
+      'role': 'headline',
+      'rect': {'x': 0.1, 'y': 0.1, 'w': 0.8, 'h': 0.2},
+      'text': 'عنوان',
+      'sizeFactor': 0.0001,
+    });
+    expect(tiny.sizeFactor, greaterThanOrEqualTo(0.012));
+  });
+
+  testWidgets('دورٌ مجهول لا يبتلع نصّ التاجر', (tester) async {
+    // كل دور لا يعرفه المخطط يسقط إلى `shape`، وكان العارض يرسمه صندوقًا
+    // فارغًا — فيختفي كلام التاجر بلا أن يعلم به أحد.
+    final spec = DesignSpec.fromJson({
+      'format': 'square',
+      'backdrop': 'mesh',
+      'elements': [
+        {
+          'role': 'title', // اسم اخترعه النموذج
+          'rect': {'x': 0.1, 'y': 0.1, 'w': 0.8, 'h': 0.2},
+          'text': 'كلام لا يجوز أن يضيع',
+        },
+      ],
+    });
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: SizedBox(
+            width: 320,
+            child: SpecRenderer(spec: spec, brandColor: const Color(0xFF2C6BED)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final drawn = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
+        .toList();
+    expect(drawn.any((t) => t.contains('كلام لا يجوز أن يضيع')), isTrue);
+  });
+
+  testWidgets('لوحة الإعلان لا تنقلب حين يبدّل التاجر لغة واجهته', (
+    tester,
+  ) async {
+    // كل محاذاة في محرّك التصميم اتجاهية، فواجهةٌ إنجليزية كانت تقلب
+    // إعلانًا عربيًّا كاملًا — والانقلاب ينتقل إلى الملفّ المصدَّر.
+    expect(adTextDirection('عرض خاص'), TextDirection.rtl);
+    expect(adTextDirection('Special offer'), TextDirection.ltr);
+    expect(adTextDirection('٣٠٪ خصم'), TextDirection.rtl);
+    expect(adTextDirection('٣٠٪'), TextDirection.rtl, reason: 'بلا حرف حاسم');
+
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        // الواجهة إنجليزية عمدًا.
+        locale: const Locale('en'),
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        home: AppStateScope(
+          notifier: state,
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: AdDesignPreview(
+                  ad: GeneratedAd(
+                    brief: AdBrief(
+                      productName: 'قهوة',
+                      description: '',
+                      tone: 'فخم',
+                      platform: 'إنستغرام',
+                      format: 'منشور مربع',
+                    ),
+                    kind: AdKind.copy,
+                    headline: 'عرض خاص على القهوة',
+                    body: 'لفترة محدودة',
+                    hashtags: const [],
+                    createdAt: DateTime(2026),
+                  ),
+                  showWatermark: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final inner = tester.widget<Directionality>(
+      find
+          .descendant(
+            of: find.byType(AdDesignPreview),
+            matching: find.byType(Directionality),
+          )
+          .first,
+    );
+    expect(
+      inner.textDirection,
+      TextDirection.rtl,
+      reason: 'اللوحة تبعت لغة الواجهة فانقلب الإعلان العربي',
+    );
+  });
+
+  test('فشل المحاولة الثانية لا يمحو حصاد الأولى', () async {
+    var calls = 0;
+    final service = wishService(
+      MockClient((req) async {
+        calls++;
+        if (calls == 1) {
+          // تخطيط فيه علّة لا تُصلَح، فتُطلب محاولة ثانية.
+          return http.Response.bytes(
+            utf8.encode(liveDesignBody(broken: true)),
+            200,
+          );
+        }
+        return http.Response.bytes(utf8.encode('{"ok":false}'), 503);
+      }),
+    );
+
+    final result = await service.design(
+      const DesignWish(text: 'رول أب', format: AdFormat.rollUp),
+      brandColor: const Color(0xFF6B4A2F),
+    );
+
+    expect(calls, 2);
+    expect(
+      result.designs,
+      isNotEmpty,
+      reason: 'تخطيط الأولى ضاع لأن الثانية سقطت — والتصميم كان في اليد',
+    );
+  });
+
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────
 
   test('الهجرة تمنع المزوّد من اعتماد نفسه وتوثيق نفسه', () {

@@ -206,7 +206,11 @@ class DesignElement {
     fill: _enumFrom(ColorRole.values, j['fill']),
     align: _enumFrom(SpecAlign.values, j['align']) ?? SpecAlign.start,
     maxLines: (j['maxLines'] as num?)?.toInt().clamp(1, 6) ?? 2,
-    sizeFactor: (j['sizeFactor'] as num?)?.toDouble(),
+    // الحجم كسر من عرض اللوحة، ويُقيَّد هنا لا في العارض: النموذج يُخرج
+    // أحيانًا ٠٫٥ أو ١٢ (يظنّها نقاطًا)، فيخرج حرفٌ أطول من اللوحة كلّها.
+    // و`ArtText` يُصغّر ما يفيض لكنه لا يُكبّر ما ضؤل، فحرفٌ عند ٠٫٠٠١
+    // يخرج نقطةً لا تُقرأ ولا بلاغ.
+    sizeFactor: (j['sizeFactor'] as num?)?.toDouble().clamp(0.012, 0.22),
     weight: (j['weight'] as num?)?.toInt().clamp(100, 900) ?? 700,
   );
 }

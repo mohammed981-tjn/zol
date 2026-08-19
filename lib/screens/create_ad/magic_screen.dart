@@ -61,8 +61,8 @@ class _MagicScreenState extends State<MagicScreen> {
   int _stage = 0;
   int _selectedCard = 0;
 
-  /// فهارس البطاقات التي يجري توليد مشهدها السحابي الآن.
-  final Set<int> _sceneLoading = {};
+  /// البطاقات التي يجري توليد مشهدها السحابي الآن — بهويّتها لا بفهرسها.
+  final Set<GeneratedAd> _sceneLoading = {};
 
   /// نصّ الأمنية وحالتها.
   final TextEditingController _wishText = TextEditingController();
@@ -183,10 +183,13 @@ class _MagicScreenState extends State<MagicScreen> {
 
   /// توليد مشهد سحابي للصيغة المختارة وحدها — نداء واحد عند الضرورة،
   /// وفشله لا يمس البطاقة: القالب المحلي يبقى معروضًا كما هو.
-  Future<void> _generateScene(int index) async {
-    if (_sceneLoading.contains(index)) return;
-    final ad = _ads![index];
-    setState(() => _sceneLoading.add(index));
+  ///
+  /// والكتابة عند العودة **بهوية البطاقة** لا بفهرسها: الأمنية تُدرج
+  /// بطاقاتها في المقدّمة، فالفهرس الذي بدأ عليه الطلب قد يشير عند
+  /// عودته إلى إعلان آخر — فيُلصق مشهدُ منتجٍ على إعلان منتجٍ غيره.
+  Future<void> _generateScene(GeneratedAd ad) async {
+    if (_sceneLoading.contains(ad)) return;
+    setState(() => _sceneLoading.add(ad));
     try {
       final scene = await _gateway.generateScene(
         widget.brief,
@@ -196,21 +199,24 @@ class _MagicScreenState extends State<MagicScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _ads![index] = ad.copyWith(
-          imageUrl: scene.url,
-          imageVerified: scene.verified,
-        );
-        _sceneLoading.remove(index);
+        final at = _ads?.indexOf(ad) ?? -1;
+        if (at >= 0) {
+          _ads![at] = ad.copyWith(
+            imageUrl: scene.url,
+            imageVerified: scene.verified,
+          );
+        }
+        _sceneLoading.remove(ad);
       });
     } on GatewayException catch (e) {
       if (!mounted) return;
-      setState(() => _sceneLoading.remove(index));
+      setState(() => _sceneLoading.remove(ad));
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
-      setState(() => _sceneLoading.remove(index));
+      setState(() => _sceneLoading.remove(ad));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تعذّر توليد المشهد. حاول مجددًا.')),
       );
@@ -558,9 +564,9 @@ class _MagicScreenState extends State<MagicScreen> {
                 // المشهد السحابي عند الطلب — للصيغة التي أعجبت التاجر
                 // وحدها، لا للثلاث جزافًا.
                 onScene: ads[i].imageUrl == null && widget.brief.hasProductImage
-                    ? () => _generateScene(i)
+                    ? () => _generateScene(ads[i])
                     : null,
-                sceneLoading: _sceneLoading.contains(i),
+                sceneLoading: _sceneLoading.contains(ads[i]),
               ),
             ),
           ),

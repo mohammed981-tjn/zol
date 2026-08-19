@@ -132,7 +132,12 @@ class SpecRenderer extends StatelessWidget {
               ),
             ),
 
-      ElementRole.shape => const SizedBox.expand(),
+      // الشكل زخرفة: لوحه يأتي من `fill` أدناه. لكنه أيضًا الدور الذي
+      // يسقط إليه **كل دور مجهول** يخترعه النموذج («title» مثلًا). فإن
+      // حمل نصًّا فهو نصّ أُسيئت تسميته، ورسمُه صندوقًا فارغًا يبتلع
+      // كلام التاجر بلا أن يعلم به أحد.
+      ElementRole.shape when (e.text ?? '').trim().isEmpty =>
+        const SizedBox.expand(),
 
       // كل ما تبقّى نصّ. `ArtText` يقيس ويضبط ويكسر كسرًا متوازنًا، فما
       // يقترحه النموذج من حجم اقتراحٌ لا أمر — والقياس يحسم.

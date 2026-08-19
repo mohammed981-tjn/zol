@@ -16,6 +16,34 @@ import '../models/generated_ad.dart';
 import '../models/seasonal_theme.dart';
 import '../state/app_state.dart';
 
+/// اتجاه لوحة الإعلان — من نصّه هو، لا من لغة الواجهة.
+///
+/// إعلانُ التاجر يخصّ جمهوره، وواجهةُ التطبيق تخصّه هو. وكل محاذاة في
+/// محرّك التصميم اتجاهية، فلو تبع الاتجاهُ لغةَ الواجهة لانقلب تصميمٌ
+/// عربيّ كامل لأن صاحبه فضّل الإنجليزية في إعداداته — وانتقل الانقلاب
+/// إلى الملفّ المصدَّر وإلى ألف نسخة مطبوعة.
+///
+/// والقاعدة على المحتوى لا على إعداد: أوّل حرف ذي اتجاه قويّ يحسم. وهذا
+/// يصحّ اليوم للعربية، ويصحّ غدًا إن ولّدنا إعلانًا إنجليزيًّا.
+TextDirection adTextDirection(String sample) {
+  for (final rune in sample.runes) {
+    // العربية والعبرية والسريانية والثانا — نطاقات الاتجاه القويّ يمينًا.
+    if ((rune >= 0x0590 && rune <= 0x08FF) ||
+        (rune >= 0xFB1D && rune <= 0xFDFF) ||
+        (rune >= 0xFE70 && rune <= 0xFEFF)) {
+      return TextDirection.rtl;
+    }
+    // لاتيني قويّ يسارًا.
+    if ((rune >= 0x0041 && rune <= 0x005A) ||
+        (rune >= 0x0061 && rune <= 0x007A) ||
+        (rune >= 0x00C0 && rune <= 0x024F)) {
+      return TextDirection.ltr;
+    }
+  }
+  // بلا حرف حاسم: العربية هي لغة التطبيق وجمهوره الأوّل.
+  return TextDirection.rtl;
+}
+
 /// محرك قوالب التصميم — الطبقة الأولى من استراتيجية الذكاء (على الجهاز
 /// 100%): يركّب صورة المنتج مع النص والهوية على أحد عشرة قوالب مختلفة
 /// التركيب، بلوحة ألوان مشتقّة من العلامة أو من صورة المنتج نفسها.
@@ -44,6 +72,19 @@ class AdDesignPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // اتجاه اللوحة من **نصّ الإعلان** لا من لغة الواجهة.
+    //
+    // كل محاذاة في محرّك التصميم اتجاهية (`start`/`end`)، و`ArtText` يصفّ
+    // بالاتجاه المحيط. فتاجرٌ يبدّل واجهته إلى الإنجليزية كان ينقلب
+    // إعلانه العربي كلّه — والانقلاب ينتقل إلى ملفّ PNG المصدَّر وإلى
+    // المطبوع. لغة الواجهة تخصّ التاجر، ولغة الإعلان تخصّ جمهوره.
+    return Directionality(
+      textDirection: adTextDirection('${ad.headline} ${ad.body} ${ad.cta}'),
+      child: _build(context),
+    );
+  }
+
+  Widget _build(BuildContext context) {
     final state = AppStateScope.of(context);
 
     // تخطيطٌ ركّبه الذكاء يتقدّم على القوالب الأحد عشر.
@@ -210,42 +251,52 @@ class _GeneratedLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, c) {
-        final s = c.maxWidth / 400;
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(18 * s),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              SpecRenderer(
-                spec: spec,
-                brandColor: brandColor,
-                product: ad.brief.imageBytes,
-                logo: logo,
-                fontFamily: fontFamily,
-                productScale: ad.brief.productScale,
-                productDx: ad.brief.productDx,
-                productDy: ad.brief.productDy,
-              ),
-              if (showWatermark)
-                Positioned(
-                  bottom: 8 * s,
-                  left: 12 * s,
-                  child: Text(
-                    'zol ✦',
-                    style: TextStyle(
-                      color: (spec.backdrop.isLight ? Colors.black : Colors.white)
-                          .withValues(alpha: 0.42),
-                      fontSize: 10 * s,
-                      fontWeight: FontWeight.w700,
+    // النسبة هنا **لازمة**: `StackFit.expand` أدناه يُعطي `SpecRenderer`
+    // قيودًا محكَمة فتُبطل نسبتَه الداخلية، فيُمطّ الرول أب إلى مربّع
+    // ويخرج المطبوع على غير ما رآه التاجر. ومسار القوالب يلفّ نفسه
+    // بنسبته، وهذا المسار كان بلا لافّ.
+    return AspectRatio(
+      aspectRatio: spec.format.aspect,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final s = c.maxWidth / 400;
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(18 * s),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                SpecRenderer(
+                  spec: spec,
+                  brandColor: brandColor,
+                  product: ad.brief.imageBytes,
+                  logo: logo,
+                  fontFamily: fontFamily,
+                  productScale: ad.brief.productScale,
+                  productDx: ad.brief.productDx,
+                  productDy: ad.brief.productDy,
+                ),
+                if (showWatermark)
+                  Positioned(
+                    bottom: 8 * s,
+                    left: 12 * s,
+                    child: Text(
+                      'zol ✦',
+                      style: TextStyle(
+                        color:
+                            (spec.backdrop.isLight
+                                    ? Colors.black
+                                    : Colors.white)
+                                .withValues(alpha: 0.42),
+                        fontSize: 10 * s,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

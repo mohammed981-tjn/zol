@@ -104,54 +104,103 @@ class SpecDoctor {
       fixed.add(e);
     }
 
-    // ٣) التداخل. الإصلاح هنا ليس آليًّا دائمًا: إزاحة عنصر قد تدفعه فوق
-    //    ثالث. نُصلح الحالة الواضحة (فراغ تحت الأعلى يكفي) ونُبلّغ عن
-    //    غيرها بدل أن ندّعي إصلاحًا يزيد الفوضى.
-    for (var i = 0; i < fixed.length; i++) {
-      if (!fixed[i].isText) continue;
-      for (var j = i + 1; j < fixed.length; j++) {
-        if (!fixed[j].isText) continue;
-        final ratio = fixed[i].rect.overlapRatio(fixed[j].rect);
-        if (ratio <= maxTextOverlap) continue;
+    // ٣) التداخل — يُمسح حتى الاستقرار لا مرّةً واحدة.
+    //
+    //    المسح المفرد كان يمرّ على الأزواج بالترتيب ويُعدّل القائمة أثناء
+    //    مروره: عنصرٌ أُنزل قد يهبط فوق عنصرٍ فُحص قبله، والزوج لا يُزار
+    //    ثانيةً أبدًا. فيخرج التقرير `usable == true` والتداخل باقٍ —
+    //    وهذا أسوأ من عدم الفحص: يمنحنا ثقةً لا سند لها.
+    //
+    //    والتغطية لا تخصّ النصّ وحده: `shape` بلوحٍ معتم و`product`
+    //    بصورة معتمة يُدفنان العنوان دفنًا تامًّا، والعارض يرسم بترتيب
+    //    القائمة فاللاحق فوق السابق. مدقّقٌ يفحص النصّ ضدّ النصّ فقط
+    //    يُجيز تصميمًا لا يُرى عنوانه.
+    const maxSweeps = 4;
+    var sweep = 0;
+    var settled = false;
+    while (!settled && sweep < maxSweeps) {
+      settled = true;
+      sweep++;
+      for (var i = 0; i < fixed.length && settled; i++) {
+        for (var j = i + 1; j < fixed.length && settled; j++) {
+          // يُفحص الزوج إن كان أحدهما نصًّا والآخر نصًّا أو حاجبًا.
+          final a = fixed[i], b = fixed[j];
+          final pairMatters =
+              (a.isText && b.isText) ||
+              (a.isText && _isOpaque(b)) ||
+              (b.isText && _isOpaque(a));
+          if (!pairMatters) continue;
 
-        final upper = fixed[i].rect.y <= fixed[j].rect.y ? i : j;
-        final lower = upper == i ? j : i;
-        final wanted = fixed[upper].rect.bottom + 0.015;
-        final room = 1 - margin - fixed[lower].rect.h;
+          final ratio = a.rect.overlapRatio(b.rect);
+          if (ratio <= maxTextOverlap) continue;
 
-        if (wanted <= room) {
-          fixed[lower] = fixed[lower].copyWith(
-            rect: SpecRect(
-              fixed[lower].rect.x,
-              wanted,
-              fixed[lower].rect.w,
-              fixed[lower].rect.h,
-            ),
-          );
-          issues.add(
-            SpecIssue(
-              code: SpecIssueCode.overlap,
-              element: lower,
-              message:
-                  '${_roleLabel(fixed[lower].role)} يغطّي '
-                  '${_roleLabel(fixed[upper].role)} '
-                  '(${(ratio * 100).round()}٪) — أُنزل تحته',
-              repaired: true,
-            ),
-          );
-        } else {
-          issues.add(
-            SpecIssue(
-              code: SpecIssueCode.overlap,
-              element: lower,
-              message:
-                  '${_roleLabel(fixed[lower].role)} يغطّي '
-                  '${_roleLabel(fixed[upper].role)} ولا فراغ لإنزاله',
-              repaired: false,
-            ),
-          );
+          // الحاجب لا يُزاح: موضعه تكوينٌ قصده النموذج، والنصّ هو الذي
+          // يجب أن يُقرأ. فإن كان أحدهما حاجبًا أُزيح النصّ.
+          final int upper, lower;
+          if (_isOpaque(a) && b.isText) {
+            upper = i;
+            lower = j;
+          } else if (_isOpaque(b) && a.isText) {
+            upper = j;
+            lower = i;
+          } else {
+            upper = a.rect.y <= b.rect.y ? i : j;
+            lower = upper == i ? j : i;
+          }
+
+          final wanted = fixed[upper].rect.bottom + 0.015;
+          final room = 1 - margin - fixed[lower].rect.h;
+
+          if (wanted <= room) {
+            fixed[lower] = fixed[lower].copyWith(
+              rect: SpecRect(
+                fixed[lower].rect.x,
+                wanted,
+                fixed[lower].rect.w,
+                fixed[lower].rect.h,
+              ),
+            );
+            issues.add(
+              SpecIssue(
+                code: SpecIssueCode.overlap,
+                element: lower,
+                message:
+                    '${_roleLabel(fixed[lower].role)} يغطّي '
+                    '${_roleLabel(fixed[upper].role)} '
+                    '(${(ratio * 100).round()}٪) — أُنزل تحته',
+                repaired: true,
+              ),
+            );
+            // القائمة تغيّرت: يُعاد المسح من أوّله بدل متابعة مقارنات
+            // بُنيت على وضعٍ لم يعد قائمًا.
+            settled = false;
+          } else {
+            issues.add(
+              SpecIssue(
+                code: SpecIssueCode.overlap,
+                element: lower,
+                message:
+                    '${_roleLabel(fixed[lower].role)} يغطّي '
+                    '${_roleLabel(fixed[upper].role)} ولا فراغ لإنزاله',
+                repaired: false,
+              ),
+            );
+          }
         }
       }
+    }
+
+    // بلغ السقف ولمّا يستقرّ: إصلاحٌ يلاحق نفسه. نُبلّغ بلا إصلاح بدل أن
+    // نزعم أن التصميم سليم.
+    if (!settled) {
+      issues.add(
+        const SpecIssue(
+          code: SpecIssueCode.overlap,
+          element: -1,
+          message: 'تداخل لا يستقرّ بعد أربع محاولات — التكوين مزدحم',
+          repaired: false,
+        ),
+      );
     }
 
     // ٤) الأركان التي لا يقوم إعلان بدونها.
@@ -178,6 +227,15 @@ class SpecDoctor {
 
     return SpecReport(spec: spec.withElements(fixed), issues: issues);
   }
+
+  /// هل يحجب هذا العنصر ما تحته؟
+  ///
+  /// المنتج صورة معتمة، والشكل ذو اللوح لوحٌ معتم. أما الشكل بلا لوح
+  /// فلا يرسم العارضُ له شيئًا، فلا يحجب.
+  static bool _isOpaque(DesignElement e) =>
+      e.role == ElementRole.product ||
+      (e.role == ElementRole.shape && e.fill != null) ||
+      (e.role == ElementRole.logo);
 
   static bool _sameRect(SpecRect a, SpecRect b) =>
       (a.x - b.x).abs() < 1e-9 &&

@@ -182,7 +182,16 @@ class DesignWishService {
     List<WishDesign> best = const [];
 
     for (var attempt = 1; attempt <= 2; attempt++) {
-      final raw = await _call(wish, attempt: attempt);
+      final ({List<Map<String, dynamic>> specs, String model}) raw;
+      try {
+        raw = await _call(wish, attempt: attempt);
+      } on DesignWishException {
+        // فشل المحاولة الثانية لا يمحو حصاد الأولى. كان الاستثناء يصعد
+        // فيضيع تخطيطٌ صالح للعرض بعلّة واحدة، ويرى التاجر رسالة عطل
+        // بينما التصميم كان في اليد.
+        if (attempt > 1 && best.isNotEmpty) break;
+        rethrow;
+      }
       model = raw.model;
 
       final judged = [
