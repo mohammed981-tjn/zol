@@ -644,4 +644,115 @@ class LEn extends L {
   @override
   String get settingsLanguageNote =>
       'Changing the language changes the app interface only. Your ad copy stays in your audience\'s language.';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingStart => 'Get started';
+
+  @override
+  String get onboardingPickFirst => 'Pick your business to continue';
+
+  @override
+  String get onboardingT1 => 'Your ad is born in seconds';
+
+  @override
+  String get onboardingB1 =>
+      'Upload a photo of your product, pick a tone and a platform, and we hand you copy and a design ready to post.';
+
+  @override
+  String get onboardingT2 => 'Print it at the nearest shop';
+
+  @override
+  String get onboardingB2 =>
+      'Banners, stickers, cards and roll-ups with instant pricing — and your order goes to the partner print shop nearest you.';
+
+  @override
+  String get onboardingT3 => 'And it arrives at your door';
+
+  @override
+  String get onboardingB3 =>
+      'Drop your location on the map and follow the order step by step until it is in your hands.';
+
+  @override
+  String get onboardingCategoryTitle => 'What is your business?';
+
+  @override
+  String get onboardingCategoryBody =>
+      'We write copy in the vocabulary of your field — not generic lines that fit anything.';
+
+  @override
+  String get onboardingCategoryHint => 'You can change this later in Settings';
+
+  @override
+  String get authEmailError => 'Enter a valid email address';
+
+  @override
+  String get authPasswordError => 'Password must be at least 6 characters';
+
+  @override
+  String get authNameError => 'Enter your name';
+
+  @override
+  String get authStoreError => 'Enter your store or business name';
+
+  @override
+  String get authTitleLogin => 'Sign in';
+
+  @override
+  String get authTitleSignup => 'Create a merchant account';
+
+  @override
+  String get authIntroLogin => 'Sign in to pick up your ads and orders';
+
+  @override
+  String get authIntroSignup =>
+      'Create a merchant account to save your ads and track your orders';
+
+  @override
+  String get authFieldName => 'Name *';
+
+  @override
+  String get authHintName => 'Your full name';
+
+  @override
+  String get authFieldStore => 'Store name *';
+
+  @override
+  String get authHintStore => 'e.g. Al-Fajr Roastery';
+
+  @override
+  String get authFieldEmail => 'Email *';
+
+  @override
+  String get authFieldPassword => 'Password *';
+
+  @override
+  String get authHintPassword => 'At least 6 characters';
+
+  @override
+  String get authSubmitLogin => 'Sign in';
+
+  @override
+  String get authSubmitSignup => 'Create account';
+
+  @override
+  String get authSwitchToSignup => 'No account yet? Create one';
+
+  @override
+  String get authSwitchToLogin => 'Already have an account? Sign in';
+
+  @override
+  String authWelcomeBack(String name) {
+    return 'Welcome back, $name!';
+  }
+
+  @override
+  String authAccountCreated(String name) {
+    return 'Your account is ready, $name!';
+  }
 }

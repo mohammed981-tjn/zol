@@ -1188,6 +1188,210 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك.'**
   String get settingsLanguageNote;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In ar, this message translates to:
+  /// **'تخطٍّ'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In ar, this message translates to:
+  /// **'التالي'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingStart.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ الآن'**
+  String get onboardingStart;
+
+  /// No description provided for @onboardingPickFirst.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر نشاطك للمتابعة'**
+  String get onboardingPickFirst;
+
+  /// No description provided for @onboardingT1.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعلانك يولد في ثوانٍ'**
+  String get onboardingT1;
+
+  /// No description provided for @onboardingB1.
+  ///
+  /// In ar, this message translates to:
+  /// **'ارفع صورة منتجك واختر النبرة والمنصة، ونحن نخرج لك نصًا وتصميمًا جاهزين للنشر.'**
+  String get onboardingB1;
+
+  /// No description provided for @onboardingT2.
+  ///
+  /// In ar, this message translates to:
+  /// **'اطبعه عند أقرب مطبعة'**
+  String get onboardingT2;
+
+  /// No description provided for @onboardingB2.
+  ///
+  /// In ar, this message translates to:
+  /// **'بنرات، استيكرات، كروت ورول أب بأسعار فورية — ويُسند طلبك تلقائيًا لأقرب مطبعة شريكة لموقعك.'**
+  String get onboardingB2;
+
+  /// No description provided for @onboardingT3.
+  ///
+  /// In ar, this message translates to:
+  /// **'ويصلك حتى الباب'**
+  String get onboardingT3;
+
+  /// No description provided for @onboardingB3.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدّد موقعك على الخريطة وتابع طلبك خطوة بخطوة حتى يصل بين يديك.'**
+  String get onboardingB3;
+
+  /// No description provided for @onboardingCategoryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما نشاطك؟'**
+  String get onboardingCategoryTitle;
+
+  /// No description provided for @onboardingCategoryBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'نكتب لك نصوصًا بمفردات مجالك — لا جملًا عامة تصلح لأي شيء.'**
+  String get onboardingCategoryBody;
+
+  /// No description provided for @onboardingCategoryHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يمكنك تغييره لاحقًا من الإعدادات'**
+  String get onboardingCategoryHint;
+
+  /// No description provided for @authEmailError.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل بريدًا إلكترونيًا صحيحًا'**
+  String get authEmailError;
+
+  /// No description provided for @authPasswordError.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور 6 أحرف على الأقل'**
+  String get authPasswordError;
+
+  /// No description provided for @authNameError.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل اسمك'**
+  String get authNameError;
+
+  /// No description provided for @authStoreError.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل اسم متجرك أو نشاطك'**
+  String get authStoreError;
+
+  /// No description provided for @authTitleLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول'**
+  String get authTitleLogin;
+
+  /// No description provided for @authTitleSignup.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء حساب تاجر'**
+  String get authTitleSignup;
+
+  /// No description provided for @authIntroLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل دخولك لمتابعة إعلاناتك وطلباتك'**
+  String get authIntroLogin;
+
+  /// No description provided for @authIntroSignup.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنشئ حساب تاجر لحفظ إعلاناتك وتتبع طلباتك'**
+  String get authIntroSignup;
+
+  /// No description provided for @authFieldName.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم *'**
+  String get authFieldName;
+
+  /// No description provided for @authHintName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسمك الكامل'**
+  String get authHintName;
+
+  /// No description provided for @authFieldStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المتجر *'**
+  String get authFieldStore;
+
+  /// No description provided for @authHintStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: محمصة الفجر'**
+  String get authHintStore;
+
+  /// No description provided for @authFieldEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد الإلكتروني *'**
+  String get authFieldEmail;
+
+  /// No description provided for @authFieldPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور *'**
+  String get authFieldPassword;
+
+  /// No description provided for @authHintPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'6 أحرف على الأقل'**
+  String get authHintPassword;
+
+  /// No description provided for @authSubmitLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'دخول'**
+  String get authSubmitLogin;
+
+  /// No description provided for @authSubmitSignup.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء الحساب'**
+  String get authSubmitSignup;
+
+  /// No description provided for @authSwitchToSignup.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليس لديك حساب؟ أنشئ حسابًا جديدًا'**
+  String get authSwitchToSignup;
+
+  /// No description provided for @authSwitchToLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'لديك حساب بالفعل؟ سجّل دخولك'**
+  String get authSwitchToLogin;
+
+  /// No description provided for @authWelcomeBack.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرحبًا بعودتك، {name}!'**
+  String authWelcomeBack(String name);
+
+  /// No description provided for @authAccountCreated.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إنشاء حسابك بنجاح، {name}!'**
+  String authAccountCreated(String name);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

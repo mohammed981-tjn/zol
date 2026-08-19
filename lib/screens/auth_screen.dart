@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/icon_circle.dart';
@@ -35,15 +36,16 @@ class _AuthScreenState extends State<AuthScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
+    final l = L.of(context);
     String? error;
     if (email.isEmpty || !email.contains('@')) {
-      error = 'أدخل بريدًا إلكترونيًا صحيحًا';
+      error = l.authEmailError;
     } else if (password.length < 6) {
-      error = 'كلمة المرور 6 أحرف على الأقل';
+      error = l.authPasswordError;
     } else if (!_isLogin && _nameController.text.trim().isEmpty) {
-      error = 'أدخل اسمك';
+      error = l.authNameError;
     } else if (!_isLogin && _storeController.text.trim().isEmpty) {
-      error = 'أدخل اسم متجرك أو نشاطك';
+      error = l.authStoreError;
     }
 
     if (error != null) {
@@ -77,8 +79,8 @@ class _AuthScreenState extends State<AuthScreen> {
       SnackBar(
         content: Text(
           _isLogin
-              ? 'مرحبًا بعودتك، ${state.account!.name}!'
-              : 'تم إنشاء حسابك بنجاح، ${state.account!.name}!',
+              ? l.authWelcomeBack(state.account!.name)
+              : l.authAccountCreated(state.account!.name),
         ),
       ),
     );
@@ -86,9 +88,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isLogin ? 'تسجيل الدخول' : 'إنشاء حساب تاجر'),
+        title: Text(_isLogin ? l.authTitleLogin : l.authTitleSignup),
       ),
       body: SafeArea(
         child: ListView(
@@ -103,9 +106,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _isLogin
-                  ? 'سجّل دخولك لمتابعة إعلاناتك وطلباتك'
-                  : 'أنشئ حساب تاجر لحفظ إعلاناتك وتتبع طلباتك',
+              _isLogin ? l.authIntroLogin : l.authIntroSignup,
               textAlign: TextAlign.center,
               style: TextStyle(color: context.textMuted),
             ),
@@ -113,28 +114,25 @@ class _AuthScreenState extends State<AuthScreen> {
             if (!_isLogin) ...[
               TextField(
                 controller: _nameController,
-                decoration: _decoration('الاسم *', 'اسمك الكامل'),
+                decoration: _decoration(l.authFieldName, l.authHintName),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: _storeController,
-                decoration: _decoration('اسم المتجر *', 'مثال: محمصة الفجر'),
+                decoration: _decoration(l.authFieldStore, l.authHintStore),
               ),
               const SizedBox(height: 14),
             ],
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: _decoration(
-                'البريد الإلكتروني *',
-                'name@example.com',
-              ),
+              decoration: _decoration(l.authFieldEmail, 'name@example.com'),
             ),
             const SizedBox(height: 14),
             TextField(
               controller: _passwordController,
               obscureText: true,
-              decoration: _decoration('كلمة المرور *', '6 أحرف على الأقل'),
+              decoration: _decoration(l.authFieldPassword, l.authHintPassword),
             ),
             if (_error != null) ...[
               const SizedBox(height: 14),
@@ -177,7 +175,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2.4),
                     )
-                  : Text(_isLogin ? 'دخول' : 'إنشاء الحساب'),
+                  : Text(_isLogin ? l.authSubmitLogin : l.authSubmitSignup),
             ),
             const SizedBox(height: 12),
             TextButton(
@@ -188,9 +186,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       _error = null;
                     }),
               child: Text(
-                _isLogin
-                    ? 'ليس لديك حساب؟ أنشئ حسابًا جديدًا'
-                    : 'لديك حساب بالفعل؟ سجّل دخولك',
+                _isLogin ? l.authSwitchToSignup : l.authSwitchToLogin,
               ),
             ),
           ],

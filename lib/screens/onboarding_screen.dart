@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/business_category.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -17,32 +18,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _page = 0;
 
-  static const _pages = [
-    (
-      icon: Icons.auto_awesome,
-      title: 'إعلانك يولد في ثوانٍ',
-      text:
-          'ارفع صورة منتجك واختر النبرة والمنصة، '
-          'ونحن نخرج لك نصًا وتصميمًا جاهزين للنشر.',
-    ),
-    (
-      icon: Icons.print_outlined,
-      title: 'اطبعه عند أقرب مطبعة',
-      text:
-          'بنرات، استيكرات، كروت ورول أب بأسعار فورية — '
-          'ويُسند طلبك تلقائيًا لأقرب مطبعة شريكة لموقعك.',
-    ),
-    (
-      icon: Icons.delivery_dining,
-      title: 'ويصلك حتى الباب',
-      text:
-          'حدّد موقعك على الخريطة وتابع طلبك خطوة بخطوة '
-          'حتى يصل بين يديك.',
-    ),
+  /// الأيقونات ثابتة، والنصّ يُقرأ من الترجمة **وقت البناء**: ثابتٌ ساكن
+  /// يُقرأ مرّة واحدة عند تحميل الصنف فلا يتغيّر حين يبدّل التاجر لغته.
+  static const _icons = [
+    Icons.auto_awesome,
+    Icons.print_outlined,
+    Icons.delivery_dining,
+  ];
+
+  static List<({String title, String text})> _pageText(L l) => [
+    (title: l.onboardingT1, text: l.onboardingB1),
+    (title: l.onboardingT2, text: l.onboardingB2),
+    (title: l.onboardingT3, text: l.onboardingB3),
   ];
 
   /// الصفحة الأخيرة هي سؤال النشاط (بعد صفحات التعريف الثلاث).
-  int get _lastIndex => _pages.length;
+  int get _lastIndex => _icons.length;
   bool get _isCategoryPage => _page == _lastIndex;
 
   BusinessCategory? _category;
@@ -62,25 +53,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   /// سؤال النشاط — الإجابة توجّه مفردات النص المولَّد ومنافعه ودعوة
   /// الإجراء في كل إعلان يُنشئه التاجر لاحقًا.
   Widget _buildCategoryPage() {
+    final l = L.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'ما نشاطك؟',
+          Text(
+            l.onboardingCategoryTitle,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'نكتب لك نصوصًا بمفردات مجالك — لا جملًا عامة تصلح لأي شيء.',
+          Text(
+            l.onboardingCategoryBody,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Color(0xFFCADCFC),
               fontSize: 13.5,
               height: 1.5,
@@ -132,9 +124,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             }).toList(),
           ),
           const SizedBox(height: 18),
-          const Text(
-            'يمكنك تغييره لاحقًا من الإعدادات',
-            style: TextStyle(color: Color(0xFF8B98C4), fontSize: 11.5),
+          Text(
+            l.onboardingCategoryHint,
+            style: const TextStyle(color: Color(0xFF8B98C4), fontSize: 11.5),
           ),
         ],
       ),
@@ -143,6 +135,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
+    final pages = _pageText(l);
     return Scaffold(
       backgroundColor: AppColors.navy,
       body: SafeArea(
@@ -152,9 +146,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 onPressed: _finish,
-                child: const Text(
-                  'تخطٍّ',
-                  style: TextStyle(color: Color(0xFF8B98C4)),
+                child: Text(
+                  l.onboardingSkip,
+                  style: const TextStyle(color: Color(0xFF8B98C4)),
                 ),
               ),
             ),
@@ -163,11 +157,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _controller,
-                itemCount: _pages.length + 1,
+                itemCount: pages.length + 1,
                 onPageChanged: (i) => setState(() => _page = i),
                 itemBuilder: (context, i) {
                   if (i == _lastIndex) return _buildCategoryPage();
-                  final page = _pages[i];
+                  final page = pages[i];
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Column(
@@ -181,7 +175,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            page.icon,
+                            _icons[i],
                             size: 58,
                             color: AppColors.coral,
                           ),
@@ -215,7 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                _pages.length + 1,
+                pages.length + 1,
                 (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -250,9 +244,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     _isCategoryPage
                         ? (_category == null
-                              ? 'اختر نشاطك للمتابعة'
-                              : 'ابدأ الآن')
-                        : 'التالي',
+                              ? l.onboardingPickFirst
+                              : l.onboardingStart)
+                        : l.onboardingNext,
                   ),
                 ),
               ),

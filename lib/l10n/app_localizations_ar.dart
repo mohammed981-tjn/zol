@@ -641,4 +641,114 @@ class LAr extends L {
   @override
   String get settingsLanguageNote =>
       'تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك.';
+
+  @override
+  String get onboardingSkip => 'تخطٍّ';
+
+  @override
+  String get onboardingNext => 'التالي';
+
+  @override
+  String get onboardingStart => 'ابدأ الآن';
+
+  @override
+  String get onboardingPickFirst => 'اختر نشاطك للمتابعة';
+
+  @override
+  String get onboardingT1 => 'إعلانك يولد في ثوانٍ';
+
+  @override
+  String get onboardingB1 =>
+      'ارفع صورة منتجك واختر النبرة والمنصة، ونحن نخرج لك نصًا وتصميمًا جاهزين للنشر.';
+
+  @override
+  String get onboardingT2 => 'اطبعه عند أقرب مطبعة';
+
+  @override
+  String get onboardingB2 =>
+      'بنرات، استيكرات، كروت ورول أب بأسعار فورية — ويُسند طلبك تلقائيًا لأقرب مطبعة شريكة لموقعك.';
+
+  @override
+  String get onboardingT3 => 'ويصلك حتى الباب';
+
+  @override
+  String get onboardingB3 =>
+      'حدّد موقعك على الخريطة وتابع طلبك خطوة بخطوة حتى يصل بين يديك.';
+
+  @override
+  String get onboardingCategoryTitle => 'ما نشاطك؟';
+
+  @override
+  String get onboardingCategoryBody =>
+      'نكتب لك نصوصًا بمفردات مجالك — لا جملًا عامة تصلح لأي شيء.';
+
+  @override
+  String get onboardingCategoryHint => 'يمكنك تغييره لاحقًا من الإعدادات';
+
+  @override
+  String get authEmailError => 'أدخل بريدًا إلكترونيًا صحيحًا';
+
+  @override
+  String get authPasswordError => 'كلمة المرور 6 أحرف على الأقل';
+
+  @override
+  String get authNameError => 'أدخل اسمك';
+
+  @override
+  String get authStoreError => 'أدخل اسم متجرك أو نشاطك';
+
+  @override
+  String get authTitleLogin => 'تسجيل الدخول';
+
+  @override
+  String get authTitleSignup => 'إنشاء حساب تاجر';
+
+  @override
+  String get authIntroLogin => 'سجّل دخولك لمتابعة إعلاناتك وطلباتك';
+
+  @override
+  String get authIntroSignup => 'أنشئ حساب تاجر لحفظ إعلاناتك وتتبع طلباتك';
+
+  @override
+  String get authFieldName => 'الاسم *';
+
+  @override
+  String get authHintName => 'اسمك الكامل';
+
+  @override
+  String get authFieldStore => 'اسم المتجر *';
+
+  @override
+  String get authHintStore => 'مثال: محمصة الفجر';
+
+  @override
+  String get authFieldEmail => 'البريد الإلكتروني *';
+
+  @override
+  String get authFieldPassword => 'كلمة المرور *';
+
+  @override
+  String get authHintPassword => '6 أحرف على الأقل';
+
+  @override
+  String get authSubmitLogin => 'دخول';
+
+  @override
+  String get authSubmitSignup => 'إنشاء الحساب';
+
+  @override
+  String get authSwitchToSignup => 'ليس لديك حساب؟ أنشئ حسابًا جديدًا';
+
+  @override
+  String get authSwitchToLogin => 'لديك حساب بالفعل؟ سجّل دخولك';
+
+  @override
+  String authWelcomeBack(String name) {
+    return 'مرحبًا بعودتك، $name!';
+  }
+
+  @override
+  String authAccountCreated(String name) {
+    return 'تم إنشاء حسابك بنجاح، $name!';
+  }
 }

@@ -323,5 +323,53 @@
   "settingsLanguageSystem": "لغة الجهاز",
   "settingsLanguageArabic": "العربية",
   "settingsLanguageEnglish": "English",
-  "settingsLanguageNote": "تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك."
+  "settingsLanguageNote": "تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك.",
+  "onboardingSkip": "تخطٍّ",
+  "onboardingNext": "التالي",
+  "onboardingStart": "ابدأ الآن",
+  "onboardingPickFirst": "اختر نشاطك للمتابعة",
+  "onboardingT1": "إعلانك يولد في ثوانٍ",
+  "onboardingB1": "ارفع صورة منتجك واختر النبرة والمنصة، ونحن نخرج لك نصًا وتصميمًا جاهزين للنشر.",
+  "onboardingT2": "اطبعه عند أقرب مطبعة",
+  "onboardingB2": "بنرات، استيكرات، كروت ورول أب بأسعار فورية — ويُسند طلبك تلقائيًا لأقرب مطبعة شريكة لموقعك.",
+  "onboardingT3": "ويصلك حتى الباب",
+  "onboardingB3": "حدّد موقعك على الخريطة وتابع طلبك خطوة بخطوة حتى يصل بين يديك.",
+  "onboardingCategoryTitle": "ما نشاطك؟",
+  "onboardingCategoryBody": "نكتب لك نصوصًا بمفردات مجالك — لا جملًا عامة تصلح لأي شيء.",
+  "onboardingCategoryHint": "يمكنك تغييره لاحقًا من الإعدادات",
+  "authEmailError": "أدخل بريدًا إلكترونيًا صحيحًا",
+  "authPasswordError": "كلمة المرور 6 أحرف على الأقل",
+  "authNameError": "أدخل اسمك",
+  "authStoreError": "أدخل اسم متجرك أو نشاطك",
+  "authTitleLogin": "تسجيل الدخول",
+  "authTitleSignup": "إنشاء حساب تاجر",
+  "authIntroLogin": "سجّل دخولك لمتابعة إعلاناتك وطلباتك",
+  "authIntroSignup": "أنشئ حساب تاجر لحفظ إعلاناتك وتتبع طلباتك",
+  "authFieldName": "الاسم *",
+  "authHintName": "اسمك الكامل",
+  "authFieldStore": "اسم المتجر *",
+  "authHintStore": "مثال: محمصة الفجر",
+  "authFieldEmail": "البريد الإلكتروني *",
+  "authFieldPassword": "كلمة المرور *",
+  "authHintPassword": "6 أحرف على الأقل",
+  "authSubmitLogin": "دخول",
+  "authSubmitSignup": "إنشاء الحساب",
+  "authSwitchToSignup": "ليس لديك حساب؟ أنشئ حسابًا جديدًا",
+  "authSwitchToLogin": "لديك حساب بالفعل؟ سجّل دخولك",
+  "authWelcomeBack": "مرحبًا بعودتك، {name}!",
+  "@authWelcomeBack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authAccountCreated": "تم إنشاء حسابك بنجاح، {name}!",
+  "@authAccountCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }
