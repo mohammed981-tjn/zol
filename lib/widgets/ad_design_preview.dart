@@ -224,6 +224,9 @@ class _GeneratedLayout extends StatelessWidget {
                 product: ad.brief.imageBytes,
                 logo: logo,
                 fontFamily: fontFamily,
+                productScale: ad.brief.productScale,
+                productDx: ad.brief.productDx,
+                productDy: ad.brief.productDy,
               ),
               if (showWatermark)
                 Positioned(

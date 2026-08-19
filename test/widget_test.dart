@@ -31,6 +31,7 @@ import 'package:zol/services/design_wish_service.dart';
 import 'package:zol/models/design_spec.dart';
 import 'package:zol/theme/spec_palette.dart';
 import 'package:zol/widgets/spec_renderer.dart';
+import 'package:zol/widgets/spec_canvas_editor.dart';
 import 'package:zol/models/ad_template.dart';
 import 'package:zol/models/business_category.dart';
 import 'package:zol/services/admin_api.dart';
@@ -3205,6 +3206,222 @@ void main() {
       drawn.any((t) => t.contains('مذاق الفخامة')),
       isTrue,
       reason: 'عنوان التخطيط المولَّد لم يصل إلى الشاشة: $drawn',
+    );
+  });
+
+
+  // ── محرّر العناصر: التاجر يمسك تصميمه ────────────────────────────────
+
+  DesignSpec sampleSpec() => const DesignSpec(
+    format: AdFormat.square,
+    backdrop: SpecBackdrop.mesh,
+    elements: [
+      DesignElement(
+        role: ElementRole.headline,
+        rect: SpecRect(0.10, 0.10, 0.80, 0.20),
+        text: 'عنوان قابل للتحريك',
+        align: SpecAlign.center,
+        maxLines: 1,
+      ),
+      DesignElement(
+        role: ElementRole.cta,
+        rect: SpecRect(0.30, 0.78, 0.40, 0.10),
+        text: 'اطلب الآن',
+        fill: ColorRole.complement,
+        align: SpecAlign.center,
+        maxLines: 1,
+      ),
+    ],
+  );
+
+  testWidgets('المحرّر: سحب عنصر يحرّكه فعلًا ويبقى داخل اللوحة', (
+    tester,
+  ) async {
+    // المحرّر **مقاد**: يعرض ما يمرّره الأب لا ما فعله الإصبع. وهذا
+    // مقصود — الأب يمرّر المواصفة بعد الطبيب، فيرى التاجر ما سيُطبع لا
+    // ما سحبه. فالمضيف هنا يجب أن يُعيد التغذية كما تفعل شاشة المحرّر.
+    var applied = sampleSpec();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 300,
+              child: StatefulBuilder(
+                builder: (context, setLocal) => SpecCanvasEditor(
+                  spec: applied,
+                  brandColor: const Color(0xFF2C6BED),
+                  onChanged: (s) => setLocal(() => applied = s),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final canvas = find.byType(SpecCanvasEditor);
+    final origin = tester.getTopLeft(canvas);
+    // مركز العنوان: من ٠٫١ إلى ٠٫٩ عرضًا، ومن ٠٫١ إلى ٠٫٣ ارتفاعًا.
+    final headlineCentre = origin + const Offset(150, 60);
+
+    await tester.dragFrom(headlineCentre, const Offset(0, 45));
+    await tester.pumpAndSettle();
+
+    final first = applied.firstOf(ElementRole.headline)!;
+    expect(first.rect.y, isNot(0.10), reason: 'الإفلات لم يُبلّغ الأب بالتعديل');
+    final step1 = first.rect.y - 0.10;
+    expect(step1, greaterThan(0), reason: 'السحب لأسفل لم يُنزل العنصر');
+    expect(
+      first.rect.x,
+      closeTo(0.10, 1e-6),
+      reason: 'تحرّك أفقيًّا وقد سُحب رأسيًّا وحده',
+    );
+
+    // سحبة ثانية مطابقة تُنتج إزاحة مطابقة: الحركة متناسبة مع الإصبع لا
+    // مقدارًا ثابتًا. (المقارنة بينهما تتجاوز عتبة اللمس التي تبتلع أوّل
+    // بكسلات كل سحبة، وهي تفصيلة إطارٍ لا عقدٌ لنا.)
+    final centre2 =
+        origin + Offset(150, (first.rect.y + first.rect.h / 2) * 300);
+    await tester.dragFrom(centre2, const Offset(0, 45));
+    await tester.pumpAndSettle();
+    final second = applied.firstOf(ElementRole.headline)!;
+    expect(second.rect.y - first.rect.y, closeTo(step1, 0.005));
+
+    // ولا يخرج من اللوحة مهما سحب.
+    final centre3 =
+        origin + Offset(150, (second.rect.y + second.rect.h / 2) * 300);
+    await tester.dragFrom(centre3, const Offset(0, 900));
+    await tester.pumpAndSettle();
+    final far = applied.firstOf(ElementRole.headline)!;
+    expect(far.rect.bottom, lessThanOrEqualTo(1.0 + 1e-9));
+  });
+
+  testWidgets('المحرّر: تحرير النصّ يغيّر ما يُرسم لا حقلًا مخفيًّا', (
+    tester,
+  ) async {
+    // الانحدار الذي كان: الشاشة تكتب في ad.headline بينما التخطيط
+    // المولَّد يرسم من spec.elements[].text — فيضغط التاجر «تطبيق» ولا
+    // يتغيّر شيء أمامه.
+    final state = AppState();
+    final ad = GeneratedAd(
+      brief: AdBrief(
+        productName: 'قهوة',
+        description: '',
+        tone: 'فخم',
+        platform: 'إنستغرام',
+        format: 'منشور مربع',
+      ),
+      kind: AdKind.image,
+      headline: 'عنوان قابل للتحريك',
+      body: '',
+      hashtags: const [],
+      createdAt: DateTime(2026),
+      spec: sampleSpec(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: DesignEditorScreen(ad: ad, template: AdTemplate.bold),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('تحرير النص'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'عنوان جديد تمامًا');
+    await tester.tap(find.text('تطبيق'));
+    await tester.pumpAndSettle();
+
+    // النصّ المرسوم تغيّر — لا حقل الإعلان وحده.
+    final drawn = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
+        .toList();
+    expect(
+      drawn.any((t) => t.contains('عنوان جديد تمامًا')),
+      isTrue,
+      reason: 'التعديل لم يصل إلى ما يُرسم: $drawn',
+    );
+
+    // وما يُعاد إلى الشاشة السابقة يحمل التعديل في المواصفة نفسها.
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('المحرّر: وضع المنتج يصل التخطيط المولَّد لا القوالب وحدها', (
+    tester,
+  ) async {
+    // كان SpecRenderer يتجاهل productScale/Dx/Dy كليًّا، فيسحب التاجر
+    // منتجه على تخطيط مولَّد ولا يتحرّك شيء — ويظنّ المحرّر معطّلًا.
+    final state = AppState();
+    Widget host(double scale) => MaterialApp(
+      localizationsDelegates: L.localizationsDelegates,
+      supportedLocales: L.supportedLocales,
+      home: AppStateScope(
+        notifier: state,
+        child: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 300,
+              child: AdDesignPreview(
+                ad: GeneratedAd(
+                  brief: AdBrief(
+                    productName: 'قهوة',
+                    description: '',
+                    tone: 'فخم',
+                    platform: 'إنستغرام',
+                    format: 'منشور مربع',
+                    imageBytes: _fakeImage,
+                    productScale: scale,
+                  ),
+                  kind: AdKind.image,
+                  headline: 'عنوان',
+                  body: '',
+                  hashtags: const [],
+                  createdAt: DateTime(2026),
+                  spec: const DesignSpec(
+                    format: AdFormat.square,
+                    backdrop: SpecBackdrop.mesh,
+                    elements: [
+                      DesignElement(
+                        role: ElementRole.product,
+                        rect: SpecRect(0.2, 0.2, 0.6, 0.6),
+                      ),
+                    ],
+                  ),
+                ),
+                showWatermark: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    const probe = ValueKey('spec-product-transform');
+
+    await tester.pumpWidget(host(1));
+    await tester.pumpAndSettle();
+    expect(find.byKey(probe), findsNothing, reason: 'تحويل بلا سبب');
+
+    await tester.pumpWidget(host(1.6));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(probe),
+      findsOneWidget,
+      reason: 'التكبير لم يصل عارض المواصفة',
     );
   });
 

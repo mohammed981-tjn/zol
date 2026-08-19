@@ -160,19 +160,23 @@ class DesignElement {
   DesignElement copyWith({
     ElementRole? role,
     SpecRect? rect,
+    String? text,
     ColorRole? color,
     ColorRole? fill,
+    SpecAlign? align,
+    int? maxLines,
     double? sizeFactor,
+    int? weight,
   }) => DesignElement(
     role: role ?? this.role,
     rect: rect ?? this.rect,
-    text: text,
+    text: text ?? this.text,
     color: color ?? this.color,
     fill: fill ?? this.fill,
-    align: align,
-    maxLines: maxLines,
+    align: align ?? this.align,
+    maxLines: maxLines ?? this.maxLines,
     sizeFactor: sizeFactor ?? this.sizeFactor,
-    weight: weight,
+    weight: weight ?? this.weight,
   );
 
   Map<String, dynamic> toJson() => {
@@ -270,6 +274,31 @@ class DesignSpec {
       if (e.role == role) return e;
     }
     return null;
+  }
+
+  int indexOf(ElementRole role) {
+    for (var i = 0; i < elements.length; i++) {
+      if (elements[i].role == role) return i;
+    }
+    return -1;
+  }
+
+  /// يبدّل عنصرًا بفهرسه. فهرس خارج المدى يعيد المواصفة كما هي بدل أن
+  /// يرمي: المحرّر يعمل على نسخة قد تتغيّر تحته، وانهيارٌ في يد التاجر
+  /// أسوأ من تعديل ضاع.
+  DesignSpec replaceAt(int index, DesignElement e) {
+    if (index < 0 || index >= elements.length) return this;
+    final next = [...elements];
+    next[index] = e;
+    return withElements(next);
+  }
+
+  /// يكتب نصًّا في أوّل عنصر بهذا الدور. لا يُنشئ عنصرًا حين يغيب الدور:
+  /// موضعُ عنصرٍ جديد قرارُ تكوين، والمحرّر لا يخترع تكوينًا.
+  DesignSpec withRoleText(ElementRole role, String text) {
+    final i = indexOf(role);
+    if (i < 0) return this;
+    return replaceAt(i, elements[i].copyWith(text: text));
   }
 }
 

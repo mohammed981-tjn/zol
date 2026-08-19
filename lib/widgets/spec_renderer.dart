@@ -30,10 +30,24 @@ class SpecRenderer extends StatelessWidget {
     this.product,
     this.logo,
     this.fontFamily,
+    this.productScale = 1,
+    this.productDx = 0,
+    this.productDy = 0,
   });
 
   final DesignSpec spec;
   final Color brandColor;
+
+  /// وضع المنتج داخل إطاره كما ضبطه التاجر في المحرّر — كسور لا بكسلات،
+  /// كما في مسار القوالب تمامًا. بلا هذا كان سحبُ المنتج وتكبيرُه يعمل
+  /// على القوالب ولا يفعل شيئًا على التخطيط المولَّد، فيظنّ التاجر أن
+  /// المحرّر معطّل.
+  final double productScale;
+  final double productDx;
+  final double productDy;
+
+  bool get _hasTransform =>
+      productScale != 1 || productDx != 0 || productDy != 0;
 
   /// صورة المنتج. غيابها يرسم مكان المنتج فارغًا بعلامة — لا يُسقط
   /// التصميم: التاجر يرى تكوينه قبل أن يرفع صورته.
@@ -97,9 +111,11 @@ class SpecRenderer extends StatelessWidget {
                   color: ink.withValues(alpha: 0.4),
                 ),
               )
-            : ProductImage(
-                palette: art,
-                child: Image.memory(product!, fit: BoxFit.cover),
+            : _transformed(
+                ProductImage(
+                  palette: art,
+                  child: Image.memory(product!, fit: BoxFit.cover),
+                ),
               ),
       ),
 
@@ -157,6 +173,23 @@ class SpecRenderer extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: canvasWidth * 0.02),
         child: content,
+      ),
+    );
+  }
+
+  /// يطبّق وضع المنتج الذي ضبطه التاجر. الإزاحة كسر من **إطار المنتج**
+  /// لا من اللوحة، فتبقى مطابقة بين المعاينة والتصدير عالي الدقة.
+  Widget _transformed(Widget img) {
+    if (!_hasTransform) return img;
+    return LayoutBuilder(
+      // مفتاح ثابت: الاختبار يحتاج أن يميّز تحويلَ المنتج عن تحويلات
+      // الرسم الداخلية، وعدُّ ودجات `Transform` يلتقطها جميعًا.
+      key: const ValueKey('spec-product-transform'),
+      builder: (context, c) => ClipRect(
+        child: Transform.translate(
+          offset: Offset(productDx * c.maxWidth, productDy * c.maxHeight),
+          child: Transform.scale(scale: productScale, child: img),
+        ),
       ),
     );
   }

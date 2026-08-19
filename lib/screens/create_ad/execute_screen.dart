@@ -10,6 +10,7 @@ import '../../models/ad_format.dart';
 import '../../models/print_catalog.dart';
 import '../../models/print_order.dart';
 import '../../models/print_shop.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/payment_config.dart';
@@ -80,6 +81,10 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   PayMethod _payMethod = PayMethod.cash;
   PrintOrder? _confirmedOrder;
   bool _exporting = false;
+
+  /// هل هذا تخطيط ركّبه الذكاء؟ يحسم أي أدوات تُعرض: القوالب لا تنطبق
+  /// عليه، وتحريره تحريكُ عناصر لا تبديلُ قالب.
+  bool get _isGenerated => _ad.spec != null;
   late AdTemplate _template = widget.initialTemplate ?? AdTemplate.bold;
 
   @override
@@ -126,10 +131,24 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
         OutlinedButton.icon(
           onPressed: _openEditor,
           icon: const Icon(Icons.tune),
-          label: const Text('تحرير التصميم (نص وموضع المنتج)'),
+          label: Text(
+            _isGenerated
+                ? L.of(context).executeEditSpec
+                : L.of(context).executeEditTemplate,
+          ),
         ),
         const SizedBox(height: 16),
-        _buildTemplatePicker(),
+        // اختيار القالب لا معنى له فوق تخطيط مولَّد: `AdDesignPreview`
+        // يتجاهل القالب حين توجد مواصفة. وزرٌّ لا يفعل شيئًا أسوأ من
+        // غيابه — التاجر يضغطه مرارًا ويظنّ التطبيق معطّلًا.
+        if (_isGenerated)
+          Text(
+            L.of(context).executeGeneratedNote,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.textMuted, fontSize: 12.5),
+          )
+        else
+          _buildTemplatePicker(),
         const SizedBox(height: 8),
         Text(
           '${_ad.kind.label} بأسلوب ${_ad.brief.tone} — '

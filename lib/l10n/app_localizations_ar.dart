@@ -472,4 +472,87 @@ class LAr extends L {
 
   @override
   String get wishDefaultCta => 'اطلب الآن';
+
+  @override
+  String get roleHeadline => 'العنوان';
+
+  @override
+  String get roleSubhead => 'السطر الثانوي';
+
+  @override
+  String get roleProduct => 'المنتج';
+
+  @override
+  String get roleCta => 'زرّ الحثّ';
+
+  @override
+  String get roleBadge => 'الشارة';
+
+  @override
+  String get roleLogo => 'الشعار';
+
+  @override
+  String get roleTags => 'الهاشتاقات';
+
+  @override
+  String get roleShape => 'شكل';
+
+  @override
+  String get editorTitle => 'تحرير التصميم';
+
+  @override
+  String get editorResizeHandle => 'مقبض التحجيم';
+
+  @override
+  String get editorSpecHint =>
+      'المس عنصرًا لتحدّده، ثم اسحبه لتحريكه أو اسحب المقبض لتحجيمه';
+
+  @override
+  String get editorProductHint => 'اسحب لتحريك المنتج، وباعد إصبعيك لتكبيره';
+
+  @override
+  String get editorNoProductHint => 'أضف صورة منتج لتتمكن من تحريكها';
+
+  @override
+  String get editorResetProduct => 'إرجاع المنتج لوضعه';
+
+  @override
+  String get editorResetLayout => 'إرجاع التخطيط كما وُلِّد';
+
+  @override
+  String get editorEditText => 'تحرير النص';
+
+  @override
+  String get editorEditElement => 'تحرير العنصر المحدّد';
+
+  @override
+  String get editorElementText => 'نصّ العنصر';
+
+  @override
+  String get editorFieldHeadline => 'العنوان';
+
+  @override
+  String get editorFieldBody => 'النص الفرعي';
+
+  @override
+  String get editorFieldCta => 'زر الدعوة';
+
+  @override
+  String get editorApply => 'تطبيق';
+
+  @override
+  String get editorSaveChanges => 'حفظ التعديلات';
+
+  @override
+  String get editorDone => 'تم';
+
+  @override
+  String get executeEditTemplate => 'تحرير التصميم (نص وموضع المنتج)';
+
+  @override
+  String get executeEditSpec => 'تحرير التصميم (حرّك العناصر وغيّر نصّها)';
+
+  @override
+  String get executeGeneratedNote =>
+      'هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر.';
 }

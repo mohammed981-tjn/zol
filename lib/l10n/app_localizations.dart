@@ -860,6 +860,168 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'اطلب الآن'**
   String get wishDefaultCta;
+
+  /// No description provided for @roleHeadline.
+  ///
+  /// In ar, this message translates to:
+  /// **'العنوان'**
+  String get roleHeadline;
+
+  /// No description provided for @roleSubhead.
+  ///
+  /// In ar, this message translates to:
+  /// **'السطر الثانوي'**
+  String get roleSubhead;
+
+  /// No description provided for @roleProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتج'**
+  String get roleProduct;
+
+  /// No description provided for @roleCta.
+  ///
+  /// In ar, this message translates to:
+  /// **'زرّ الحثّ'**
+  String get roleCta;
+
+  /// No description provided for @roleBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشارة'**
+  String get roleBadge;
+
+  /// No description provided for @roleLogo.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشعار'**
+  String get roleLogo;
+
+  /// No description provided for @roleTags.
+  ///
+  /// In ar, this message translates to:
+  /// **'الهاشتاقات'**
+  String get roleTags;
+
+  /// No description provided for @roleShape.
+  ///
+  /// In ar, this message translates to:
+  /// **'شكل'**
+  String get roleShape;
+
+  /// No description provided for @editorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحرير التصميم'**
+  String get editorTitle;
+
+  /// No description provided for @editorResizeHandle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقبض التحجيم'**
+  String get editorResizeHandle;
+
+  /// No description provided for @editorSpecHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'المس عنصرًا لتحدّده، ثم اسحبه لتحريكه أو اسحب المقبض لتحجيمه'**
+  String get editorSpecHint;
+
+  /// No description provided for @editorProductHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسحب لتحريك المنتج، وباعد إصبعيك لتكبيره'**
+  String get editorProductHint;
+
+  /// No description provided for @editorNoProductHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف صورة منتج لتتمكن من تحريكها'**
+  String get editorNoProductHint;
+
+  /// No description provided for @editorResetProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرجاع المنتج لوضعه'**
+  String get editorResetProduct;
+
+  /// No description provided for @editorResetLayout.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرجاع التخطيط كما وُلِّد'**
+  String get editorResetLayout;
+
+  /// No description provided for @editorEditText.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحرير النص'**
+  String get editorEditText;
+
+  /// No description provided for @editorEditElement.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحرير العنصر المحدّد'**
+  String get editorEditElement;
+
+  /// No description provided for @editorElementText.
+  ///
+  /// In ar, this message translates to:
+  /// **'نصّ العنصر'**
+  String get editorElementText;
+
+  /// No description provided for @editorFieldHeadline.
+  ///
+  /// In ar, this message translates to:
+  /// **'العنوان'**
+  String get editorFieldHeadline;
+
+  /// No description provided for @editorFieldBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'النص الفرعي'**
+  String get editorFieldBody;
+
+  /// No description provided for @editorFieldCta.
+  ///
+  /// In ar, this message translates to:
+  /// **'زر الدعوة'**
+  String get editorFieldCta;
+
+  /// No description provided for @editorApply.
+  ///
+  /// In ar, this message translates to:
+  /// **'تطبيق'**
+  String get editorApply;
+
+  /// No description provided for @editorSaveChanges.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ التعديلات'**
+  String get editorSaveChanges;
+
+  /// No description provided for @editorDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم'**
+  String get editorDone;
+
+  /// No description provided for @executeEditTemplate.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحرير التصميم (نص وموضع المنتج)'**
+  String get executeEditTemplate;
+
+  /// No description provided for @executeEditSpec.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحرير التصميم (حرّك العناصر وغيّر نصّها)'**
+  String get executeEditSpec;
+
+  /// No description provided for @executeGeneratedNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر.'**
+  String get executeGeneratedNote;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
