@@ -625,4 +625,20 @@ class LAr extends L {
 
   @override
   String get quoteCopied => 'نُسخ نصّ الطلب';
+
+  @override
+  String get settingsLanguage => 'اللغة';
+
+  @override
+  String get settingsLanguageSystem => 'لغة الجهاز';
+
+  @override
+  String get settingsLanguageArabic => 'العربية';
+
+  @override
+  String get settingsLanguageEnglish => 'English';
+
+  @override
+  String get settingsLanguageNote =>
+      'تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك.';
 }

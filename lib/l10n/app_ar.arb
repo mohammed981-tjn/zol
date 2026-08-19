@@ -318,5 +318,10 @@
   "quoteOffline": "تعذّر الإرسال عبر التطبيق — أرسِله بنفسك من الزرّ أدناه",
   "quoteNeedsAccount": "سجّل حسابك أوّلًا ليُنسب الطلب إليك ويصلك الردّ",
   "quoteNotRoutable": "هذا المزوّد من شبكة المطابع ولا يستقبل عبر التطبيق — انسخ الطلب وأرسله إليه",
-  "quoteCopied": "نُسخ نصّ الطلب"
+  "quoteCopied": "نُسخ نصّ الطلب",
+  "settingsLanguage": "اللغة",
+  "settingsLanguageSystem": "لغة الجهاز",
+  "settingsLanguageArabic": "العربية",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageNote": "تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك."
 }

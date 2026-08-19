@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_ar.dart';
+import 'app_localizations_en.dart';
 
 // ignore_for_file: type=lint
 
@@ -91,7 +92,10 @@ abstract class L {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('ar')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('ar'),
+    Locale('en'),
+  ];
 
   /// اسم التطبيق — لا يُترجَم
   ///
@@ -1154,6 +1158,36 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'نُسخ نصّ الطلب'**
   String get quoteCopied;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In ar, this message translates to:
+  /// **'اللغة'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsLanguageSystem.
+  ///
+  /// In ar, this message translates to:
+  /// **'لغة الجهاز'**
+  String get settingsLanguageSystem;
+
+  /// No description provided for @settingsLanguageArabic.
+  ///
+  /// In ar, this message translates to:
+  /// **'العربية'**
+  String get settingsLanguageArabic;
+
+  /// No description provided for @settingsLanguageEnglish.
+  ///
+  /// In ar, this message translates to:
+  /// **'English'**
+  String get settingsLanguageEnglish;
+
+  /// No description provided for @settingsLanguageNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك.'**
+  String get settingsLanguageNote;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
@@ -1166,7 +1200,7 @@ class _LDelegate extends LocalizationsDelegate<L> {
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['ar'].contains(locale.languageCode);
+      <String>['ar', 'en'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_LDelegate old) => false;
@@ -1177,6 +1211,8 @@ L lookupL(Locale locale) {
   switch (locale.languageCode) {
     case 'ar':
       return LAr();
+    case 'en':
+      return LEn();
   }
 
   throw FlutterError(

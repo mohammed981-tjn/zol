@@ -9,6 +9,7 @@ import '../utils/payment_config.dart';
 import '../widgets/icon_circle.dart';
 import '../services/admin_api.dart';
 import '../widgets/section_header.dart';
+import '../l10n/app_localizations.dart';
 import 'admin_screen.dart';
 import 'auth_screen.dart';
 import 'payment/payment_flow.dart';
@@ -79,6 +80,11 @@ class SettingsScreen extends StatelessWidget {
               selected: {state.themeMode},
               onSelectionChanged: (modes) => state.setThemeMode(modes.first),
             ),
+            const SizedBox(height: 28),
+            // اللغة كانت مدعومة في الحالة وتُحفَظ، وبلا مبدّل في الواجهة
+            // — دعمٌ لا يصل إليه أحد. وهذا أسوأ من غيابه: يبدو منجَزًا في
+            // الشيفرة ولا وجود له عند التاجر.
+            _LanguagePicker(state: state),
             const SizedBox(height: 28),
             _buildPlanCard(context, state),
             const SizedBox(height: 28),
@@ -576,6 +582,52 @@ class _AdminEntryState extends State<_AdminEntry> {
           ),
         );
       },
+    );
+  }
+}
+
+/// مبدّل لغة الواجهة.
+///
+/// «لغة الجهاز» تُخزَّن **غيابًا** لا نصًّا: من اختارها يريد أن يتبع
+/// جهازه أبدًا، وتخزينُ «ar» وقتها يجمّده على العربية حين يبدّل جهازه.
+class _LanguagePicker extends StatelessWidget {
+  const _LanguagePicker({required this.state});
+
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L.of(context);
+    final code = state.locale?.languageCode;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l.settingsLanguage,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: context.scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SegmentedButton<String>(
+          segments: [
+            ButtonSegment(value: '', label: Text(l.settingsLanguageSystem)),
+            ButtonSegment(value: 'ar', label: Text(l.settingsLanguageArabic)),
+            ButtonSegment(value: 'en', label: Text(l.settingsLanguageEnglish)),
+          ],
+          selected: {code ?? ''},
+          onSelectionChanged: (picked) {
+            final next = picked.first;
+            state.setLocale(next.isEmpty ? null : Locale(next));
+          },
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l.settingsLanguageNote,
+          style: TextStyle(color: context.textMuted, fontSize: 12.5),
+        ),
+      ],
     );
   }
 }

@@ -161,6 +161,14 @@ AiGateway _fakeGateway() => AiGateway(
 
 void main() {
   setUpAll(() {
+    // جهاز الاختبار لغته الإنجليزية. وبعد أن صارت الإنجليزية مدعومة
+    // فعلًا صار التطبيق يتبعه — وهو السلوك الصحيح، لكنه يجعل كل توقّع
+    // على نصّ عربي يسقط. فنثبّت لغة الجهاز على العربية هنا: هذه
+    // الاختبارات تفحص الواجهة العربية، وللإنجليزية اختبارها الخاصّ.
+    final binding = TestWidgetsFlutterBinding.ensureInitialized();
+    binding.platformDispatcher.localeTestValue = const Locale('ar');
+    binding.platformDispatcher.localesTestValue = const [Locale('ar')];
+
     MagicScreen.debugGatewayOverride = _fakeGateway;
     UploadDetailsScreen.debugPickImageOverride = () async => _fakeImage;
     BackgroundRemover.debugRunSynchronously = true;
@@ -662,6 +670,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(AdTemplate.spotlight.description), findsOneWidget);
     expect(find.text(AdTemplate.bold.description), findsNothing);
+
 
     // لا يُفحص حضور القوالب العشرة هنا: الشريط كسول فلا يبني ما خرج عن
     // الشاشة، والتمرير إليها بعد النقر يفشل لأن الشريط يكون قد تفكّك.
@@ -1531,8 +1540,84 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(state.themeMode, ThemeMode.dark);
-    final context = tester.element(find.text('المظهر'));
+    // السياق يُؤخذ من الزرّ نفسه لا من عنوان القسم: القائمة كسولة، وما
+    // خرج من نافذة العرض بعد التمرير يُتلَف — فيسقط الاختبار كلّما
+    // أُضيف قسم جديد أعلى منه، وهو تغيّرٌ لا علاقة له بالمظهر.
+    final context = tester.element(find.text('داكن'));
     expect(Theme.of(context).brightness, Brightness.dark);
+  });
+
+
+  // ── الإنجليزية: لغة ثانية حقيقية لا ملفّ ────────────────────────────
+
+  testWidgets('الإنجليزية تُعرض فعلًا، ومبدّلها يصل إليه التاجر', (
+    tester,
+  ) async {
+    final state = AppState();
+    await _pumpApp(tester, state);
+
+    await tester.tap(find.text('الإعدادات'));
+    await tester.pumpAndSettle();
+
+    // المبدّل كان غائبًا كليًّا: اللغة مدعومة في الحالة وتُحفظ، ولا سبيل
+    // للتاجر إليها — دعمٌ يبدو منجَزًا في الشيفرة ولا وجود له عنده.
+    final list = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(find.text('English'), 200, scrollable: list);
+    // تمريرة زائدة: `scrollUntilVisible` يقف عند أوّل ظهور، وشريط
+    // التنقّل السفلي يغطّي الصفّ فتضيع اللمسة على حافّته.
+    await tester.drag(list, const Offset(0, -160));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+
+    expect(state.locale?.languageCode, 'en');
+    // والواجهة تحوّلت فعلًا — لا الحالة وحدها.
+    expect(find.text('Settings'), findsWidgets);
+    expect(find.text('Language'), findsWidgets);
+
+    // ثم يعود، فالتبديل ليس طريقًا واحدًا.
+    await tester.tap(find.text('العربية'));
+    await tester.pumpAndSettle();
+    expect(state.locale?.languageCode, 'ar');
+    expect(find.text('اللغة'), findsWidgets);
+  });
+
+  test('كل مفتاح عربي له مقابل إنجليزي — لا شاشة نصفها معرَّب', () {
+    final ar = jsonDecode(File('lib/l10n/app_ar.arb').readAsStringSync())
+        as Map<String, dynamic>;
+    final en = jsonDecode(File('lib/l10n/app_en.arb').readAsStringSync())
+        as Map<String, dynamic>;
+
+    final missing = ar.keys
+        .where((k) => !k.startsWith('@') && !en.containsKey(k))
+        .toList();
+    expect(
+      missing,
+      isEmpty,
+      reason: 'مفاتيح بلا ترجمة إنجليزية: ${missing.join(', ')}',
+    );
+
+    // ومفتاح إنجليزي بلا أصل عربي بقيّةُ مفتاح حُذف — يكبر الملفّ بما لا
+    // يُستعمل ويُربك المترجم.
+    final orphan = en.keys
+        .where((k) => !k.startsWith('@') && !ar.containsKey(k))
+        .toList();
+    expect(orphan, isEmpty, reason: 'مفاتيح يتيمة: ${orphan.join(', ')}');
+
+    // والوسائط نفسها في اللغتين: `{count}` يسقط في لغة ويبقى في أخرى
+    // فيظهر للمستخدم اسم الوسيط حرفيًّا.
+    final placeholder = RegExp(r'\{(\w+)[,}]');
+    for (final k in ar.keys.where((k) => !k.startsWith('@'))) {
+      final a = placeholder
+          .allMatches(ar[k] as String)
+          .map((m) => m.group(1))
+          .toSet();
+      final e = placeholder
+          .allMatches(en[k] as String)
+          .map((m) => m.group(1))
+          .toSet();
+      expect(e, equals(a), reason: 'وسائط مختلفة في $k');
+    }
   });
 
   // ── القوالب العشرة ────────────────────────────────────────────────
