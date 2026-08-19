@@ -3210,6 +3210,94 @@ void main() {
   });
 
 
+
+  test('الأمنية على تخطيط قائم تُرسل الأساس لا تبدأ من الصفر', () async {
+    Map<String, dynamic>? sent;
+    final service = wishService(
+      MockClient((req) async {
+        sent = jsonDecode(req.body) as Map<String, dynamic>;
+        return http.Response.bytes(utf8.encode(liveDesignBody()), 200);
+      }),
+    );
+
+    const base = DesignSpec(
+      format: AdFormat.banner,
+      backdrop: SpecBackdrop.arcs,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.1, 0.1, 0.5, 0.2),
+          text: 'العنوان الأصلي',
+        ),
+      ],
+    );
+
+    await service.design(
+      const DesignWish(
+        text: 'كبّر العنوان',
+        format: AdFormat.banner,
+        base: base,
+      ),
+      brandColor: const Color(0xFF2C6BED),
+    );
+
+    expect(sent, isNotNull);
+    // النموذج يرى ما يعدّله. والأساس يُرسل حقلًا أيضًا ليستعمله إصدار
+    // لاحق من الدالّة استعمالًا مقيَّدًا بمخطط.
+    expect(sent!['wish'], contains('كبّر العنوان'));
+    expect(sent!['wish'], contains('العنوان الأصلي'));
+    expect(sent!['base'], isA<Map<String, dynamic>>());
+  });
+
+  testWidgets('شاشة السحر: أمنيات جاهزة تملأ الصندوق ولا تُرسل عن التاجر', (
+    tester,
+  ) async {
+    var calls = 0;
+    MagicScreen.debugWishServiceOverride = () => wishService(
+      MockClient((req) async {
+        calls++;
+        return http.Response.bytes(utf8.encode(liveDesignBody()), 200);
+      }),
+    );
+    addTearDown(() => MagicScreen.debugWishServiceOverride = null);
+
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: MagicScreen(
+            brief: AdBrief(
+              productName: 'قهوة',
+              description: '',
+              tone: 'فخم',
+              platform: 'إنستغرام',
+              format: 'ستوري',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // صندوقٌ فارغ أمام من لا يعرف ما يكتب جدارٌ لا باب.
+    final preset = find.text('افتتاح فرع جديد');
+    expect(preset, findsOneWidget);
+
+    await tester.tap(preset);
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField).last);
+    expect(field.controller!.text, 'افتتاح فرع جديد');
+    expect(calls, 0, reason: 'الاقتراح نُفِّذ عن التاجر بلا أن يطلب');
+
+    // وتختفي الاقتراحات بعد أن يكتب: مكانها أولى بما يكتبه.
+    expect(find.text('عرض رمضان'), findsNothing);
+  });
+
   // ── محرّر العناصر: التاجر يمسك تصميمه ────────────────────────────────
 
   DesignSpec sampleSpec() => const DesignSpec(

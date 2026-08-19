@@ -303,5 +303,13 @@
   "editorDone": "تم",
   "executeEditTemplate": "تحرير التصميم (نص وموضع المنتج)",
   "executeEditSpec": "تحرير التصميم (حرّك العناصر وغيّر نصّها)",
-  "executeGeneratedNote": "هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر."
+  "executeGeneratedNote": "هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر.",
+  "wishRefineChip": "عدّل هذا التصميم",
+  "wishRefineHint": "اكتب ما تريد تغييره… مثال: كبّر العنوان واجعل الخلفية فاتحة",
+  "wishPresetDiscount": "إعلان خصم ٥٠٪ لنهاية الأسبوع",
+  "wishPresetOpening": "افتتاح فرع جديد",
+  "wishPresetNewItem": "وصل منتج جديد",
+  "wishPresetHiring": "نطلب موظفين",
+  "wishPresetDelivery": "توصيل مجاني اليوم",
+  "wishPresetRamadan": "عرض رمضان"
 }

@@ -555,4 +555,29 @@ class LAr extends L {
   @override
   String get executeGeneratedNote =>
       'هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر.';
+
+  @override
+  String get wishRefineChip => 'عدّل هذا التصميم';
+
+  @override
+  String get wishRefineHint =>
+      'اكتب ما تريد تغييره… مثال: كبّر العنوان واجعل الخلفية فاتحة';
+
+  @override
+  String get wishPresetDiscount => 'إعلان خصم ٥٠٪ لنهاية الأسبوع';
+
+  @override
+  String get wishPresetOpening => 'افتتاح فرع جديد';
+
+  @override
+  String get wishPresetNewItem => 'وصل منتج جديد';
+
+  @override
+  String get wishPresetHiring => 'نطلب موظفين';
+
+  @override
+  String get wishPresetDelivery => 'توصيل مجاني اليوم';
+
+  @override
+  String get wishPresetRamadan => 'عرض رمضان';
 }

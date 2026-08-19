@@ -69,6 +69,12 @@ class _MagicScreenState extends State<MagicScreen> {
   late AdFormat _wishFormat = adFormatFromLabel(widget.brief.format);
   bool _wishBusy = false;
 
+  /// هل الأمنية القادمة **تعديل** على التصميم المعروض أم تصميم جديد؟
+  ///
+  /// افتراضها مطفأة: التاجر الذي يكتب أوّل أمنية يريد إعلانًا لا تعديلًا،
+  /// وتشغيلُها من تلقائها يجعل أوّل طلبٍ يعدّل بطاقةً لم ينظر إليها.
+  bool _refine = false;
+
   /// ملاحظات الطبيب على آخر تخطيط مولَّد. تُعرض للتاجر لا تُبتلع: تصميمٌ
   /// أُصلح خلسةً يجعل التاجر يظنّ الذكاء معصومًا، فإذا أخطأ يومًا لم يعرف
   /// أن عليه أن ينظر.
@@ -211,6 +217,15 @@ class _MagicScreenState extends State<MagicScreen> {
     }
   }
 
+  /// المواصفة المعروضة الآن — أساسُ التعديل حين يطلبه التاجر.
+  DesignSpec? get _shownSpec {
+    final ads = _ads;
+    if (ads == null || _selectedCard < 0 || _selectedCard >= ads.length) {
+      return null;
+    }
+    return ads[_selectedCard].spec;
+  }
+
   /// ينفّذ ما كتبه التاجر: النموذج يُخرج **تخطيطًا** لا نصًّا، والطبيب
   /// يفحصه، والعارض يرسمه. هذه هي النقلة من «املأ الحقول» إلى «قل ما
   /// تريد» — وهي التي كانت تفصلنا عن كانفا.
@@ -226,6 +241,10 @@ class _MagicScreenState extends State<MagicScreen> {
         widget.brief.paletteColor ??
         0xFF2C6BED;
 
+    // الأساس يُلتقط قبل النداء: البطاقة المعروضة قد تتغيّر تحت الطلب،
+    // وتعديلُ تخطيطٍ غير الذي رآه التاجر أسوأ من رفض الطلب.
+    final base = _refine ? _shownSpec : null;
+
     setState(() {
       _wishBusy = true;
       _wishNotes = const [];
@@ -235,11 +254,14 @@ class _MagicScreenState extends State<MagicScreen> {
       final result = await _wishes.design(
         DesignWish(
           text: text,
-          format: _wishFormat,
+          // الصيغة تأتي من الأساس حين نعدّله: تغييرُ اللوحة تحت تعديلٍ
+          // طُلب على غيرها يُخرج تكوينًا لا يشبه ما رآه.
+          format: base?.format ?? _wishFormat,
           product: widget.brief.productName,
           brandName: widget.brief.brandName,
           tone: widget.brief.tone,
           hasImage: widget.brief.hasProductImage,
+          base: base,
         ),
         brandColor: Color(brandArgb),
         hasLogo: state.brandLogoBytes != null,
@@ -253,6 +275,9 @@ class _MagicScreenState extends State<MagicScreen> {
         // افتراضاتنا حين لم يطلب.
         _ads = [...made, ...?_ads];
         _selectedCard = 0;
+        // النصّ يُفرَّغ بعد التنفيذ: صندوقٌ يبقى ممتلئًا يجعل الضغطة
+        // التالية تُعيد الطلب نفسه بلا أن ينتبه.
+        _wishText.clear();
         _wishNotes = [
           for (final i in result.designs.first.report.issues) i.toString(),
         ];
@@ -337,6 +362,9 @@ class _MagicScreenState extends State<MagicScreen> {
               format: _wishFormat,
               busy: _wishBusy,
               notes: _wishNotes,
+              canRefine: _shownSpec != null,
+              refine: _refine,
+              onRefine: (v) => setState(() => _refine = v),
               onFormat: (f) => setState(() => _wishFormat = f),
               onSubmit: _runWish,
             ),
@@ -515,7 +543,12 @@ class _MagicScreenState extends State<MagicScreen> {
           child: PageView.builder(
             itemCount: ads.length,
             controller: _pages,
-            onPageChanged: (i) => setState(() => _selectedCard = i),
+            onPageChanged: (i) => setState(() {
+              _selectedCard = i;
+              // بطاقةٌ بلا تخطيط لا تُعدَّل، فلا يبقى المفتاح مضاءً على
+              // ما لا ينطبق عليه.
+              if (_ads?[i].spec == null) _refine = false;
+            }),
             itemBuilder: (context, i) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: _AdPreviewCard(
@@ -631,6 +664,9 @@ class _WishBar extends StatelessWidget {
     required this.format,
     required this.busy,
     required this.notes,
+    required this.canRefine,
+    required this.refine,
+    required this.onRefine,
     required this.onFormat,
     required this.onSubmit,
   });
@@ -639,11 +675,29 @@ class _WishBar extends StatelessWidget {
   final AdFormat format;
   final bool busy;
   final List<String> notes;
+
+  /// هل البطاقة المعروضة تخطيطٌ يقبل التعديل؟
+  final bool canRefine;
+  final bool refine;
+  final ValueChanged<bool> onRefine;
   final ValueChanged<AdFormat> onFormat;
   final VoidCallback onSubmit;
 
+  /// أمنيات جاهزة. أكثر التجّار لا يعرف ماذا يكتب في صندوق فارغ — وصندوقٌ
+  /// فارغ أمام من لا يعرف ما يكتب جدارٌ لا باب. وهي تملأ الصندوق ولا
+  /// تُرسل: من لمسها يريدها بداية يعدّلها لا أمرًا يُنفَّذ عنه.
+  static List<String> _presets(L l) => [
+    l.wishPresetDiscount,
+    l.wishPresetOpening,
+    l.wishPresetNewItem,
+    l.wishPresetDelivery,
+    l.wishPresetHiring,
+    l.wishPresetRamadan,
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final l = L.of(context);
     return Container(
       decoration: BoxDecoration(
         color: context.cardBg,
@@ -667,21 +721,74 @@ class _WishBar extends StatelessWidget {
               ),
             const SizedBox(height: 4),
           ],
+          // أمنيات جاهزة حين يكون الصندوق فارغًا وحده: بعد أن يكتب،
+          // مكانُها أولى بما يكتبه.
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              if (value.text.trim().isNotEmpty) return const SizedBox.shrink();
+              return SizedBox(
+                height: 34,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (final p in _presets(l))
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 6),
+                        child: ActionChip(
+                          label: Text(p, style: const TextStyle(fontSize: 12)),
+                          onPressed: busy
+                              ? null
+                              : () => controller.value = TextEditingValue(
+                                  text: p,
+                                  selection: TextSelection.collapsed(
+                                    offset: p.length,
+                                  ),
+                                ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 6),
           SizedBox(
             height: 34,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                for (final f in AdFormat.values)
+                if (canRefine)
                   Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 6),
-                    child: ChoiceChip(
-                      label: Text(f.label, style: const TextStyle(fontSize: 12)),
-                      selected: f == format,
-                      onSelected: busy ? null : (_) => onFormat(f),
+                    padding: const EdgeInsetsDirectional.only(end: 10),
+                    child: FilterChip(
+                      avatar: const Icon(Icons.edit_outlined, size: 15),
+                      label: Text(
+                        l.wishRefineChip,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      selected: refine,
+                      onSelected: busy ? null : onRefine,
                       visualDensity: VisualDensity.compact,
                     ),
                   ),
+                // الصيغة تأتي من التصميم الذي يُعدَّل، فاختيارها هنا
+                // يُخفى بدل أن يُعرض ولا يُطاع.
+                if (!refine)
+                  for (final f in AdFormat.values)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 6),
+                      child: ChoiceChip(
+                        label: Text(
+                          f.label,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        selected: f == format,
+                        onSelected: busy ? null : (_) => onFormat(f),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
               ],
             ),
           ),
@@ -699,7 +806,7 @@ class _WishBar extends StatelessWidget {
                   onSubmitted: (_) => onSubmit(),
                   decoration: InputDecoration(
                     isDense: true,
-                    hintText: L.of(context).wishHint,
+                    hintText: refine ? l.wishRefineHint : l.wishHint,
                     prefixIcon: const Icon(Icons.auto_awesome, size: 20),
                   ),
                 ),

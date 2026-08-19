@@ -1022,6 +1022,54 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر.'**
   String get executeGeneratedNote;
+
+  /// No description provided for @wishRefineChip.
+  ///
+  /// In ar, this message translates to:
+  /// **'عدّل هذا التصميم'**
+  String get wishRefineChip;
+
+  /// No description provided for @wishRefineHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب ما تريد تغييره… مثال: كبّر العنوان واجعل الخلفية فاتحة'**
+  String get wishRefineHint;
+
+  /// No description provided for @wishPresetDiscount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعلان خصم ٥٠٪ لنهاية الأسبوع'**
+  String get wishPresetDiscount;
+
+  /// No description provided for @wishPresetOpening.
+  ///
+  /// In ar, this message translates to:
+  /// **'افتتاح فرع جديد'**
+  String get wishPresetOpening;
+
+  /// No description provided for @wishPresetNewItem.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصل منتج جديد'**
+  String get wishPresetNewItem;
+
+  /// No description provided for @wishPresetHiring.
+  ///
+  /// In ar, this message translates to:
+  /// **'نطلب موظفين'**
+  String get wishPresetHiring;
+
+  /// No description provided for @wishPresetDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'توصيل مجاني اليوم'**
+  String get wishPresetDelivery;
+
+  /// No description provided for @wishPresetRamadan.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض رمضان'**
+  String get wishPresetRamadan;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

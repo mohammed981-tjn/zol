@@ -24,6 +24,7 @@ class DesignWish {
     this.tone,
     this.hasImage = false,
     this.count = 2,
+    this.base,
   });
 
   /// ما كتبه التاجر حرفيًّا. لا نُعيد صياغته ولا نُلحق به قوالبنا: كلّ
@@ -40,8 +41,31 @@ class DesignWish {
   /// وأربعة تُضاعف زمن الانتظار على جوال في شبكة ضعيفة.
   final int count;
 
+  /// تخطيط قائم يُراد **تعديله** لا استبداله.
+  ///
+  /// أرخص من إعادة التوليد، وأهمّ من ذلك: يحفظ ما أعجب التاجر. من رضي
+  /// عن تكوينه وأزعجه حجم عنوان لا يجوز أن نُجبره على مقامرة بتكوين
+  /// جديد كاملًا.
+  final DesignSpec? base;
+
+  /// النصّ كما يصل النموذج.
+  ///
+  /// المواصفة الأساس تُدمج في نصّ الأمنية لا في حقل مستقلّ: الدالّة
+  /// المنشورة تمرّر `wish` حرفيًّا إلى النموذج، فالتعديل يعمل اليوم بلا
+  /// نشرٍ جديد. ويُرسل `base` أيضًا كحقل ليستعمله إصدار لاحق من الدالّة
+  /// استعمالًا مقيَّدًا بمخطط بدل الدمج في النصّ.
+  String get promptText {
+    final b = base;
+    if (b == null) return text;
+    return '${text.trim()}\n\n'
+        'هذا تخطيط قائم. عدّله بما طُلب أعلاه فقط، وأبقِ ما لم يُذكر كما '
+        'هو، وأعِد إخراجه كاملًا بنفس الشكل:\n'
+        '${jsonEncode(b.toJson())}';
+  }
+
   Map<String, dynamic> toJson() => {
-    'wish': text,
+    'wish': promptText,
+    if (base != null) 'base': base!.toJson(),
     'format': format.label,
     'aspect': format.aspect,
     if (product != null && product!.trim().isNotEmpty) 'product': product,
@@ -247,7 +271,7 @@ class DesignWishService {
               // نفسه على نموذج بنفس الحرارة تُرجّح مخرَجًا مشابهًا.
               if (attempt > 1)
                 'wish':
-                    '${wish.text.trim()}\n\n'
+                    '${wish.promptText}\n\n'
                     'المحاولة السابقة تداخلت عناصرها. باعد بين الكتل '
                     'باعدًا واضحًا، وابقِ كل عنصر بين ٠٫٠٨ و٠٫٩٢.',
             }),
