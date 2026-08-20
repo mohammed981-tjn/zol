@@ -11,6 +11,7 @@ import '../services/admin_api.dart';
 import '../widgets/section_header.dart';
 import '../l10n/app_localizations.dart';
 import 'admin_screen.dart';
+import 'user_guide_screen.dart';
 import 'auth_screen.dart';
 import 'payment/payment_flow.dart';
 
@@ -88,6 +89,21 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 28),
             _buildPlanCard(context, state),
             const SizedBox(height: 28),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.menu_book_outlined, color: context.textMuted),
+              title: Text(
+                L.of(context).guideTitle,
+                style: TextStyle(color: context.scheme.onSurface),
+              ),
+              trailing: Icon(Icons.chevron_left, color: context.textMuted),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const UserGuideScreen(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.info_outline, color: context.textMuted),

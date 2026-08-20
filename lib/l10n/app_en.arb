@@ -135,6 +135,8 @@
   "roleTags": "Hashtags",
   "roleShape": "Shape",
   "roleOrnament": "Ornament",
+  "guideTitle": "User guide",
+  "guideUnavailable": "The guide could not be opened on this device.",
   "editorTitle": "Edit design",
   "editorResizeHandle": "Resize handle",
   "editorSpecHint": "Tap an element to select it, then drag to move it or drag the handle to resize",

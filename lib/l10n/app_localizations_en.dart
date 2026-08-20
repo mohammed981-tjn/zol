@@ -494,6 +494,13 @@ class LEn extends L {
   String get roleOrnament => 'Ornament';
 
   @override
+  String get guideTitle => 'User guide';
+
+  @override
+  String get guideUnavailable =>
+      'The guide could not be opened on this device.';
+
+  @override
   String get editorTitle => 'Edit design';
 
   @override

@@ -493,6 +493,12 @@ class LAr extends L {
   String get roleOrnament => 'الزخرفة';
 
   @override
+  String get guideTitle => 'دليل الاستخدام';
+
+  @override
+  String get guideUnavailable => 'تعذّر فتح الدليل على هذا الجهاز.';
+
+  @override
   String get editorTitle => 'تحرير التصميم';
 
   @override

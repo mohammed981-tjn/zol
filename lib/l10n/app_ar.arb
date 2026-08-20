@@ -277,6 +277,8 @@
   "roleTags": "الهاشتاقات",
   "roleShape": "شكل",
   "roleOrnament": "الزخرفة",
+  "guideTitle": "دليل الاستخدام",
+  "guideUnavailable": "تعذّر فتح الدليل على هذا الجهاز.",
   "editorTitle": "تحرير التصميم",
   "editorResizeHandle": "مقبض التحجيم",
   "editorSpecHint": "المس عنصرًا لتحدّده، ثم اسحبه لتحريكه أو اسحب المقبض لتحجيمه",

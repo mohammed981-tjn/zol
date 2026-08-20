@@ -115,6 +115,9 @@ flutter:
   # المسطّح فقط، كخيار بديل يختاره التاجر (نمط قوالب Canva الجاهزة).
   assets:
     - assets/backgrounds/
+    # دليل الاستخدام ملفّ واحد لا نسختان: يُقرأ على GitHub ويُعرض داخل
+    # التطبيق من المسار نفسه، فلا تفترق نسخة عن أخرى.
+    - docs/USER_GUIDE.md
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

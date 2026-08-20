@@ -907,6 +907,18 @@ abstract class L {
   /// **'الزخرفة'**
   String get roleOrnament;
 
+  /// No description provided for @guideTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'دليل الاستخدام'**
+  String get guideTitle;
+
+  /// No description provided for @guideUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فتح الدليل على هذا الجهاز.'**
+  String get guideUnavailable;
+
   /// No description provided for @editorTitle.
   ///
   /// In ar, this message translates to:

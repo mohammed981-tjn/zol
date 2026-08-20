@@ -29,6 +29,7 @@ import 'package:zol/models/ad_format.dart';
 import 'package:zol/services/spec_doctor.dart';
 import 'package:zol/services/local_designer.dart';
 import 'package:zol/services/print_backend.dart';
+import 'package:zol/screens/user_guide_screen.dart';
 import 'package:zol/services/design_critic.dart';
 import 'package:zol/services/wish_parser.dart';
 import 'package:zol/services/design_wish_service.dart';
@@ -4408,6 +4409,33 @@ void main() {
 
 
   // ── شبكة الطباعة على الخادم ───────────────────────────────────────
+
+
+  testWidgets('دليل الاستخدام يُقرأ من الحزمة ويُعرض للتاجر', (tester) async {
+    // الحارس الآخر يفحص الملفّ على القرص؛ هذا يفحص أنه **محزوم** فعلًا:
+    // ملفّ سليم غير مُعلَن في `assets` يمرّ كل فحص نصّي ثم يخرج التطبيق
+    // على الجهاز بشاشة عطل.
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: const UserGuideScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('دليل الاستخدام'), findsWidgets);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    // عنوان من متن الدليل: وجودُه يعني أن المحتوى وصل لا الشاشة وحدها.
+    expect(find.text('دليل استخدام zol'), findsOneWidget);
+
+    // والقائمة كسولة، فالأقسام البعيدة لا تُبنى حتى تُرى — والتمرير
+    // إليها يفحص المتن كلّه لا رأسه.
+    await tester.scrollUntilVisible(find.text('شاشة السحر'), 200);
+    expect(find.text('شاشة السحر'), findsOneWidget);
+  });
 
   test('المال يأتي من الخادم: الضريبة مشمولة لا مُضافة', () {
     // العطل الذي كشفه أوّل نداء حقيقي: التطبيق يجمع الضريبة **فوق**
