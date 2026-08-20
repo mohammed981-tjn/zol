@@ -44,6 +44,7 @@ class AppState extends ChangeNotifier {
   static const _onboardedKey = 'onboarded';
   static const _categoryKey = 'business_category';
   static const _trashKey = 'trashed_ads';
+  static const _tasteKey = 'design_taste';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
@@ -68,6 +69,14 @@ class AppState extends ChangeNotifier {
 
   /// هل شاهد المستخدم شاشة الترحيب؟ تُعرض مرة واحدة عند أول تشغيل.
   bool hasOnboarded = false;
+
+  /// ذوق التاجر في التكوين: كم مرّة أبقى تخطيطًا من كل نمط.
+  ///
+  /// هذه ذاكرة المصمّم المحلّي الوحيدة. بدونها يُرتّب لكل التجّار
+  /// ترتيبًا واحدًا إلى الأبد: صاحب المطعم الذي يختار «الصورة أوّلًا»
+  /// في كل مرّة يجدها في المرّة الحادية عشرة حيث وجدها في الأولى.
+  /// وهي على الجهاز وحده — لا تُرسل ولا تُجمَّع.
+  final Map<String, int> designTaste = {};
 
   /// نشاط التاجر — يُسأل عنه عند أول تشغيل ويوجّه النص المولَّد كله.
   BusinessCategory businessCategory = BusinessCategory.retail;
@@ -136,6 +145,17 @@ class AppState extends ChangeNotifier {
       (c) => c.name == prefs.getString(_categoryKey),
       orElse: () => BusinessCategory.retail,
     );
+    designTaste.clear();
+    try {
+      final raw = jsonDecode(prefs.getString(_tasteKey) ?? '{}') as Map;
+      raw.forEach((k, v) {
+        if (k is String && v is num && v > 0) designTaste[k] = v.toInt();
+      });
+    } catch (_) {
+      // ذاكرة ذوقٍ تالفة تُنسى ولا تُسقط التطبيق: أسوأ أثرها ترتيبٌ
+      // محايد، وهو ما يبدأ به كل تاجر جديد أصلًا.
+    }
+
     brandColorValue = prefs.getInt(_brandColorKey);
     final fontName = prefs.getString(_brandFontKey);
     brandFont = BrandFont.values.cast<BrandFont?>().firstWhere(
@@ -330,6 +350,35 @@ class AppState extends ChangeNotifier {
     _prefs?.setBool(_onboardedKey, true);
     notifyListeners();
   }
+
+  /// يسجّل أن التاجر **أبقى** تكوينًا من هذا النمط.
+  ///
+  /// الإشارة من الفعل لا من الرأي: لا نسأله «أعجبك؟» — نعدّ ما حفظه
+  /// أو مضى به إلى النشر أو الطباعة. ومن قلّب التكوينات ومضى بالثالث
+  /// فقد رفض اثنين واختار واحدًا، وذلك أصدق من نجمة يمنحها مجاملةً.
+  ///
+  /// و**يُنسى** بالنصف عند بلوغ السقف: ذوق التاجر يتغيّر مع الموسم
+  /// والحملة، وعدّادٌ لا ينقص أبدًا يجعل شهره الأول يحكم سنته كلّها.
+  void rememberComposition(String archetype) {
+    if (archetype.isEmpty) return;
+    designTaste[archetype] = (designTaste[archetype] ?? 0) + 1;
+
+    var total = 0;
+    for (final v in designTaste.values) {
+      total += v;
+    }
+    if (total > _tasteCeiling) {
+      designTaste.updateAll((_, v) => v ~/ 2);
+      designTaste.removeWhere((_, v) => v <= 0);
+    }
+
+    _prefs?.setString(_tasteKey, jsonEncode(designTaste));
+    notifyListeners();
+  }
+
+  /// سقف الذاكرة قبل النسيان بالنصف. أربعون اختيارًا تكفي لتمييز ذوق،
+  /// ولا تكفي لتحجيره.
+  static const _tasteCeiling = 40;
 
   void setBrandColor(int? value) {
     brandColorValue = value;

@@ -125,6 +125,7 @@ class LocalDesigner {
     DesignBrief rawBrief, {
     required Color brandColor,
     Color? seasonColor,
+    Map<String, int>? taste,
     int count = 3,
   }) {
     // المصمّم **يُكمل** لا يصمت.
@@ -216,7 +217,9 @@ class LocalDesigner {
       }
     }
 
-    candidates.sort((a, b) => b.score.total.compareTo(a.score.total));
+    candidates.sort(
+      (a, b) => _tasted(b, taste).compareTo(_tasted(a, taste)),
+    );
 
     // تنوّع الأنماط مفروض: ثلاثة تكوينات من نمط واحد تبدو للتاجر خيارًا
     // واحدًا مكرّرًا، ولو كانت أعلى الدرجات.
@@ -252,6 +255,30 @@ class LocalDesigner {
       seenGeometry.add(key);
     }
     return picked;
+  }
+
+  /// أقصى ما يرفعه ذوق التاجر من درجة نمطٍ يحبّه.
+  ///
+  /// اثنا عشر بالمئة تكفي لتقديم المفضَّل حين يتقارب المرشّحون، ولا
+  /// تكفي لتقديم رديء على جيّد. والفرق جوهريّ: مفضَّلٌ بلا سقف يجعل
+  /// التطبيق يعيد نمطًا واحدًا إلى الأبد، فيصير «تعلُّمًا» اسمًا
+  /// لانغلاقٍ على أوّل اختيار.
+  static const maxTasteBoost = 0.12;
+
+  /// الدرجة بعد ميل الذوق.
+  ///
+  /// **ترتيبٌ لا بوّابة**: الضرب يقع على درجةٍ اجتازت الطبيب أصلًا،
+  /// فذوق التاجر يقدّم ويؤخّر ولا يُحيي تصميمًا رفضه القياس. ولو دخل
+  /// الذوق قبل البوّابة لصار «أحبّ هذا النمط» طريقًا إلى نصٍّ لا يُقرأ.
+  static double _tasted(LocalDesign d, Map<String, int>? taste) {
+    if (taste == null || taste.isEmpty) return d.score.total;
+    var top = 0;
+    for (final v in taste.values) {
+      if (v > top) top = v;
+    }
+    if (top <= 0) return d.score.total;
+    final mine = taste[d.archetype] ?? 0;
+    return d.score.total * (1 + maxTasteBoost * (mine / top));
   }
 
   /// بصمة هندسية: الأدوار ومواضعها مقرَّبة. تكوينان بالبصمة نفسها

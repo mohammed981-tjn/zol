@@ -4522,6 +4522,93 @@ void main() {
     expect(adorned.first.spec.elements.first.role, ElementRole.ornament);
   });
 
+  test('الذوق يقدّم ولا يفتح بوّابة: ترتيبٌ مائل بسقف', () {
+    const brand = Color(0xFF2C6BED);
+    const brief = DesignBrief(
+      headline: 'خصم ٣٠٪ على العسل',
+      subhead: 'لفترة محدودة',
+      cta: 'اطلب الآن',
+      format: AdFormat.square,
+      hasImage: true,
+    );
+
+    final neutral = LocalDesigner.compose(brief, brandColor: brand, count: 7);
+    expect(neutral, isNotEmpty);
+
+    // نمطٌ لم يكن الأوّل: نُعلِّم المصمّم أن التاجر يبقيه، فيتقدّم.
+    final laggard = neutral.last.archetype;
+    expect(laggard, isNot(neutral.first.archetype));
+
+    final tasted = LocalDesigner.compose(
+      brief,
+      brandColor: brand,
+      taste: {laggard: 5},
+      count: 7,
+    );
+    expect(
+      tasted.first.archetype,
+      laggard,
+      reason: 'الذوق لم يقدّم ما أبقاه التاجر مرارًا',
+    );
+
+    // لكنّه **ترتيب لا بوّابة**: الميل يضرب درجةً اجتازت الطبيب، فلا
+    // يُدخل نمطًا لم يُخرج تخطيطًا صالحًا أصلًا. وبلا صورة منتج تُستبعَد
+    // أنماط المنتج كلّها — ولا يُعيدها حبٌّ ولا تكرار.
+    const noImage = DesignBrief(
+      headline: 'وصل جديدنا',
+      subhead: 'جديدنا بين يديك',
+      cta: 'اكتشفه',
+      format: AdFormat.square,
+      hasImage: false,
+    );
+    final forced = LocalDesigner.compose(
+      noImage,
+      brandColor: brand,
+      taste: const {'magazine': 99},
+      count: 7,
+    );
+    expect(forced, isNotEmpty);
+    expect(
+      forced.map((d) => d.archetype),
+      isNot(contains('magazine')),
+      reason: 'الذوق أحيا نمطًا لا يصلح لهذا الموجز',
+    );
+
+    // وسقف الميل يمنع الانغلاق: نمطٌ محبوب بدرجة ضعيفة لا يتقدّم على
+    // نمطٍ ممتاز. اثنا عشر بالمئة تقدّم عند التقارب لا عند الفرق البيّن.
+    expect(LocalDesigner.maxTasteBoost, lessThanOrEqualTo(0.2));
+  });
+
+  test('ذاكرة الذوق تُحفظ وتُنسى بالنصف عند السقف', () async {
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+    expect(state.designTaste, isEmpty);
+
+    for (var i = 0; i < 3; i++) {
+      state.rememberComposition('stackTop');
+    }
+    state.rememberComposition('magazine');
+    expect(state.designTaste['stackTop'], 3);
+    expect(state.designTaste['magazine'], 1);
+
+    // تُقرأ بعد إعادة التشغيل: ذاكرةٌ تُمحى عند الإغلاق ليست ذاكرة.
+    final again = await AppState.load();
+    expect(again.designTaste['stackTop'], 3);
+
+    // وتُنسى بالنصف عند السقف: عدّادٌ لا ينقص يجعل الشهر الأول يحكم
+    // السنة كلّها.
+    for (var i = 0; i < 40; i++) {
+      state.rememberComposition('stackTop');
+    }
+    final total = state.designTaste.values.fold<int>(0, (a, b) => a + b);
+    expect(
+      total,
+      lessThanOrEqualTo(40),
+      reason: 'الذاكرة تراكمت بلا نسيان',
+    );
+    expect(state.designTaste['stackTop'], greaterThan(0));
+  });
+
   test('الناقد لا يُخدَع بشريط ضيّق ولا بعناصر لا تُرسم', () {
     const brand = Color(0xFF2C6BED);
 

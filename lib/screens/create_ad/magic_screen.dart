@@ -433,6 +433,7 @@ class _MagicScreenState extends State<MagicScreen> {
         ),
         brandColor: Color(brandArgb),
         seasonColor: _seasonColor,
+        taste: state.designTaste,
         count: 8,
       );
       if (designs.isEmpty) return const [];
@@ -497,6 +498,7 @@ class _MagicScreenState extends State<MagicScreen> {
         brief,
         brandColor: Color(brandArgb),
         seasonColor: _seasonColor,
+        taste: AppStateScope.of(context).designTaste,
         count: 8,
       );
       if (designs.isEmpty) return const [];
@@ -805,6 +807,7 @@ class _MagicScreenState extends State<MagicScreen> {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: PrintCostCalculator(
             onProceed: (product, sizeIndex, quantity) {
+              _rememberTaste(ads[_selectedCard]);
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ExecuteScreen(
@@ -845,10 +848,28 @@ class _MagicScreenState extends State<MagicScreen> {
   }
 
   void _saveAd(GeneratedAd ad) {
+    _rememberTaste(ad);
     AppStateScope.of(context).saveAd(ad);
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(L.of(context).magicSavedToLibrary)));
+  }
+
+  /// يسجّل نمط التكوين الذي أبقاه التاجر — إن كان تكوينًا محلّيًّا.
+  ///
+  /// المطابقة بهويّة الكائن لا بمقارنة الحقول: مواصفةٌ مرّت على المحرّر
+  /// صارت كائنًا آخر بمستطيلات حرّكها التاجر بيده، وعدُّها «اختيارًا
+  /// لهذا النمط» يعلّم المصمّم شيئًا لم يقع. فما لم نتعرّف عليه لا
+  /// نسجّله — الصمت أصدق من إشارة مخترَعة.
+  void _rememberTaste(GeneratedAd ad) {
+    final spec = ad.spec;
+    if (spec == null) return;
+    for (final v in _variants) {
+      if (identical(v.spec, spec)) {
+        AppStateScope.of(context).rememberComposition(v.archetype);
+        return;
+      }
+    }
   }
 
   Future<void> _copyAd(GeneratedAd ad) async {
@@ -860,6 +881,7 @@ class _MagicScreenState extends State<MagicScreen> {
   }
 
   void _goExecute(List<GeneratedAd> ads, {required bool isDigital}) {
+    _rememberTaste(ads[_selectedCard]);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ExecuteScreen(
