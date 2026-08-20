@@ -91,6 +91,9 @@ class _MagicScreenState extends State<MagicScreen> {
   /// أن عليه أن ينظر.
   List<String> _wishNotes = const [];
 
+  /// ما فهمه القارئ المحلّي من آخر أمنية — يُعرض للتاجر لا يبقى خفيًّا.
+  WishIntent? _reading;
+
   @override
   void initState() {
     super.initState();
@@ -295,9 +298,25 @@ class _MagicScreenState extends State<MagicScreen> {
     // وتعديلُ تخطيطٍ غير الذي رآه التاجر أسوأ من رفض الطلب.
     final base = _refine ? _shownSpec : null;
 
+    // القراءة تُعرض للتاجر لا تبقى في رأس البرنامج.
+    //
+    // كان القارئ يستخرج نوع العرض والنسبة والموضوع ثم يبني عليها بصمت،
+    // فإن أخطأ — قرأ «مطعم» موضوعًا وهو اسم الحيّ — خرج إعلانٌ غريب بلا
+    // سبب ظاهر، ولا يملك التاجر إلا أن يعيد الطلب بالكلمات نفسها.
+    // فإظهار ما فُهم يحوّل عطلًا صامتًا إلى شيء يُصحَّح بإعادة صياغة.
+    //
+    // وفي وضع التنقيح لا قراءة: النصّ حينها أمرُ تعديل («كبّر العنوان»)
+    // لا وصفُ عرض، وعرضُه «فهمتُ: إعلان عام» هراءٌ واثق.
+    final intent = base == null ? WishParser.parse(text) : null;
+
     setState(() {
       _wishBusy = true;
       _wishNotes = const [];
+      _reading = intent;
+      // والصيغة التي قرأها القارئ تصير الصيغة المختارة: كان يُخرج
+      // ستوري لمن كتب «ستوري» بينما تبقى الرقاقة على «مربّع» — فيرى
+      // التاجر واجهةً تقول غير ما فعلت.
+      if (intent?.format != null) _wishFormat = intent!.format!;
     });
 
     // ١) الجهاز أوّلًا — قبل الشبكة لا بعد فشلها.
@@ -308,7 +327,9 @@ class _MagicScreenState extends State<MagicScreen> {
     // الحصّة بقي في يده تصميم لا رسالة عطل.
     //
     // وهذا ليس احتياطًا: هو المخرَج الأساسي، والسحابة تُحسّنه.
-    final localMade = base == null ? _composeLocally(text, brandArgb) : const [];
+    final localMade = intent == null
+        ? const <GeneratedAd>[]
+        : _composeLocally(intent, brandArgb);
     if (localMade.isNotEmpty && mounted) {
       setState(() {
         _error = null;
@@ -480,9 +501,8 @@ class _MagicScreenState extends State<MagicScreen> {
   ///
   /// القارئ يستخرج نوع العرض والنسبة والصيغة والموضوع، والمصمّح يُولّد
   /// مئات المرشّحين ويقيسها ويختار أعلاها درجةً بأنماط متنوّعة.
-  List<GeneratedAd> _composeLocally(String wish, int brandArgb) {
+  List<GeneratedAd> _composeLocally(WishIntent intent, int brandArgb) {
     try {
-      final intent = WishParser.parse(wish);
       final brief = LocalDesigner.briefFromIntent(
         intent,
         fallbackFormat: _wishFormat,
@@ -578,6 +598,7 @@ class _MagicScreenState extends State<MagicScreen> {
               format: _wishFormat,
               busy: _wishBusy,
               notes: _wishNotes,
+              reading: _reading,
               canRefine: _shownSpec != null,
               refine: _refine,
               onRefine: (v) => setState(() => _refine = v),
@@ -906,6 +927,7 @@ class _WishBar extends StatelessWidget {
     required this.format,
     required this.busy,
     required this.notes,
+    required this.reading,
     required this.canRefine,
     required this.refine,
     required this.onRefine,
@@ -917,6 +939,9 @@ class _WishBar extends StatelessWidget {
   final AdFormat format;
   final bool busy;
   final List<String> notes;
+
+  /// قراءة القارئ المحلّي لآخر أمنية. `null` يعني لا قراءة تُعرض.
+  final WishIntent? reading;
 
   /// هل البطاقة المعروضة تخطيطٌ يقبل التعديل؟
   final bool canRefine;
@@ -937,9 +962,78 @@ class _WishBar extends StatelessWidget {
     l.wishPresetRamadan,
   ];
 
+  static String _offerLabel(L l, WishOffer o) => switch (o) {
+    WishOffer.discount => l.wishOfferDiscount,
+    WishOffer.opening => l.wishOfferOpening,
+    WishOffer.newItem => l.wishOfferNewItem,
+    WishOffer.hiring => l.wishOfferHiring,
+    WishOffer.delivery => l.wishOfferDelivery,
+    WishOffer.season => l.wishOfferSeason,
+    WishOffer.general => l.wishOfferGeneral,
+  };
+
+  /// ما فُهم من الأمنية، رقاقةً رقاقة.
+  ///
+  /// النسبة تُعرض حين تُقرأ فقط: «خصم ١٥ ريال» ليس «خصم ١٥٪»، وعرضُ
+  /// رقاقةٍ بنسبة لم تُذكر يؤكّد للتاجر خطأً يظنّه فهمًا.
+  Widget _readingRow(BuildContext context, L l, WishIntent r) {
+    final chips = <String>[
+      _offerLabel(l, r.offer),
+      if (r.discountPercent != null) l.wishReadDiscount(r.discountPercent!),
+      if ((r.subject ?? '').trim().isNotEmpty) r.subject!.trim(),
+      if (r.format != null) r.format!.label,
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(Icons.psychology_outlined, size: 15, color: context.textMuted),
+          const SizedBox(width: 5),
+          Text(
+            '${l.wishRead}:',
+            style: TextStyle(fontSize: 11.5, color: context.textMuted),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: SizedBox(
+              height: 24,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (final c in chips)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 5),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: context.hairline,
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          child: Text(
+                            c,
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = L.of(context);
+    final r = reading;
     return Container(
       decoration: BoxDecoration(
         color: context.cardBg,
@@ -950,6 +1044,7 @@ class _WishBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (r != null) _readingRow(context, l, r),
           if (notes.isNotEmpty) ...[
             // ما وجده الطبيب معروضٌ لا مبتلَع: التاجر يستحق أن يعرف أن
             // العنوان أُزيح أو أن لونًا غُيّر ليُقرأ.

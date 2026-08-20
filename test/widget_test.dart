@@ -3299,6 +3299,63 @@ void main() {
     );
   });
 
+  testWidgets('شاشة السحر: ما فهمه القارئ يُعرض ويُصحَّح بالصيغة', (
+    tester,
+  ) async {
+    // بلا خدمة سحابية: القراءة والتركيب كلاهما على الجهاز، وهذا ما
+    // يجب أن يظهر.
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: MagicScreen(
+            brief: AdBrief(
+              productName: 'قهوة مختصة',
+              description: 'حبّ مختار',
+              tone: 'فخم',
+              platform: 'إنستغرام',
+              format: 'مربّع',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).last,
+      'ابي ستوري خصم ٢٥٪ على القهوة',
+    );
+    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // القراءة معروضة: نوع العرض والنسبة والموضوع.
+    expect(find.textContaining('فهمتُ'), findsOneWidget);
+    expect(find.text('خصم'), findsWidgets);
+    // الأرقام تُصاغ عبر `NumberFormat` بحسب اللغة لا تُكتب يدويًّا،
+    // فتخرج لاتينية في العربية السعودية كما هو المتعارف هناك — وهو
+    // ما يُكتب في نصّ الإعلان نفسه أيضًا، فلا تختلف الرقاقة عن اللوحة.
+    expect(find.text('خصم 25٪'), findsWidgets);
+
+    // والصيغة التي قرأها القارئ صارت المختارة: كان يُخرج ستوري لمن
+    // كتب «ستوري» بينما تبقى الرقاقة على «مربّع».
+    final chosen = tester
+        .widgetList<ChoiceChip>(find.byType(ChoiceChip))
+        .where((c) => c.selected)
+        .map((c) => (c.label as Text).data)
+        .toList();
+    expect(
+      chosen,
+      contains(AdFormat.story.label),
+      reason: 'الرقاقة تقول غير ما فعل القارئ: $chosen',
+    );
+  });
+
 
 
   test('الأمنية على تخطيط قائم تُرسل الأساس لا تبدأ من الصفر', () async {

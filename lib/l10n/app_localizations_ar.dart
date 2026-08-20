@@ -559,6 +559,35 @@ class LAr extends L {
       'اكتب ما تريد تغييره… مثال: كبّر العنوان واجعل الخلفية فاتحة';
 
   @override
+  String get wishRead => 'فهمتُ';
+
+  @override
+  String wishReadDiscount(int pct) {
+    return 'خصم $pct٪';
+  }
+
+  @override
+  String get wishOfferDiscount => 'خصم';
+
+  @override
+  String get wishOfferOpening => 'افتتاح';
+
+  @override
+  String get wishOfferNewItem => 'صنف جديد';
+
+  @override
+  String get wishOfferHiring => 'توظيف';
+
+  @override
+  String get wishOfferDelivery => 'توصيل';
+
+  @override
+  String get wishOfferSeason => 'موسم';
+
+  @override
+  String get wishOfferGeneral => 'إعلان عام';
+
+  @override
   String get wishPresetDiscount => 'إعلان خصم ٥٠٪ لنهاية الأسبوع';
 
   @override

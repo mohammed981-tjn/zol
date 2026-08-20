@@ -1033,6 +1033,60 @@ abstract class L {
   /// **'اكتب ما تريد تغييره… مثال: كبّر العنوان واجعل الخلفية فاتحة'**
   String get wishRefineHint;
 
+  /// No description provided for @wishRead.
+  ///
+  /// In ar, this message translates to:
+  /// **'فهمتُ'**
+  String get wishRead;
+
+  /// No description provided for @wishReadDiscount.
+  ///
+  /// In ar, this message translates to:
+  /// **'خصم {pct}٪'**
+  String wishReadDiscount(int pct);
+
+  /// No description provided for @wishOfferDiscount.
+  ///
+  /// In ar, this message translates to:
+  /// **'خصم'**
+  String get wishOfferDiscount;
+
+  /// No description provided for @wishOfferOpening.
+  ///
+  /// In ar, this message translates to:
+  /// **'افتتاح'**
+  String get wishOfferOpening;
+
+  /// No description provided for @wishOfferNewItem.
+  ///
+  /// In ar, this message translates to:
+  /// **'صنف جديد'**
+  String get wishOfferNewItem;
+
+  /// No description provided for @wishOfferHiring.
+  ///
+  /// In ar, this message translates to:
+  /// **'توظيف'**
+  String get wishOfferHiring;
+
+  /// No description provided for @wishOfferDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'توصيل'**
+  String get wishOfferDelivery;
+
+  /// No description provided for @wishOfferSeason.
+  ///
+  /// In ar, this message translates to:
+  /// **'موسم'**
+  String get wishOfferSeason;
+
+  /// No description provided for @wishOfferGeneral.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعلان عام'**
+  String get wishOfferGeneral;
+
   /// No description provided for @wishPresetDiscount.
   ///
   /// In ar, this message translates to:

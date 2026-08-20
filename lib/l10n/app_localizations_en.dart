@@ -561,6 +561,35 @@ class LEn extends L {
       'Write what to change… e.g. make the headline bigger and the background light';
 
   @override
+  String get wishRead => 'Understood';
+
+  @override
+  String wishReadDiscount(int pct) {
+    return '$pct% off';
+  }
+
+  @override
+  String get wishOfferDiscount => 'Discount';
+
+  @override
+  String get wishOfferOpening => 'Opening';
+
+  @override
+  String get wishOfferNewItem => 'New arrival';
+
+  @override
+  String get wishOfferHiring => 'Hiring';
+
+  @override
+  String get wishOfferDelivery => 'Delivery';
+
+  @override
+  String get wishOfferSeason => 'Season';
+
+  @override
+  String get wishOfferGeneral => 'General ad';
+
+  @override
   String get wishPresetDiscount => '50% off this weekend';
 
   @override

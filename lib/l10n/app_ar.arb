@@ -298,6 +298,18 @@
   "executeGeneratedNote": "هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر.",
   "wishRefineChip": "عدّل هذا التصميم",
   "wishRefineHint": "اكتب ما تريد تغييره… مثال: كبّر العنوان واجعل الخلفية فاتحة",
+  "wishRead": "فهمتُ",
+  "wishReadDiscount": "خصم {pct}٪",
+  "wishOfferDiscount": "خصم",
+  "wishOfferOpening": "افتتاح",
+  "wishOfferNewItem": "صنف جديد",
+  "wishOfferHiring": "توظيف",
+  "wishOfferDelivery": "توصيل",
+  "wishOfferSeason": "موسم",
+  "wishOfferGeneral": "إعلان عام",
+  "@wishReadDiscount": {
+    "placeholders": { "pct": { "type": "int" } }
+  },
   "wishPresetDiscount": "إعلان خصم ٥٠٪ لنهاية الأسبوع",
   "wishPresetOpening": "افتتاح فرع جديد",
   "wishPresetNewItem": "وصل منتج جديد",
