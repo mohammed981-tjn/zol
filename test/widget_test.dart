@@ -5632,6 +5632,69 @@ void main() {
       expect(tester.takeException(), isNull, reason: 'استثناء في $style');
     }
   });
+
+  testWidgets('الزخرفة التي يضعها المُركِّب يرسمها العارض فعلًا', (
+    tester,
+  ) async {
+    // الحلقة بين طرفَي المحرّك: المُركِّب يضع عنصرًا، والعارض يرسمه.
+    // وانقطاعُها هو ما جعل `logo` حقلًا ميّتًا شهورًا — يُحسب في طرف
+    // ولا يُرسم في الآخر، ولا اختبارَ يمرّ بالطرفين معًا.
+    final designs = LocalDesigner.compose(
+      const DesignBrief(
+        headline: 'وصل جديدنا',
+        subhead: 'جديدنا بين يديك',
+        cta: 'اكتشفه',
+        format: AdFormat.square,
+        hasImage: true,
+        ornament: true,
+      ),
+      brandColor: const Color(0xFF2C6BED),
+      count: 1,
+    );
+    expect(designs, isNotEmpty);
+    expect(designs.first.spec.firstOf(ElementRole.ornament), isNotNull);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: SizedBox(
+          width: 400,
+          height: 400,
+          child: SpecRenderer(
+            spec: designs.first.spec,
+            brandColor: const Color(0xFF2C6BED),
+            ornamentAsset: 'assets/backgrounds/cafe.svg',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byType(SvgPicture),
+      findsWidgets,
+      reason: 'المُركِّب وضع زخرفة والعارض لم يرسمها',
+    );
+
+    // وبلا ملفّ لا شيء يُرسم ولا شيء ينكسر: التاجر أطفأ الزخرفة، أو
+    // فُتحت مواصفة محفوظة بلا نشاطها.
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: SizedBox(
+          width: 400,
+          height: 400,
+          child: SpecRenderer(
+            spec: designs.first.spec,
+            brandColor: const Color(0xFF2C6BED),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(SvgPicture), findsNothing);
+  });
 }
 
 /// اسم القالب للرسائل التشخيصية.
