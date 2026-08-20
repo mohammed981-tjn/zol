@@ -33,6 +33,7 @@ import 'package:zol/screens/create_ad/execute_screen.dart';
 import 'package:zol/screens/user_guide_screen.dart';
 import 'package:zol/config/app_role.dart';
 import 'package:zol/screens/print_shop_screen.dart';
+import 'package:zol/screens/admin_screen.dart';
 import 'package:zol/services/design_critic.dart';
 import 'package:zol/services/wish_parser.dart';
 import 'package:zol/services/design_wish_service.dart';
@@ -4556,20 +4557,16 @@ void main() {
   });
 
 
-  test('الدور يُحسم بالأسبقية الصحيحة', () {
+  test('جذر التطبيق يتبع البناء وحده لا صفة الحساب', () {
     // المثبَّت في مدخل النكهة يغلب كل شيء — به تعمل النكهات الثلاث.
-    expect(
-      resolveRole(pinned: AppRole.printShop, isAdmin: true),
-      AppRole.printShop,
-    );
+    expect(rootRole(pinned: AppRole.printShop), AppRole.printShop);
+    expect(rootRole(pinned: AppRole.admin), AppRole.admin);
 
-    // وبلا تثبيت: الإدارة أوسع من المطبعة، فمن جمعهما يرى لوحة المنصّة.
-    expect(resolveRole(isAdmin: true, isShopOwner: true), AppRole.admin);
-    expect(resolveRole(isShopOwner: true), AppRole.printShop);
-
-    // والافتراض تاجر لا مجهول: أكثر من يفتح التطبيق تاجر، وزائرٌ بلا
-    // حساب يجب أن يرى ما يفهمه لا شاشة اختيار دور لا تعنيه.
-    expect(resolveRole(), AppRole.merchant);
+    // وبلا تثبيت: تاجر. وهذا هو الإصلاح — كانت صفةُ الحساب تحسم الجذر،
+    // فمن يملك المنصّة يفتح التطبيق فلا يجد إلّا لوحة الإدارة: لا شاشة
+    // سحر ولا تنقّل سفلي ولا سهم رجوع، لأن اللوحة جذرٌ لا صفحة مدفوعة.
+    // والامتياز صار بابًا في الإعدادات لا بيتًا يُبدَّل.
+    expect(rootRole(), AppRole.merchant);
   });
 
   testWidgets('جذر التطبيق يتبع الدور المثبَّت', (tester) async {
@@ -4592,6 +4589,67 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ShellScreen), findsOneWidget);
     expect(find.byType(PrintShopScreen), findsNothing);
+
+    // وبلا تثبيت: صفةُ الحساب **لا** تخطف الجذر. هذا ما وقع فعلًا في
+    // الجهاز: صاحب المنصّة فتح التطبيق فوجد لوحة الإدارة أوّل شاشة، بلا
+    // شاشة سحر ولا تنقّل سفلي ولا سهم رجوع — الامتياز حبسه في اللوحة.
+    state.isShopOwner = true;
+    await tester.pumpWidget(ZolApp(state: state));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShellScreen), findsOneWidget);
+    expect(find.byType(PrintShopScreen), findsNothing);
+    expect(find.byType(AdminScreen), findsNothing);
+  });
+
+  testWidgets('صاحب المطبعة يجد بابه في الإعدادات', (tester) async {
+    // ولأن الجذر لم يعد يتبدّل بالصفة، فالباب هو الطريق الوحيد إلى
+    // اللوحة. وبلا هذا الفحص يصير الإصلاح أعلاه حجبًا لا تحريرًا:
+    // صاحب المطبعة يخرج من حبس اللوحة ولا يجدها بعد ذلك أبدًا.
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+    state.completeOnboarding();
+    state.isShopOwner = true;
+
+    await tester.pumpWidget(
+      AppStateScope(
+        notifier: state,
+        child: MaterialApp(
+          localizationsDelegates: L.localizationsDelegates,
+          supportedLocales: L.supportedLocales,
+          home: const SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('لوحة المطبعة'), 200);
+    await tester.tap(find.text('لوحة المطبعة'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PrintShopScreen), findsOneWidget);
+
+    // ويرجع منها — وهو بالضبط ما لم يكن ممكنًا حين كانت جذرًا.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+  });
+
+  testWidgets('ومن لا مطبعة له لا يرى الباب', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final state = await AppState.load();
+    state.completeOnboarding();
+
+    await tester.pumpWidget(
+      AppStateScope(
+        notifier: state,
+        child: MaterialApp(
+          localizationsDelegates: L.localizationsDelegates,
+          supportedLocales: L.supportedLocales,
+          home: const SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('لوحة المطبعة'), findsNothing);
   });
 
   test('المال يأتي من الخادم: الضريبة مشمولة لا مُضافة', () {

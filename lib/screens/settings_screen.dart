@@ -11,6 +11,7 @@ import '../services/admin_api.dart';
 import '../widgets/section_header.dart';
 import '../l10n/app_localizations.dart';
 import 'admin_screen.dart';
+import 'print_shop_screen.dart';
 import 'user_guide_screen.dart';
 import 'auth_screen.dart';
 import 'payment/payment_flow.dart';
@@ -47,6 +48,7 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 20),
             _buildAccountSection(context, state),
             const _AdminEntry(),
+            const _ShopEntry(),
             const SizedBox(height: 28),
             _buildBusinessSection(context, state),
             const SizedBox(height: 28),
@@ -559,6 +561,34 @@ class SettingsScreen extends StatelessWidget {
           ),
           TextButton(onPressed: state.logout, child: const Text('خروج')),
         ],
+      ),
+    );
+  }
+}
+
+/// مدخل لوحة المطبعة. يظهر لمن يملك مطبعةً وحده.
+///
+/// **وهو ما يجعل الجذر حرًّا**: كانت صفةُ المطبعة تُبدّل واجهة التطبيق
+/// كلّها، فصاحبها لا يرى شاشة السحر ولا التنقّل السفلي. فصارت بابًا
+/// يُدخَل منه ويُرجَع — والصفحة مدفوعة لا جذر، فسهم الرجوع فيها.
+class _ShopEntry extends StatelessWidget {
+  const _ShopEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AppStateScope.of(context).isShopOwner) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Card(
+        child: ListTile(
+          leading: const Icon(Icons.print_outlined),
+          title: const Text('لوحة المطبعة'),
+          subtitle: const Text('طوابير الطباعة وحالاتها'),
+          trailing: const Icon(Icons.chevron_left),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const PrintShopScreen()),
+          ),
+        ),
       ),
     );
   }

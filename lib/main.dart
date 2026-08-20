@@ -62,17 +62,12 @@ class ZolApp extends StatelessWidget {
     );
   }
 
-  /// الجذر يتبع الدور.
+  /// الجذر يتبع دور **البناء** لا صفة الحساب — راجع [rootRole].
   ///
   /// وشاشة الترحيب تخصّ التاجر وحده: مطبعةٌ تفتح لوحتها لا تحتاج ثلاث
   /// صفحات تشرح توليد الإعلانات.
   Widget _home() {
-    final role = resolveRole(
-      pinned: pinnedRole,
-      isShopOwner: state.isShopOwner,
-      isAdmin: state.isPlatformAdmin,
-    );
-    return switch (role) {
+    return switch (rootRole(pinned: pinnedRole)) {
       AppRole.admin => const AdminScreen(),
       AppRole.printShop => const PrintShopScreen(),
       AppRole.merchant => state.hasOnboarded

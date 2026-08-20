@@ -70,12 +70,15 @@ class AppState extends ChangeNotifier {
   /// هل شاهد المستخدم شاشة الترحيب؟ تُعرض مرة واحدة عند أول تشغيل.
   bool hasOnboarded = false;
 
-  /// صفة صاحب الجلسة — يقرؤها جذر التطبيق ليختار واجهته.
+  /// هل يملك صاحب الجلسة مطبعة؟ يفتح لها بابًا في الإعدادات.
   ///
-  /// وكلاهما **يفشل نحو التاجر**: تعذّر السؤال أو انقطاع الشبكة يعني
-  /// «تاجر»، لا شاشةً فارغة ولا لوحةَ إدارة تُفتح بالخطأ. ومن يملك
-  /// الصفة يراها بعد أن يصل الجواب، وأسوأ ما يقع تأخّرُ لحظة.
-  bool isPlatformAdmin = false;
+  /// **بابًا لا جذرًا**: كانت هذه الصفة تختار واجهة التطبيق كلّها، فمن
+  /// يملك مطبعةً — أو يملك المنصّة — يفتح التطبيق فلا يجد واجهة التاجر
+  /// ولا طريقًا إليها. راجع [rootRole].
+  ///
+  /// وهي **تفشل نحو التاجر**: تعذّر السؤال أو انقطاع الشبكة يعني «لا
+  /// باب»، لا شاشةً فارغة. وأسوأ ما يقع أن يفتح صاحب المطبعة الإعدادات
+  /// فلا يجد بابه حتى يعود الاتصال.
   bool isShopOwner = false;
 
   /// ذوق التاجر في التكوين: كم مرّة أبقى تخطيطًا من كل نمط.
@@ -219,27 +222,23 @@ class AppState extends ChangeNotifier {
     // بعد استعادة الجلسة لا قبلها: المزامنة تحتاج مستخدمًا معروفًا.
     // ومنفصلة عن try أعلاه لأنها تفشل بصمت أصلًا، فلا تُخفي فشل الحساب.
     await syncBrandIdentityFromCloud();
-    await refreshRoles();
+    await refreshShopOwnership();
   }
 
-  /// يسأل الخادم عن صفة صاحب الجلسة.
+  /// يسأل الخادم: هل لصاحب الجلسة مطبعة؟
   ///
-  /// السؤالان مستقلّان ويُبتلع فشلهما: الصفة امتيازٌ يُضاف، وغيابُها
-  /// يعيد التاجر إلى واجهته الطبيعية. أمّا إسقاط التطبيق لأن سؤال
-  /// امتيازٍ تعثّر فمنعُ الأكثريّة لأجل الأقلّية.
-  Future<void> refreshRoles() async {
+  /// ويُبتلع فشله: الصفة امتيازٌ يُضاف، وغيابُها يترك التاجر في واجهته
+  /// الطبيعية. أمّا إسقاط التطبيق لأن سؤال امتيازٍ تعثّر فمنعُ الأكثريّة
+  /// لأجل الأقلّية.
+  ///
+  /// (وصفةُ الإدارة لا تُخزَّن هنا: بابها في الإعدادات يسأل القاعدة عند
+  /// فتحه، فلا تبقى نسخةٌ ثانية منها تشيخ في الذاكرة.)
+  Future<void> refreshShopOwnership() async {
     final client = _client;
     final uid = client?.auth.currentUser?.id;
     if (client == null || uid == null) {
-      isPlatformAdmin = false;
       isShopOwner = false;
       return;
-    }
-    try {
-      final res = await client.rpc('is_platform_admin');
-      isPlatformAdmin = res == true;
-    } catch (_) {
-      isPlatformAdmin = false;
     }
     try {
       final rows = await client
@@ -663,6 +662,11 @@ class AppState extends ChangeNotifier {
       }
       account = await _fetchMerchantProfile(user);
       notifyListeners();
+      // بعد الدخول لا عند الإقلاع وحده: من دخل بحساب مطبعته في هذه
+      // الجلسة كان لا يرى بابه حتى يُغلق التطبيق ويفتحه — والصفة تُسأل
+      // مرّة واحدة في `_restoreSupabaseSession` التي لا تمرّ بها جلسةٌ
+      // بدأت بتسجيل دخول.
+      await refreshShopOwnership();
       return null;
     } on supa.AuthException catch (e) {
       return _translateAuthError(e.message);
