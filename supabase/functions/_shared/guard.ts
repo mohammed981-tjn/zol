@@ -52,15 +52,23 @@ export const rest = (path: string, init: RequestInit = {}) =>
   });
 
 /**
- * المعرّف الذي تُنسب إليه نداءات من لا هوية له.
+ * اسمُ المجهول **في مسار التخزين** وحده — لا في قاعدة البيانات.
  *
- * ‏UUID صفريّ لا كلمة «anon»: كل `merchant_id` في هذا المخطّط من نوع
- * `uuid`، وإدراج نصٍّ ليس معرّفًا يفشل — و[logRow] تبتلع فشلها عمدًا كي
- * لا تحرم التاجر مخرَجه. فتكون النتيجة أن صفوف المجهولين لا تُكتب، ولا
- * تُعدّ، ولا تُغلق بوّابتهم أبدًا: حراسةٌ موجودة في الشيفرة معدومة في
- * الأثر — وهي أسوأ من غيابها لأنها تُطمئن.
+ * كان معرّفًا صفريًّا يُكتب في `generation_logs.merchant_id`، فرفضته
+ * القاعدة: `merchant_id` مرتبطٌ بـ`merchants` المرتبط بـ`auth.users`،
+ * فلا وجود لتاجرٍ صفريّ ولا ينبغي أن يُختلق. وفشلُ الكتابة يعني أن
+ * صفوف المجهولين لا تُكتب ولا تُعدّ ولا تُغلق بوّابتهم أبدًا: حراسةٌ
+ * موجودة في الشيفرة معدومة في الأثر — وهي أسوأ من غيابها لأنها تُطمئن.
+ *
+ * فصار نداء المجهول يُكتب بلا صاحب (`null`)، وبقيت هذه الكلمة للمجلّد
+ * الذي تُحفظ فيه صوره — إذ المسار نصٌّ لا مفتاح أجنبي.
+ *
+ * @see supabase/migrations/20260820000500_anonymous_generation_logs.sql
  */
-export const ANON = "00000000-0000-0000-0000-000000000000";
+export const ANON = "anon";
+
+/** المعرّف الصفريّ: يصل أحيانًا من عميلٍ يظنّه هويّة، وليس هويّة. */
+const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
 export type Caller = { merchant: string; anonymous: boolean };
 
@@ -78,8 +86,18 @@ export type Caller = { merchant: string; anonymous: boolean };
  */
 export function identify(raw: unknown): Caller {
   const m = typeof raw === "string" ? raw.trim() : "";
-  return m ? { merchant: m, anonymous: false } : { merchant: ANON, anonymous: true };
+  // والمعرّف الصفريّ يُعامَل مجهولًا لا معروفًا: هو ما يرسله عميلٌ لم
+  // يُسجَّل صاحبه بعد، وقبولُه هويّةً يمنح كلَّ من أرسله حصّةَ تاجرٍ
+  // واحدةً مشتركة — سقفٌ أكبر لمن لا نعرفه.
+  const known = m && m !== NIL_UUID;
+  return known ? { merchant: m, anonymous: false } : { merchant: ANON, anonymous: true };
 }
+
+/** ترشيح صاحب النداء في PostgREST. المجهول `null` لا قيمةً بعينها. */
+const ownerFilter = (c: Caller) =>
+  c.anonymous
+    ? "merchant_id=is.null"
+    : `merchant_id=eq.${encodeURIComponent(c.merchant)}`;
 
 /** عدّاد نداءات خلال اليوم الماضي. `null` يعني تعذّر العدّ. */
 export async function usedSince(filter: string): Promise<number | null> {
@@ -115,8 +133,7 @@ export async function quotaGate(o: {
 }): Promise<Response | null> {
   const limit = o.caller.anonymous ? o.perAnon : o.perMerchant;
   const mine = await usedSince(
-    `merchant_id=eq.${encodeURIComponent(o.caller.merchant)}` +
-      `&prompt_key=eq.${encodeURIComponent(o.promptKey)}`,
+    `${ownerFilter(o.caller)}&prompt_key=eq.${encodeURIComponent(o.promptKey)}`,
   );
   if (mine !== null && mine >= limit) {
     return json(
@@ -234,7 +251,8 @@ export async function logRow(a: {
     const r = await rest("generation_logs", {
       method: "POST",
       body: JSON.stringify({
-        merchant_id: a.merchant,
+        // بلا صاحبٍ حين لا صاحب. راجع [ANON].
+        merchant_id: a.merchant === ANON ? null : a.merchant,
         prompt: a.prompt.slice(0, 2000),
         output_text: a.output.slice(0, 8000),
         model: a.model,

@@ -218,13 +218,22 @@ Deno.serve(async (req: Request) => {
     brief?: Record<string, unknown>;
   };
   try { b = await req.json(); } catch { return json({ ok: false, error: "bad_json" }, 400); }
-  if (!b?.merchant_id || !b?.product) return json({ ok: false, error: "merchant_id_and_product_required" }, 400);
+  if (!b?.product) return json({ ok: false, error: "merchant_id_and_product_required" }, 400);
+
+  // ولا مجهول لهذه الدالّة وحدها: هي تحفظ الاتجاهات في `ad_variants`
+  // وعمود صاحبها هناك إلزاميّ. فالمعرّف الغائب — أو الصفريّ الذي يرسله
+  // عميلٌ يظنّه هويّة — يُردّ **هنا**، لا أن يعبر البوّابة ثم يسقط عند
+  // الحفظ بـ‏500 بعد أن أُنفق المفتاح على التوليد.
+  const caller = identify(b.merchant_id);
+  if (caller.anonymous) {
+    return json({ ok: false, error: "merchant_id_and_product_required" }, 400);
+  }
 
   // الهوية كانت مشترطة هنا منذ البداية، والحصّة لا. والاشتراط وحده
   // يقول **من** أنفق ولا يمنعه من الإنفاق: من يخترع معرّفًا في كل نداء
   // يمرّ كأنه ألف تاجر. فالبوّابة العامّة أدناه هي ما يوقفه.
   const blocked = await quotaGate({
-    caller: identify(b.merchant_id),
+    caller,
     promptKey: "ad_copy_system",
     perMerchant: Number(Deno.env.get("DAILY_COPY_LIMIT") ?? "60"),
     perAnon: Number(Deno.env.get("DAILY_COPY_LIMIT") ?? "60"),
