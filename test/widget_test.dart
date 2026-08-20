@@ -28,6 +28,7 @@ import 'package:zol/screens/create_ad/design_editor_screen.dart';
 import 'package:zol/models/ad_format.dart';
 import 'package:zol/services/spec_doctor.dart';
 import 'package:zol/services/local_designer.dart';
+import 'package:zol/services/print_backend.dart';
 import 'package:zol/services/design_critic.dart';
 import 'package:zol/services/wish_parser.dart';
 import 'package:zol/services/design_wish_service.dart';
@@ -4403,6 +4404,76 @@ void main() {
 
     // ومحرف التوجيه الملصَق من واتساب لا يمنع الفهم.
     expect(WishParser.parse('بنر ‏لمطعم برجر').subject, 'مطعم برجر');
+  });
+
+
+  // ── شبكة الطباعة على الخادم ───────────────────────────────────────
+
+  test('المال يأتي من الخادم: الضريبة مشمولة لا مُضافة', () {
+    // العطل الذي كشفه أوّل نداء حقيقي: التطبيق يجمع الضريبة **فوق**
+    // الإجمالي، والخادم يعدّها **مشمولة فيه** (فوترة سعودية). فبنران
+    // بتسعين: يُقبض من البطاقة ٢٣٥٫٧٥ ويُسجَّل الطلب بـ٢٠٥٫٠٠.
+    //
+    // وهذا الاختبار يحرس القاعدة لا الرقم: من يحسب المال هو من يسجّله.
+    final quote = PrintQuote.fromJson(const {
+      'items_total': 180.0,
+      'delivery_fee': 25.0,
+      'vat_included': 26.74,
+      'grand_total': 205.0,
+      'turnaround_hours': 24,
+    });
+
+    expect(quote.grandTotal, 205.0);
+    expect(
+      quote.itemsTotal + quote.deliveryFee,
+      closeTo(quote.grandTotal, 0.001),
+      reason: 'الإجمالي يساوي المنتج والتوصيل — الضريبة داخله',
+    );
+
+    // والصيغة المحلية القديمة تُخرج رقمًا آخر. إن تساوى الرقمان يومًا
+    // فقد عاد أحد الطرفين إلى حساب الآخر، وحينها يُراجَع هذا الاختبار
+    // لا يُحذف.
+    final localFormula =
+        quote.itemsTotal + quote.deliveryFee + (quote.grandTotal * 0.15);
+    expect(
+      localFormula,
+      isNot(closeTo(quote.grandTotal, 0.01)),
+      reason: 'الحساب المحلي صار يوافق الخادم — تحقّق من أيّهما تغيّر',
+    );
+  });
+
+  test('أقرب مطبعة تتجاهل من لا موقع لها', () {
+    // مطبعة بلا إحداثيات كانت ستُقرأ صفرًا صفرًا — نقطة في خليج غينيا
+    // تصير «الأقرب» لكل طلب في الجزيرة العربية.
+    const riyadh = [
+      ShopRow(id: 'a', name: 'بلا موقع'),
+      ShopRow(id: 'b', name: 'الرياض', lat: 24.7136, lng: 46.6753),
+      ShopRow(id: 'c', name: 'جدة', lat: 21.5623, lng: 39.1520),
+    ];
+    expect(nearestShopRow(riyadh, 24.83, 46.64)?.id, 'b');
+    expect(nearestShopRow(riyadh, 21.60, 39.20)?.id, 'c');
+
+    // ولا مطبعةَ لها موقع يعني **لا إسناد**، لا إسنادًا عشوائيًّا.
+    const noneLocated = [ShopRow(id: 'a', name: 'بلا موقع')];
+    expect(nearestShopRow(noneLocated, 24.83, 46.64), isNull);
+  });
+
+  test('المنتج يقرأ مقاسه من specs ولا ينهار بدونه', () {
+    final withSize = ProductRow.fromJson(const {
+      'id': 'p1', 'shop_id': 's1', 'kind': 'banner', 'title': 'بنر',
+      'specs': {'size': '1×2 متر'}, 'unit_price': 90, 'min_qty': 1,
+      'turnaround_hours': 24,
+    });
+    expect(withSize.size, '1×2 متر');
+    expect(withSize.unitPrice, 90);
+
+    // مطبعة لم تكتب المقاس: المنتج يبقى صالحًا للطلب بلا مقاس معروض.
+    final bare = ProductRow.fromJson(const {
+      'id': 'p2', 'shop_id': 's1', 'kind': 'card', 'title': 'كرت',
+      'unit_price': 60,
+    });
+    expect(bare.size, isNull);
+    expect(bare.minQty, 1);
   });
 
   test('المصمّح يُكمل الناقص ولا يصمت', () {
