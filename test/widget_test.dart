@@ -4536,6 +4536,39 @@ void main() {
     );
   });
 
+
+  test('البذرة محسوبة لا مأخوذة من hashCode', () {
+    // `String.hashCode` في Dart تفصيلةُ تنفيذ لا تُضمن عبر المنصّات ولا
+    // عبر الإصدارات، ووعدُ الحتمية في التوثيق مبنيّ عليها كان وعدًا
+    // بلا سند. البذرة الآن حسابٌ معرَّف بالكامل (FNV-1a).
+    // الفحص على الشيفرة لا على النثر: التعليق يشرح لماذا تُركت
+    // `hashCode`، فالبحث في الملفّ كاملًا يلتقط شرحَها لا استعمالها.
+    final code = File('lib/services/local_designer.dart')
+        .readAsStringSync()
+        .split('\n')
+        .where((l) => !l.trimLeft().startsWith('//') && !l.trimLeft().startsWith('///'))
+        .join('\n');
+    expect(
+      code,
+      isNot(contains('.hashCode')),
+      reason: 'عاد الاعتماد على hashCode في بذرة التوليد',
+    );
+
+    // ونفس الموجز يعطي نفس اللوحة الفنّية (variant) لا نفس الترتيب فقط.
+    const brand = Color(0xFF2C6BED);
+    const brief = DesignBrief(
+      headline: 'خصم ٣٠٪ على القهوة',
+      subhead: 'اغتنمها',
+      cta: 'اطلب',
+      format: AdFormat.square,
+      hasImage: true,
+    );
+    final a = LocalDesigner.compose(brief, brandColor: brand, count: 3);
+    final b = LocalDesigner.compose(brief, brandColor: brand, count: 3);
+    expect(a.map((d) => d.spec.variant), b.map((d) => d.spec.variant));
+    expect(a.map((d) => d.spec.backdrop), b.map((d) => d.spec.backdrop));
+  });
+
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────
 
   test('الهجرة تمنع المزوّد من اعتماد نفسه وتوثيق نفسه', () {

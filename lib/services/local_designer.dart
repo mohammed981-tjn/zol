@@ -64,9 +64,16 @@ class LocalDesign {
 ///
 /// وهذا المولّد يفعل ما يفعله النموذج — يُركّب تكوينًا — بطريقة أخرى:
 ///
-///   **يقترح**: أنماط تكوين معلَّمة (لا قوالب جامدة) تُوَلِّد مئات
-///   التخطيطات بضرب خياراتها: جهة النصّ، وحجم العنوان، ونصيب المنتج،
-///   ونمط الخلفية.
+///   **يقترح**: سبعة أنماط معلَّمة (لا قوالب جامدة) تُضرَب في جهة النصّ
+///   وإزاحة حجم العنوان ونصيب المنتج ومقدار الفجوة ونمط الخلفية — نحو
+///   ألف ومئتَي محاولة، ينجو منها بعد الطبيب أربعون إلى ستّين تخطيطًا
+///   **متمايز الهندسة**.
+///
+///   والرقم مذكور لأنه قيس: كان التوثيق يقول «مئات التخطيطات» بينما
+///   البحث الحقيقي تسعةٌ لا غير — لأن إزاحة الحجم لا تمسّ مستطيلًا،
+///   والناقد يقيس النِسَب لا الأحجام، فتتعادل عشرات المرشّحين ويُحسم
+///   المعروض بترتيب الفرز لا بقياس. فصار التنويع على ما يغيّر
+///   **المستطيلات**: نصيب المنتج والفجوة وجهة النصّ.
 ///
 ///   **يقيس**: كل مرشَّح يمرّ على `SpecDoctor` (بوّابة: يُقرأ؟ داخل
 ///   الهامش؟ بلا تداخل؟) ثم على `DesignCritic` (درجة: تسلسل، اصطفاف،
@@ -131,44 +138,61 @@ class LocalDesigner {
     final usable = brief.hasImage
         ? archetypes
         : archetypes
-              .where((a) => !const {
-                'stackBottom',
-                'sideBySide',
-                'heroCentre',
-                'magazine',
-              }.contains(a))
+              .where(
+                (a) => !const {
+                  'stackBottom',
+                  'sideBySide',
+                  'heroCentre',
+                  'magazine',
+                }.contains(a),
+              )
               .toList();
 
     for (final archetype in usable) {
       for (final textAtStart in [true, false]) {
         for (final headStep in [0, 1, 2]) {
-          for (final backdrop in _backdropsFor(brief)) {
-            final variant = (seed + archetype.hashCode + headStep) % 8;
-            final elements = _build(
-              archetype: archetype,
-              grid: grid,
-              brief: brief,
-              textAtStart: textAtStart,
-              headStep: headStep,
-            );
-            if (elements.isEmpty) continue;
+          // وزن المنتج والفجوة يغيّران **المستطيلات** لا الأحجام وحدها.
+          // وبلا هذين كان البحث الحقيقي تسعة تخطيطات لا مئتين وعشرة:
+          // `headStep` يمسّ حجم الحرف فقط، والناقد يقيس النِسَب لا
+          // الأحجام المطلقة — فتتعادل عشرات المرشّحين عند القمّة ويُحسم
+          // المعروض بترتيب الفرز لا بقياس.
+          for (final productWeight in [2.6, 3.4, 4.4]) {
+            for (final gap in [0.024, 0.042]) {
+              for (final backdrop in _backdropsFor(brief)) {
+                final variant =
+                    (seed + usable.indexOf(archetype) * 31 + headStep) % 8;
+                final elements = _build(
+                  archetype: archetype,
+                  grid: grid,
+                  brief: brief,
+                  textAtStart: textAtStart,
+                  headStep: headStep,
+                  productWeight: productWeight,
+                  gap: gap,
+                );
+                if (elements.isEmpty) continue;
 
-            final spec = DesignSpec(
-              format: brief.format,
-              backdrop: backdrop,
-              elements: elements,
-              variant: variant.abs(),
-              note: _noteFor(archetype),
-            );
-            final score = DesignCritic.score(spec, brandColor: brandColor);
-            if (!score.usable) continue;
+                final spec = DesignSpec(
+                  format: brief.format,
+                  backdrop: backdrop,
+                  elements: elements,
+                  variant: variant.abs(),
+                  note: _noteFor(archetype),
+                );
+                final score = DesignCritic.score(spec, brandColor: brandColor);
+                if (!score.usable) continue;
 
-            // المعروض هو ما بعد الطبيب لا ما قبله: الدرجة حُسبت على
-            // المُصلَح، فعرضُ الخام يعني عرض غير ما قِيس.
-            final healed = SpecDoctor.review(spec, brandColor: brandColor).spec;
-            candidates.add(
-              LocalDesign(spec: healed, score: score, archetype: archetype),
-            );
+                // المعروض هو ما بعد الطبيب لا ما قبله: الدرجة حُسبت على
+                // المُصلَح، فعرضُ الخام يعني عرض غير ما قِيس.
+                final healed = SpecDoctor.review(
+                  spec,
+                  brandColor: brandColor,
+                ).spec;
+                candidates.add(
+                  LocalDesign(spec: healed, score: score, archetype: archetype),
+                );
+              }
+            }
           }
         }
       }
@@ -178,18 +202,36 @@ class LocalDesigner {
 
     // تنوّع الأنماط مفروض: ثلاثة تكوينات من نمط واحد تبدو للتاجر خيارًا
     // واحدًا مكرّرًا، ولو كانت أعلى الدرجات.
-    // التنوّع يُقاس بالهندسة لا بالاسم.
+    // التنوّع بشرطين لا بشرط واحد.
     //
-    // كان الفرز على اسم النمط، والأسماء تكذب: ثلاثة أنماط قد تُخرج
-    // المستطيلات نفسها بالضبط فيمرّ التكرار مصنَّفًا «تنوّعًا».
+    // الاسم وحده يكذب: ثلاثة أنماط قد تُخرج المستطيلات نفسها بالضبط
+    // فيمرّ التكرار مصنَّفًا «تنوّعًا». والهندسة وحدها لا تكفي: ثلاث
+    // نسخ من نمطٍ واحد بأوزان منتج مختلفة تتمايز حسابيًّا وتتشابه
+    // للعين — والتاجر يريد خيارات لا فروقًا دقيقة.
+    //
+    // فالمرور الأول يأخذ أعلى تخطيط من **كل نمط**، والثاني يُكمل بما
+    // تمايزت هندسته مهما تكرّر نمطه.
     final picked = <LocalDesign>[];
-    final seen = <String>{};
+    final seenGeometry = <String>{};
+    final seenArchetype = <String>{};
+
     for (final c in candidates) {
-      final key = _geometryKey(c.spec);
-      if (seen.contains(key)) continue;
-      picked.add(c);
-      seen.add(key);
       if (picked.length >= count) break;
+      final key = _geometryKey(c.spec);
+      if (seenArchetype.contains(c.archetype) || seenGeometry.contains(key)) {
+        continue;
+      }
+      picked.add(c);
+      seenArchetype.add(c.archetype);
+      seenGeometry.add(key);
+    }
+
+    for (final c in candidates) {
+      if (picked.length >= count) break;
+      final key = _geometryKey(c.spec);
+      if (seenGeometry.contains(key)) continue;
+      picked.add(c);
+      seenGeometry.add(key);
     }
     return picked;
   }
@@ -239,9 +281,7 @@ class LocalDesigner {
     // والمخزَّن قد يكون من جلسة أخرى وسلعة أخرى.
     final named = intent.subject?.trim() ?? '';
     final stored = product.trim();
-    final p = named.isNotEmpty
-        ? named
-        : (stored.isEmpty ? 'منتجنا' : stored);
+    final p = named.isNotEmpty ? named : (stored.isEmpty ? 'منتجنا' : stored);
     final pct = intent.discountPercent;
 
     // النصّ يُبنى من الفهم لا يُنسخ من الأمنية: التاجر يكتب طلبًا
@@ -268,7 +308,9 @@ class LocalDesigner {
       WishOffer.season => ('موسمنا معك', 'عروض $p هذا الموسم', 'تسوّق الآن'),
       WishOffer.general => (
         p,
-        brandName?.trim().isNotEmpty == true ? brandName!.trim() : 'جودة تُميّزنا',
+        brandName?.trim().isNotEmpty == true
+            ? brandName!.trim()
+            : 'جودة تُميّزنا',
         'تواصل معنا',
       ),
     };
@@ -293,24 +335,67 @@ class LocalDesigner {
     required DesignBrief brief,
     required bool textAtStart,
     required int headStep,
+    required double productWeight,
+    required double gap,
   }) {
-    // ثلاث درجات لحجم العنوان بدل رقم واحد: ما يصلح لعنوان من كلمتين
-    // يفيض بعنوان من ستّ.
-    final headSize = switch (headStep) {
-      0 => 0.052,
-      1 => 0.068,
-      _ => 0.084,
-    };
+    // حجم العنوان من **طول نصّه** لا من عدّاد أعمى.
+    //
+    // كانت ثلاث درجات تُجرَّب جميعًا بلا نظر إلى الكلام، والتعليق يزعم
+    // أنها تراعي الطول. وقياسًا: عنوانٌ بحرف واحد وعنوانٌ بخمس عشرة
+    // كلمة كانا يخرجان **بنفس المستطيل ونفس الحجم بالضبط** — ثمانون
+    // حرفًا في كرت ‎9×5‎ سم بحجم ٧٪ لا يسعها العارض فيُصغّرها أو يقصّها،
+    // والناقد لا يرى شيئًا من ذلك.
+    //
+    // فالدرجة تُشتقّ من الطول، وتبقى `headStep` إزاحةً حول ما اشتُقّ:
+    // تجربةُ الأكبر والأصغر قليلًا حول المقاس المناسب.
+    final chars = brief.headline.trim().length;
+    final base = chars <= 12
+        ? 0.084
+        : chars <= 24
+        ? 0.068
+        : chars <= 40
+        ? 0.056
+        : 0.046;
+    final headSize =
+        (base *
+                switch (headStep) {
+                  0 => 0.85,
+                  1 => 1.0,
+                  _ => 1.18,
+                })
+            .clamp(0.030, 0.11);
     final tall = brief.format.aspectClass == AspectClass.tall;
 
     return switch (archetype) {
-      'stackTop' => _stack(grid, brief, headSize, productBelow: true),
-      'stackBottom' => _stack(grid, brief, headSize, productBelow: false),
-      'sideBySide' => _sideBySide(grid, brief, headSize, textAtStart),
-      'heroCentre' => _heroCentre(grid, brief, headSize),
-      'bandedHeadline' => _banded(grid, brief, headSize, tall),
-      'posterFrame' => _poster(grid, brief, headSize),
-      'magazine' => _magazine(grid, brief, headSize, textAtStart),
+      'stackTop' => _stack(
+        grid,
+        brief,
+        headSize,
+        productBelow: true,
+        textAtStart: textAtStart,
+        productWeight: productWeight,
+        gap: gap,
+      ),
+      'stackBottom' => _stack(
+        grid,
+        brief,
+        headSize,
+        productBelow: false,
+        textAtStart: textAtStart,
+        productWeight: productWeight,
+        gap: gap,
+      ),
+      'sideBySide' => _sideBySide(grid, brief, headSize, textAtStart, gap),
+      'heroCentre' => _heroCentre(grid, brief, headSize, productWeight, gap),
+      'bandedHeadline' => _banded(grid, brief, headSize, tall, productWeight),
+      'posterFrame' => _poster(grid, brief, headSize, productWeight),
+      'magazine' => _magazine(
+        grid,
+        brief,
+        headSize,
+        textAtStart,
+        productWeight,
+      ),
       _ => const [],
     };
   }
@@ -353,21 +438,31 @@ class LocalDesigner {
     DesignBrief b,
     double headSize, {
     required bool productBelow,
+    bool textAtStart = true,
+    double productWeight = 3.4,
+    double gap = 0.03,
   }) {
-    final badge = _badgeBlock(g, b);
-    final head = _headBlock(b, headSize, 2.0, SpecAlign.start, span: 12);
-    final sub = _subBlock(b, headSize, 1.1, SpecAlign.start, span: 10);
-    final product = _productBlock(b, 3.4, col: 1, span: 10);
-    final cta = _ctaBlock(b, headSize, 1.0, col: 0, span: 5);
+    // جهة النصّ كانت مُهمَلة في خمسة أنماط من سبعة، فيتكرّر التخطيط
+    // نفسه مرّتين تحت اسمين — «تنوّعٌ» في العدّ لا في الرؤية.
+    final align = textAtStart ? SpecAlign.start : SpecAlign.end;
+    final col = textAtStart ? 0 : 2;
+
+    final badge = _badgeBlock(g, b, col: col);
+    final head = _headBlock(b, headSize, 2.0, align, span: 10, col: col);
+    final sub = _subBlock(b, headSize, 1.1, align, span: 9, col: col);
+    final product = _productBlock(b, productWeight, col: 1, span: 10);
+    final cta = _ctaBlock(b, headSize, 1.0, col: col, span: 5);
 
     return _column(g, [
+      _logoBlock(b, col: 0, span: 2),
       if (!productBelow) product,
       badge,
       head,
       sub,
       if (productBelow) product,
       cta,
-    ]);
+      _tagsBlock(b, headSize, align, span: 9, col: col),
+    ], gap: gap);
   }
 
   /// نصفان: نصّ في جهة ومنتج في الأخرى — تكوين اللوحات العريضة.
@@ -376,8 +471,17 @@ class LocalDesigner {
     DesignBrief b,
     double headSize,
     bool textAtStart,
+    double gap,
   ) {
-    if (!b.hasImage) return _stack(g, b, headSize, productBelow: true);
+    if (!b.hasImage) {
+      return _stack(
+        g,
+        b,
+        headSize,
+        productBelow: true,
+        textAtStart: textAtStart,
+      );
+    }
 
     final textCol = textAtStart ? 0 : 7;
     final prodCol = textAtStart ? 7 : 0;
@@ -390,7 +494,8 @@ class LocalDesigner {
       _headBlock(b, headSize * 0.86, 2.2, align, span: 5, col: textCol),
       _subBlock(b, headSize, 1.1, align, span: 5, col: textCol),
       _ctaBlock(b, headSize, 1.0, col: textCol, span: 4),
-    ], gap: 0.035);
+      _tagsBlock(b, headSize, align, span: 5, col: textCol),
+    ], gap: gap);
 
     return [
       DesignElement(
@@ -406,14 +511,19 @@ class LocalDesigner {
     _Grid g,
     DesignBrief b,
     double headSize,
+    double productWeight,
+    double gap,
   ) {
     if (!b.hasImage) return const [];
     return _column(g, [
+      _logoBlock(b, col: 5, span: 2),
+      _badgeBlock(g, b, col: 4, span: 4),
       _headBlock(b, headSize, 1.6, SpecAlign.center, span: 10, col: 1),
-      _productBlock(b, 4.2, col: 1, span: 10),
+      _productBlock(b, productWeight + 0.8, col: 1, span: 10),
       _subBlock(b, headSize, 1.0, SpecAlign.center, span: 10, col: 1),
       _ctaBlock(b, headSize, 1.0, col: 4, span: 4),
-    ]);
+      _tagsBlock(b, headSize, SpecAlign.center, span: 10, col: 1),
+    ], gap: gap);
   }
 
   /// شريطٌ ملوّن خلف العنوان — أوضح تسلسل ممكن، ويعمل فوق أي خلفية.
@@ -422,12 +532,15 @@ class LocalDesigner {
     DesignBrief b,
     double headSize,
     bool tall,
+    double productWeight,
   ) {
     final body = _column(g, [
       _headBlock(b, headSize, tall ? 1.8 : 2.2, SpecAlign.center, span: 12),
-      _productBlock(b, 3.6, col: 1, span: 10),
+      _badgeBlock(g, b, col: 4, span: 4),
+      _productBlock(b, productWeight, col: 1, span: 10),
       _subBlock(b, headSize, 1.0, SpecAlign.center, span: 10, col: 1),
       _ctaBlock(b, headSize, 1.0, col: 4, span: 4),
+      _tagsBlock(b, headSize, SpecAlign.center, span: 10, col: 1),
     ]);
     if (body.isEmpty) return body;
 
@@ -450,13 +563,20 @@ class LocalDesigner {
   }
 
   /// إطارٌ رفيع وتكوين مركزي — تكوين المطبوعات الهادئة.
-  static List<DesignElement> _poster(_Grid g, DesignBrief b, double headSize) =>
-      _column(g, [
-        _headBlock(b, headSize, 2.0, SpecAlign.center, span: 10, col: 1),
-        _subBlock(b, headSize, 1.0, SpecAlign.center, span: 8, col: 2),
-        _productBlock(b, 3.0, col: 2, span: 8),
-        _ctaBlock(b, headSize, 1.0, col: 4, span: 4),
-      ], gap: 0.04);
+  static List<DesignElement> _poster(
+    _Grid g,
+    DesignBrief b,
+    double headSize,
+    double productWeight,
+  ) => _column(g, [
+    _logoBlock(b, col: 5, span: 2),
+    _headBlock(b, headSize, 2.0, SpecAlign.center, span: 10, col: 1),
+    _badgeBlock(g, b, col: 4, span: 4),
+    _subBlock(b, headSize, 1.0, SpecAlign.center, span: 8, col: 2),
+    _productBlock(b, productWeight - 0.4, col: 2, span: 8),
+    _ctaBlock(b, headSize, 1.0, col: 4, span: 4),
+    _tagsBlock(b, headSize, SpecAlign.center, span: 8, col: 2),
+  ], gap: 0.04);
 
   /// عنوانٌ كبير ومنتجٌ مزاح — تكوين غير مركزي.
   ///
@@ -467,17 +587,20 @@ class LocalDesigner {
     DesignBrief b,
     double headSize,
     bool textAtStart,
+    double productWeight,
   ) {
     if (!b.hasImage) return const [];
     final col = textAtStart ? 0 : 4;
     final align = textAtStart ? SpecAlign.start : SpecAlign.end;
     return _column(g, [
+      _badgeBlock(g, b, col: col, span: 3),
       _headBlock(b, headSize, 2.0, align, span: 8, col: col),
       // المنتج غير مركزي عمدًا: قِستُ في بنر كانفا حقيقي منتجًا عند ٤٢٪
       // من العرض لا في المنتصف، وهو ما يعطي التكوين حركةً.
-      _productBlock(b, 3.6, col: textAtStart ? 3 : 1, span: 8),
+      _productBlock(b, productWeight, col: textAtStart ? 3 : 1, span: 8),
       _subBlock(b, headSize, 1.0, align, span: 7, col: col),
       _ctaBlock(b, headSize, 1.0, col: col, span: 5),
+      _tagsBlock(b, headSize, align, span: 7, col: col),
     ]);
   }
 
@@ -557,6 +680,41 @@ class LocalDesigner {
     ),
   );
 
+  /// شعار العلامة كتلةً في العمود لا ملصقًا في ركن.
+  ///
+  /// `hasLogo` كان حقلًا ميّتًا: لا نمط يبني `ElementRole.logo` إطلاقًا،
+  /// فشعار التاجر لا يظهر في أي تخطيط محلّي. ووضعُه في ركنٍ فوق النصّ
+  /// يجعله حاجبًا يُزيح العنوان، فمكانه صفٌّ خاصّ به.
+  static _Block _logoBlock(DesignBrief b, {int col = 0, int span = 2}) =>
+      _Block(
+        weight: b.hasLogo ? 0.7 : 0,
+        build: (g, y, h) => DesignElement(
+          role: ElementRole.logo,
+          rect: g.rect(col: col, span: span, y: y, h: h),
+        ),
+      );
+
+  /// الهاشتاقات — حقلٌ ميّت آخر: `_adFromSpec` يقرأها من المواصفة
+  /// فتعود `null` دائمًا، فكل إعلان محلّي بلا هاشتاقات.
+  static _Block _tagsBlock(
+    DesignBrief b,
+    double headSize,
+    SpecAlign align, {
+    required int span,
+    int col = 0,
+  }) => _Block(
+    weight: b.hasTags ? 0.7 : 0,
+    build: (g, y, h) => DesignElement(
+      role: ElementRole.tags,
+      rect: g.rect(col: col, span: span, y: y, h: h),
+      text: b.tags,
+      align: align,
+      maxLines: 2,
+      sizeFactor: headSize * 0.30,
+      weight: 500,
+    ),
+  );
+
   static _Block _ctaBlock(
     DesignBrief b,
     double headSize,
@@ -580,7 +738,11 @@ class LocalDesigner {
   static List<SpecBackdrop> _backdropsFor(DesignBrief b) {
     if (b.preferLight == true) return const [SpecBackdrop.paper];
     if (b.preferLight == false) {
-      return const [SpecBackdrop.mesh, SpecBackdrop.spotlight, SpecBackdrop.arcs];
+      return const [
+        SpecBackdrop.mesh,
+        SpecBackdrop.spotlight,
+        SpecBackdrop.arcs,
+      ];
     }
     return const [
       SpecBackdrop.mesh,
@@ -602,11 +764,27 @@ class LocalDesigner {
     _ => 'تكوين محلّي',
   };
 
-  static int _seedOf(DesignBrief b) =>
-      (b.headline.hashCode ^
-              (b.subhead ?? '').hashCode ^
-              b.format.index * 7919)
-          .abs();
+  /// بذرة ثابتة من المحتوى — بحساب صريح لا بـ`hashCode`.
+  ///
+  /// `String.hashCode` في Dart لا يضمن قيمةً واحدة عبر المنصّات ولا عبر
+  /// إصدارات التنفيذ (الجهاز غير الويب)، والتوثيق أعلاه يَعِد بالحتمية:
+  /// «نفس الموجز يعطي نفس التصاميم». فوعدٌ مبنيّ على تفصيلة تنفيذٍ ليس
+  /// وعدًا. وFNV-1a حسابٌ معرَّف بالكامل يعطي الرقم نفسه في كل مكان.
+  static int _seedOf(DesignBrief b) {
+    var h = 0x811C9DC5;
+    void mix(String s) {
+      for (final c in s.codeUnits) {
+        h ^= c;
+        h = (h * 0x01000193) & 0x7FFFFFFF;
+      }
+      h ^= 0x5F;
+    }
+
+    mix(b.headline);
+    mix(b.subhead ?? '');
+    mix(b.format.name);
+    return h;
+  }
 }
 
 /// شبكة تخطيط كسريّة — الأداة التي تجعل الحواف تصطفّ من تلقائها.
