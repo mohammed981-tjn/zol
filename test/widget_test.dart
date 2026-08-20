@@ -4579,6 +4579,61 @@ void main() {
     expect(adorned.first.spec.elements.first.role, ElementRole.ornament);
   });
 
+  test('الأمنية تتكلّم لغة النشاط لا لغة عامّة', () {
+    // مفردات الأنشطة موجودة في التطبيق منذ زمن، وكان مسار الأمنية
+    // وحده لا يمرّ بها — فيكتب لصاحب الكافيه ما يكتبه لمتجر قطع غيار.
+    final wish = WishParser.parse('ابي إعلان خصم ٢٠٪');
+
+    final cafe = LocalDesigner.briefFromIntent(
+      wish,
+      fallbackFormat: AdFormat.square,
+      product: 'قهوة مختصة',
+      category: BusinessCategory.cafe,
+    );
+    final generic = LocalDesigner.briefFromIntent(
+      wish,
+      fallbackFormat: AdFormat.square,
+      product: 'قهوة مختصة',
+    );
+
+    final cafeCalls = [
+      BusinessCategory.cafe.cta,
+      ...BusinessCategory.cafe.ctaVariants,
+    ];
+    expect(
+      cafeCalls,
+      contains(cafe.cta),
+      reason: 'دعوة الإجراء عامّة رغم معرفتنا بالنشاط: ${cafe.cta}',
+    );
+    expect(generic.cta, 'اطلب الآن', reason: 'بلا نشاط تبقى الصيغة العامّة');
+
+    // والهاشتاقات كانت حقلًا ميّتًا ثالثًا: لا مسارَ يملؤه، فمن ينسخ
+    // نصّه إلى إنستغرام ينسخ نصف إعلان.
+    expect(cafe.hasTags, isTrue);
+    expect(cafe.tags, contains('#قهوة_مختصة'));
+    expect(generic.hasTags, isFalse);
+
+    // وحتميّ: نفس الأمنية تعطي نفس الصياغة، فمن أعجبه ما رآه يجده.
+    final again = LocalDesigner.briefFromIntent(
+      wish,
+      fallbackFormat: AdFormat.square,
+      product: 'قهوة مختصة',
+      category: BusinessCategory.cafe,
+    );
+    expect(again.cta, cafe.cta);
+    expect(again.subhead, cafe.subhead);
+
+    // والتوظيف وحده لا يأخذ دعوة النشاط: «زورونا اليوم» في إعلان وظيفة
+    // يطلب من الباحث عن عمل أن يشتري.
+    final hiring = LocalDesigner.briefFromIntent(
+      WishParser.parse('نبي إعلان توظيف'),
+      fallbackFormat: AdFormat.square,
+      product: 'قهوة مختصة',
+      category: BusinessCategory.cafe,
+    );
+    expect(hiring.cta, 'قدّم الآن');
+  });
+
   test('الذوق يقدّم ولا يفتح بوّابة: ترتيبٌ مائل بسقف', () {
     const brand = Color(0xFF2C6BED);
     const brief = DesignBrief(

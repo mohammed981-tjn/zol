@@ -508,11 +508,15 @@ class _MagicScreenState extends State<MagicScreen> {
         fallbackFormat: _wishFormat,
         product: widget.brief.productName,
         brandName: widget.brief.brandName,
+        category: widget.brief.category,
         hasImage: widget.brief.hasProductImage,
         hasLogo: AppStateScope.of(context).brandLogoBytes != null,
         seasonBadge: _seasonBadge,
         merchantBadge: widget.brief.badge?.label,
         ornament: widget.brief.useDecorativeBackground,
+        // القالب الذي اختاره التاجر يحمل سطحه: تركيبٌ يقلب الفاتح
+        // داكنًا يُبطل اختيارًا صريحًا اتّخذه في الشاشة السابقة.
+        preferLight: widget.initialTemplate?.isLightSurface,
       );
       final designs = LocalDesigner.compose(
         brief,

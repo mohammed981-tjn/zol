@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../models/ad_format.dart';
+import '../models/business_category.dart';
 import '../models/design_spec.dart';
 import 'design_critic.dart';
 import 'spec_doctor.dart';
@@ -316,16 +317,24 @@ class LocalDesigner {
   }
 
   /// يبني موجزًا من أمنية التاجر — الجسر بين القارئ والمصمّم.
+  ///
+  /// [category] نشاط التاجر. بدونه يخرج إعلانٌ صحيح وعامّ؛ ومعه يخرج
+  /// إعلانٌ يتكلّم لغة النشاط: المقهى يُنادى إليه بـ«زورونا اليوم» لا
+  /// بـ«اطلب الآن»، والعقار بـ«احجز معاينتك». والمفردات موجودة في
+  /// التطبيق منذ زمن (`business_category.dart`) وكان مسارُ الأمنية
+  /// وحده لا يمرّ بها — فيكتب لصاحب الكافيه ما يكتبه لمتجر قطع غيار.
   static DesignBrief briefFromIntent(
     WishIntent intent, {
     required AdFormat fallbackFormat,
     required String product,
     String? brandName,
+    BusinessCategory? category,
     bool hasImage = false,
     bool hasLogo = false,
     String? seasonBadge,
     String? merchantBadge,
     bool ornament = false,
+    bool? preferLight,
   }) {
     // ما ذكره التاجر في أمنيته أولى بما خزّناه عنه: هو يكتب الآن،
     // والمخزَّن قد يكون من جلسة أخرى وسلعة أخرى.
@@ -334,6 +343,18 @@ class LocalDesigner {
     final p = named.isNotEmpty ? named : (stored.isEmpty ? 'منتجنا' : stored);
     final pct = intent.discountPercent;
 
+    // الاختيار من مفردات النشاط **حتميّ** من نصّ الأمنية: التاجر الذي
+    // يعيد الطلب نفسه يرى الصياغة نفسها، ومن غيّر كلمةً يرى تنويعًا.
+    // ولو كان عشوائيًّا لصار «أعجبني هذا» خسارةً لا رجعة فيها.
+    final seed = _fnv(intent.raw);
+    String? ofList(List<String> xs, int salt) =>
+        xs.isEmpty ? null : xs[(seed ~/ (salt + 1)) % xs.length];
+
+    final catCta = category == null
+        ? null
+        : ofList([category.cta, ...category.ctaVariants], 1);
+    final hook = category == null ? null : ofList(category.hooks, 7);
+
     // النصّ يُبنى من الفهم لا يُنسخ من الأمنية: التاجر يكتب طلبًا
     // («أبي إعلان خصم») لا عنوانًا، ووضعُ طلبه عنوانًا يُخرج إعلانًا
     // يخاطبنا نحن لا جمهوره.
@@ -341,27 +362,38 @@ class LocalDesigner {
       WishOffer.discount => (
         pct != null ? 'خصم $pct٪ على $p' : 'عرض خاص على $p',
         intent.urgent ? 'لفترة محدودة — لا تفوّته' : 'اغتنمها قبل أن تنتهي',
-        'اطلب الآن',
+        catCta ?? 'اطلب الآن',
       ),
       WishOffer.opening => (
         'افتتاح ${brandName?.trim().isNotEmpty == true ? brandName!.trim() : p}',
         'ننتظرك في يومنا الأول',
-        'زُرنا اليوم',
+        catCta ?? 'زُرنا اليوم',
       ),
-      WishOffer.newItem => ('وصل $p', 'جديدنا بين يديك', 'اكتشفه'),
+      WishOffer.newItem => ('وصل $p', hook ?? 'جديدنا بين يديك', 'اكتشفه'),
+      // والتوظيف وحده لا يأخذ دعوة النشاط: «احجز معاينتك» في إعلان
+      // وظيفة يطلب من الباحث عن عمل أن يشتري.
       WishOffer.hiring => (
         'نبحث عن من يشبهنا',
         'فرص عمل في ${brandName?.trim().isNotEmpty == true ? brandName!.trim() : p}',
         'قدّم الآن',
       ),
-      WishOffer.delivery => ('توصيل مجاني', 'يصلك $p إلى بابك', 'اطلب الآن'),
-      WishOffer.season => ('موسمنا معك', 'عروض $p هذا الموسم', 'تسوّق الآن'),
+      WishOffer.delivery => (
+        'توصيل مجاني',
+        'يصلك $p إلى بابك',
+        catCta ?? 'اطلب الآن',
+      ),
+      WishOffer.season => (
+        'موسمنا معك',
+        'عروض $p هذا الموسم',
+        catCta ?? 'تسوّق الآن',
+      ),
       WishOffer.general => (
         p,
-        brandName?.trim().isNotEmpty == true
-            ? brandName!.trim()
-            : 'جودة تُميّزنا',
-        'تواصل معنا',
+        hook ??
+            (brandName?.trim().isNotEmpty == true
+                ? brandName!.trim()
+                : 'جودة تُميّزنا'),
+        catCta ?? 'تواصل معنا',
       ),
     };
 
@@ -374,11 +406,17 @@ class LocalDesigner {
       // وشارتان بمعنيين متقاربين تزدحمان في ركن واحد.
       badge: pct != null ? 'خصم $pct٪' : merchantBadge,
       seasonBadge: seasonBadge,
+      // هاشتاقات النشاط: `tags` كان حقلًا ميّتًا ثالثًا — لا مسارَ يملؤه،
+      // فكلّ إعلان محلّي يخرج بلا هاشتاق، والتاجر الذي ينسخ نصّه إلى
+      // إنستغرام ينسخ نصفَ إعلان.
+      tags: category?.hashtags.join(' '),
       ornament: ornament,
       format: intent.format ?? fallbackFormat,
       hasImage: hasImage,
       hasLogo: hasLogo,
-      preferLight: intent.wantsLight,
+      // ما نطق به التاجر في أمنيته («تصميم فاتح») أولى بما استنتجناه
+      // من قالبٍ اختاره قبل قليل.
+      preferLight: intent.wantsLight ?? preferLight,
     );
   }
 
@@ -888,16 +926,24 @@ class LocalDesigner {
   static int _seedOf(DesignBrief b) {
     var h = 0x811C9DC5;
     void mix(String s) {
-      for (final c in s.codeUnits) {
-        h ^= c;
-        h = (h * 0x01000193) & 0x7FFFFFFF;
-      }
+      h = _fnv(s, h);
       h ^= 0x5F;
     }
 
     mix(b.headline);
     mix(b.subhead ?? '');
     mix(b.format.name);
+    return h;
+  }
+
+  /// FNV-1a على وحدات الترميز — حسابٌ معرَّف بالكامل يعطي الرقم نفسه
+  /// على كل منصّة، بخلاف `String.hashCode`.
+  static int _fnv(String s, [int seed = 0x811C9DC5]) {
+    var h = seed;
+    for (final c in s.codeUnits) {
+      h ^= c;
+      h = (h * 0x01000193) & 0x7FFFFFFF;
+    }
     return h;
   }
 }
