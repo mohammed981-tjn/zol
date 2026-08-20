@@ -263,6 +263,21 @@ small.dim{color:var(--muted);font-size:.74rem}
             <div class="fld"><label>نسبة العمولة %</label><input id="sComm" type="number" value="15" min="0" max="60" step="0.5"></div>
           </div>
           <button class="btn-sm" id="addShop">إضافة المطبعة</button>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3>رسم المنصّة على التاجر</h3>
+          <p class="dim" style="font-size:12.5px;line-height:1.7">
+            نسبة تُضاف على كل طلب طباعة فوق ما تأخذه المنصّة من المطبعة.
+            <b>صفر يعني معطّل</b> — وهو الوضع الحالي، فالاشتراك وحده مصدر
+            الدخل من التاجر.
+          </p>
+          <div class="fld"><label>النسبة %</label>
+            <input id="mFee" type="number" value="0" min="0" max="25" step="0.5"></div>
+          <button class="btn-sm" id="saveFee">حفظ الرسم</button>
+
+          <div id="commPrev" class="dim" style="margin-top:14px;font-size:12.5px;line-height:1.9"></div>
+          <button class="btn-sm" id="calcComm" style="margin-top:8px">احسب العائد على طلب ١٨٠ ر.س</button>
           <div style="margin-top:6px"><small class="dim">تُضاف بحالة «قيد المراجعة» — لا تظهر للتجار ولا تُسنَد إليها طلبات حتى تعتمدها.</small></div>
         </div>
       </div>
@@ -505,7 +520,11 @@ function renderShops(){
     <td>${esc(s.city||'—')}</td>
     <td><small class="dim">${esc(s.phone||'—')}</small></td>
     <td><span class="pill p-${esc(s.status)}">${esc(AR_SHOP[s.status]||s.status)}</span></td>
-    <td>${esc(s.commission_rate ?? 15)}%</td>
+    <td>
+      <input class="commIn" id="comm-${s.id}" type="number" step="0.5" min="0" max="50"
+             value="${esc(s.commission_rate ?? 15)}" style="width:68px">
+      <button class="act" onclick="setComm('${s.id}')">حفظ</button>
+    </td>
     <td>
       ${s.status!=='approved'?`<button class="act go" onclick="shopStatus('${s.id}','approved')">اعتماد</button>`:''}
       ${s.status==='approved'?`<button class="act bad" onclick="shopStatus('${s.id}','suspended')">إيقاف</button>`:''}
@@ -630,6 +649,44 @@ window.move = async (id, to) => {
   }catch(e){ toast('خطأ: '+(e.message||e),'bad'); }
 };
 
+/* نسبة عمولة المطبعة — تفاوضية لكل مطبعة، ولها حدّ أعلى في القاعدة
+   يردّ الخطأ الشائع: كتابة 1500 بدل 15. */
+/* معاينة العائد بالأرقام.
+   الوعاء الذي تُحسب عليه العمولة سؤالٌ يُحسم بالنظر لا بالشرح: تُعرض
+   الحصّة على المبلغ الشامل وعلى الصافي معًا، فيرى صاحب المنصّة أثر
+   اختياره قبل أن يختار — وأن حصّته من الشامل تحمل ضريبتها. */
+async function refreshCommPreview(){
+  const box = $('commPrev'); if(!box) return;
+  const rate = Number(($('sComm')||{}).value) || 15;
+  try{
+    const {data,error} = await sb.rpc('commission_preview',
+      {p_items_total:180, p_rate:rate});
+    if(error) throw error;
+    if(!data.ok){ box.textContent = errAr(data); return; }
+    box.innerHTML =
+      `على طلب منتجه <b>${data.items_total}</b> ر.س بنسبة <b>${rate}%</b>:<br>`+
+      `الإجمالي المدفوع <b>${data.grand_total}</b> ر.س (منه ضريبة ${data.vat_included})<br>`+
+      `عمولتك على المبلغ الشامل: <b>${data.cut_on_gross}</b> — وصافيها بعد الضريبة `+
+      `<b>${data.cut_on_gross_after_vat}</b><br>`+
+      `ولو حُسبت على الصافي قبل الضريبة: <b>${data.cut_on_net}</b><br>`+
+      `صافي المطبعة الآن: <b>${data.shop_net_now}</b>`;
+  }catch(e){ box.textContent = 'تعذّرت المعاينة: '+(e.message||e); }
+}
+
+window.setComm = async (id) => {
+  const el = document.getElementById('comm-'+id);
+  const rate = Number(el && el.value);
+  if(!isFinite(rate)){ toast('نسبة غير صالحة','bad'); return; }
+  try{
+    const {data,error} = await sb.rpc('admin_set_shop_commission',
+      {p_shop_id:id, p_rate:rate});
+    if(error) throw error;
+    if(!data.ok){ toast(errAr(data),'bad'); return; }
+    toast('حُفظت العمولة: '+rate+'%','ok');
+    await loadAll();
+  }catch(e){ toast('خطأ: '+(e.message||e),'bad'); }
+};
+
 window.shopStatus = async (id, st) => {
   try{
     const {data,error} = await sb.rpc('admin_set_shop_status',{p_shop_id:id, p_status:st});
@@ -668,6 +725,19 @@ $('doAssign').onclick = async () => {
     $('assignModal').classList.remove('on');
     toast('تم الإسناد','ok');
     await loadAll();
+  }catch(e){ toast('خطأ: '+(e.message||e),'bad'); }
+};
+
+const _calc = $('calcComm'); if(_calc) _calc.onclick = refreshCommPreview;
+
+const _saveFee = $('saveFee'); if(_saveFee) _saveFee.onclick = async () => {
+  const rate = Number($('mFee').value);
+  if(!isFinite(rate)){ toast('نسبة غير صالحة','bad'); return; }
+  try{
+    const {data,error} = await sb.rpc('admin_set_merchant_fee', {p_rate:rate});
+    if(error) throw error;
+    if(!data.ok){ toast(errAr(data),'bad'); return; }
+    toast(rate===0 ? 'رسم التاجر معطّل' : 'حُفظ رسم التاجر: '+rate+'%', 'ok');
   }catch(e){ toast('خطأ: '+(e.message||e),'bad'); }
 };
 
@@ -713,7 +783,8 @@ function errAr(d){
     illegal_transition:'انتقال غير مسموح من هذه الحالة',
     role_not_allowed:'هذا الانتقال ليس من صلاحيتك',
     too_late_to_cancel:'فات أوان الإلغاء — بدأ التنفيذ',
-    invalid_status:'حالة غير صحيحة'
+    invalid_status:'حالة غير صحيحة',
+    rate_out_of_range:'النسبة خارج المدى المسموح (٠–٥٠٪ للمطبعة، ٠–٢٥٪ للتاجر)'
   };
   return M[d.error] || ('خطأ: '+(d.error||'غير معروف'));
 }

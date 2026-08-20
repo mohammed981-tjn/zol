@@ -347,6 +347,73 @@ void main() {
     expect(find.textContaining('AD-1001'), findsOneWidget);
   });
 
+
+  testWidgets('لا مطبعة معتمدة ⇒ لا طلب ولا قبض', (tester) async {
+    // المسار الذي اخترناه على «سعرٍ لا يقابله من يطبع»: التاجر الذي
+    // يدفع لطلبٍ لا يجد من ينفّذه يخسر ثقته مرّة ولا تعود.
+    final backend = _FakePrintBackend(shopsResult: const []);
+    ExecuteScreen.debugBackendOverride = () => backend;
+    ExecuteScreen.debugCaptureOverride = () async => Uint8List.fromList([1]);
+    addTearDown(() {
+      ExecuteScreen.debugBackendOverride = null;
+      ExecuteScreen.debugCaptureOverride = null;
+    });
+
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+    await tester.tap(find.text('اطبعه وصلّه'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, -1600));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'الرياض');
+    tester.binding.focusManager.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -800));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'تأكيد الطلب — 115 ر.س'));
+    await tester.pumpAndSettle();
+
+    expect(state.orders, isEmpty);
+    expect(backend.uploads, 0, reason: 'رُفع ملفّ لطلب لن يُنشأ');
+    expect(backend.creates, 0);
+    expect(find.textContaining('لا مطبعة معتمدة'), findsOneWidget);
+  });
+
+  testWidgets('رفض الخادم ⇒ لا طلب محلّي يوهم التاجر أنه مضى', (tester) async {
+    // وهذا هو الفخّ المقابل: أن يسقط الإنشاء على الخادم ويُكتب الطلب
+    // محليًّا على كل حال، فيرى التاجر «تم استلام طلبك» ولا يعلم به أحد
+    // — وهو بالضبط ما كان يفعله التطبيق قبل الوصل، دائمًا.
+    final backend = _FakePrintBackend(createOutcome: OrderOutcome.offline);
+    ExecuteScreen.debugBackendOverride = () => backend;
+    ExecuteScreen.debugCaptureOverride = () async => Uint8List.fromList([1]);
+    addTearDown(() {
+      ExecuteScreen.debugBackendOverride = null;
+      ExecuteScreen.debugCaptureOverride = null;
+    });
+
+    final state = AppState();
+    await _pumpApp(tester, state);
+    await _reachMagicResults(tester);
+    await tester.tap(find.text('اطبعه وصلّه'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, -1600));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'الرياض');
+    tester.binding.focusManager.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -800));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'تأكيد الطلب — 115 ر.س'));
+    await tester.pumpAndSettle();
+
+    expect(backend.creates, 1, reason: 'حاول الإنشاء');
+    expect(state.orders, isEmpty, reason: 'ولم يُكتب محليًّا بعد رفضه');
+    expect(find.text('تم استلام طلب الطباعة'), findsNothing);
+  });
+
   test('State persists across app restarts', () async {
     SharedPreferences.setMockInitialValues({});
 
