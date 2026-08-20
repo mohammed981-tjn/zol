@@ -229,9 +229,15 @@ class AdDesignPreview extends StatelessWidget {
 
 /// غلاف التخطيط المولَّد: العارض، وعليه العلامة المائية وحدها.
 ///
-/// لا شارة موسم ولا شارة عرض ولا زخرفة ركن — كلّها هنا **داخل** المواصفة
-/// إن أرادها النموذج، وحقنُها من الخارج فوق تكوينٍ لم يحسب لها مكانًا هو
-/// بالضبط ما يُنتج التصاميم المزدحمة.
+/// لا شارة موسم ولا شارة عرض ولا زخرفة ركن تُحقن هنا — كلّها **داخل**
+/// المواصفة، لها مستطيلاتها التي حسبها المُركِّب وقاسها الطبيب. وحقنُها
+/// من الخارج فوق تكوينٍ لم يحسب لها مكانًا هو بالضبط ما يُنتج التصاميم
+/// المزدحمة.
+///
+/// والموسمُ والزخرفة يُمرَّران **قيمةً** لا داخل المواصفة: المواصفة تقول
+/// «لون الموسم» و«زخرفة هنا»، ومَن يعرف أيّ موسمٍ اختير وأيّ نشاطٍ
+/// للتاجر يُترجم. ولو حُفر لونٌ أو مسارُ ملفّ في المواصفة لانكسر
+/// المحفوظُ منها أوّلَ مرّة نعيد فيها ترتيب الأصول.
 class _GeneratedLayout extends StatelessWidget {
   const _GeneratedLayout({
     required this.ad,
@@ -274,6 +280,12 @@ class _GeneratedLayout extends StatelessWidget {
                   productScale: ad.brief.productScale,
                   productDx: ad.brief.productDx,
                   productDy: ad.brief.productDy,
+                  seasonColor: ad.brief.season == null
+                      ? null
+                      : Color(ad.brief.season!.colorValue),
+                  ornamentAsset: ad.brief.useDecorativeBackground
+                      ? 'assets/backgrounds/${ad.brief.category.name}.svg'
+                      : null,
                 ),
                 if (showWatermark)
                   Positioned(

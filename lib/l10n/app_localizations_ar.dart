@@ -490,6 +490,9 @@ class LAr extends L {
   String get roleShape => 'شكل';
 
   @override
+  String get roleOrnament => 'الزخرفة';
+
+  @override
   String get editorTitle => 'تحرير التصميم';
 
   @override

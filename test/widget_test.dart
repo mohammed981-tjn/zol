@@ -4406,6 +4406,122 @@ void main() {
     }
   });
 
+  test('كل زينة اختارها التاجر تصل إلى المواصفة، في كل صيغة', () {
+    // الحارس ضدّ **الحقول الميّتة**: حقلٌ في الموجز يُحسب ثم لا يضعه
+    // بعض الأنماط في التخطيط. وقد وقع مرّتين — `logo` لم يكن يبنيه أي
+    // نمط، ثم بناه أربعة من سبعة وأسقطته ثلاثة. والعطل صامت تمامًا:
+    // التصميم يخرج جميلًا، وشعارُ التاجر ليس فيه.
+    //
+    // فالفحص على **كل** مخرَج لا على أوّله: نمطٌ واحد ناقص يكفي ليصل
+    // إلى التاجر.
+    const brand = Color(0xFF2C6BED);
+    const season = Color(0xFF1E7A46);
+
+    for (final format in AdFormat.values) {
+      final out = LocalDesigner.compose(
+        DesignBrief(
+          headline: 'خصم ٣٠٪ على العسل',
+          subhead: 'لفترة محدودة',
+          cta: 'اطلب الآن',
+          badge: 'خصم ٣٠٪',
+          seasonBadge: '🇸🇦 اليوم الوطني',
+          tags: '#عسل #خصم',
+          ornament: true,
+          hasImage: true,
+          hasLogo: true,
+          format: format,
+        ),
+        brandColor: brand,
+        seasonColor: season,
+        count: LocalDesigner.archetypes.length,
+      );
+
+      // العدد بعدد الأنماط لا ثلاثة: المرور الأوّل يأخذ واحدًا من كل
+      // نمط، فطلبُ ثلاثة يفحص ثلاثة أنماط ويترك أربعة بلا فحص — ونمطٌ
+      // واحد ناقص يكفي ليصل إلى التاجر.
+      expect(
+        out.map((d) => d.archetype).toSet(),
+        hasLength(LocalDesigner.archetypes.length),
+        reason: 'صيغة ${format.name} لا تُخرج كل الأنماط مع كل الزينة',
+      );
+
+      for (final d in out) {
+        final roles = d.spec.elements.map((e) => e.role).toList();
+        for (final needed in const [
+          ElementRole.headline,
+          ElementRole.cta,
+          ElementRole.product,
+          ElementRole.logo,
+          ElementRole.tags,
+          ElementRole.ornament,
+        ]) {
+          expect(
+            roles,
+            contains(needed),
+            reason:
+                'نمط ${d.archetype} في ${format.name} أسقط ${needed.name}',
+          );
+        }
+
+        // الشارتان اثنتان لا واحدة: الموسم بلون الموسم، والعرض بلون
+        // اللوحة. وضمّهما في شارة واحدة يُسقط اختيارًا صريحًا.
+        final badges = d.spec.elements
+            .where((e) => e.role == ElementRole.badge)
+            .toList();
+        expect(
+          badges.map((e) => e.fill),
+          containsAll(const [ColorRole.season, ColorRole.complement]),
+          reason: 'نمط ${d.archetype} لا يحمل الشارتين معًا',
+        );
+      }
+    }
+  });
+
+  test('الزخرفة تُرسم ولا تُقاس: لا تُحشر داخل الهامش ولا تدخل الميزان', () {
+    const brand = Color(0xFF2C6BED);
+    const bare = DesignBrief(
+      headline: 'وصل جديدنا',
+      subhead: 'جديدنا بين يديك',
+      cta: 'اكتشفه',
+      format: AdFormat.square,
+      hasImage: true,
+    );
+    final plain = LocalDesigner.compose(bare, brandColor: brand, count: 1);
+    final adorned = LocalDesigner.compose(
+      const DesignBrief(
+        headline: 'وصل جديدنا',
+        subhead: 'جديدنا بين يديك',
+        cta: 'اكتشفه',
+        format: AdFormat.square,
+        hasImage: true,
+        ornament: true,
+      ),
+      brandColor: brand,
+      count: 1,
+    );
+    expect(plain, isNotEmpty);
+    expect(adorned, isNotEmpty);
+
+    // الزخرفة زينة لا محتوى: إضافتها لا تُزحزح درجة التكوين. ولو دخلت
+    // الميزان لعاقبت التاجرَ على اختياره إيّاها — حافّة زائدة في
+    // الاصطفاف، وثقل في ركن، ومساحة مشغولة في الفراغ.
+    expect(
+      adorned.first.score.total,
+      closeTo(plain.first.score.total, 0.001),
+      reason: 'الزخرفة غيّرت الدرجة — دخلت الميزان وهي خارجه',
+    );
+
+    // ونزفُها خارج اللوحة مقصود: الطبيب لا يحشرها داخل الهامش الآمن،
+    // وإلا انقلبت من ركنٍ إلى بقعةٍ معلّقة في الفراغ.
+    final orn = adorned.first.spec.firstOf(ElementRole.ornament)!;
+    expect(orn.rect.right, greaterThan(1.0));
+    expect(orn.rect.bottom, greaterThan(1.0));
+
+    // وهي **أوّل** القائمة: العارض يرسم بترتيبها، فآخرُها طبقةٌ فوق
+    // العنوان والمنتج.
+    expect(adorned.first.spec.elements.first.role, ElementRole.ornament);
+  });
+
   test('الناقد لا يُخدَع بشريط ضيّق ولا بعناصر لا تُرسم', () {
     const brand = Color(0xFF2C6BED);
 

@@ -84,7 +84,12 @@ class DesignCritic {
   /// `shape` بلا `fill` لا يُرسم له شيء، ونصٌّ فارغ لا يظهر. وحسابُهما
   /// يفتح بابًا لخداع الدرجة بعناصر «شبح»: أربعة وعشرون شكلًا لا يُرى
   /// منها شيء رفعت الاصطفاف من ٠٫٤٠ إلى ٠٫٨٦ وأضافت تسع درجات.
+  /// والزخرفة تُرسم لكنها **ليست محتوى**: ركنٌ خافت خلف كل شيء. عدُّها
+  /// في الاصطفاف والتوازن والفراغ يعاقب التاجرَ على اختياره إيّاها —
+  /// حافّة زائدة، وثقل في ركن، ومساحة مشغولة — وهي لا تزاحم شيئًا.
+  /// فتُترك للعين لا للميزان، كما تُترك الخلفية.
   static bool _rendered(DesignElement e) {
+    if (e.role == ElementRole.ornament) return false;
     if (e.role == ElementRole.shape) return e.fill != null;
     if (e.isText) return (e.text ?? '').trim().isNotEmpty;
     return true;
@@ -94,8 +99,16 @@ class DesignCritic {
   static List<DesignElement> _live(DesignSpec s) =>
       s.elements.where(_rendered).toList();
 
-  static DesignScore score(DesignSpec spec, {required Color brandColor}) {
-    final report = SpecDoctor.review(spec, brandColor: brandColor);
+  static DesignScore score(
+    DesignSpec spec, {
+    required Color brandColor,
+    Color? seasonColor,
+  }) {
+    final report = SpecDoctor.review(
+      spec,
+      brandColor: brandColor,
+      seasonColor: seasonColor,
+    );
     final s = report.spec;
     final art = ArtPalette.from(brandColor, variant: s.variant);
 

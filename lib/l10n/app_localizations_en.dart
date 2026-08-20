@@ -491,6 +491,9 @@ class LEn extends L {
   String get roleShape => 'Shape';
 
   @override
+  String get roleOrnament => 'Ornament';
+
+  @override
   String get editorTitle => 'Edit design';
 
   @override

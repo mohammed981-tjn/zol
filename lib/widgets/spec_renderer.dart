@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../models/ad_format.dart';
 import '../models/design_spec.dart';
@@ -33,10 +34,25 @@ class SpecRenderer extends StatelessWidget {
     this.productScale = 1,
     this.productDx = 0,
     this.productDy = 0,
+    this.seasonColor,
+    this.ornamentAsset,
   });
 
   final DesignSpec spec;
   final Color brandColor;
+
+  /// لون الموسم الذي اختاره التاجر — يترجم `ColorRole.season`.
+  ///
+  /// يُمرَّر من الخارج لا يُشتقّ هنا: المواصفة لا تعرف المواسم، وهذا
+  /// **نفس** ما يُمرَّر إلى الطبيب فلا يفترق المفحوص عن المرسوم.
+  final Color? seasonColor;
+
+  /// ملفّ زخرفة الركن — يترجم `ElementRole.ornament`.
+  ///
+  /// المواصفة تقول أين تقع الزخرفة، والداعي يقول أيّ زخرفة: النموذج
+  /// اللغوي لا يعرف ملفّات مشروعنا، ومواصفةٌ تحمل مسار ملفّ تنكسر حين
+  /// نعيد ترتيب الأصول.
+  final String? ornamentAsset;
 
   /// وضع المنتج داخل إطاره كما ضبطه التاجر في المحرّر — كسور لا بكسلات،
   /// كما في مسار القوالب تمامًا. بلا هذا كان سحبُ المنتج وتكبيرُه يعمل
@@ -95,8 +111,13 @@ class SpecRenderer extends StatelessWidget {
   }
 
   Widget _element(DesignElement e, ArtPalette art, double canvasWidth) {
-    final behind = backgroundBehind(e, spec, art);
-    final ink = resolveColorRole(e.color, art, behind: behind);
+    final behind = backgroundBehind(e, spec, art, seasonColor: seasonColor);
+    final ink = resolveColorRole(
+      e.color,
+      art,
+      behind: behind,
+      seasonColor: seasonColor,
+    );
 
     final Widget content = switch (e.role) {
       ElementRole.product => ProductStage(
@@ -118,6 +139,22 @@ class SpecRenderer extends StatelessWidget {
                 ),
               ),
       ),
+
+      // زخرفة الركن: خافتة بلون الحبر، بلا نقر، وخلف كل شيء (موضعها في
+      // أوّل القائمة يضعها تحت المحتوى). وبلا ملفّ لا تُرسم — التاجر
+      // أطفأ الزخرفة، أو فُتحت مواصفة قديمة بلا نشاطها.
+      ElementRole.ornament => ornamentAsset == null
+          ? const SizedBox.shrink()
+          : IgnorePointer(
+              child: Opacity(
+                opacity: 0.16,
+                child: SvgPicture.asset(
+                  ornamentAsset!,
+                  fit: BoxFit.contain,
+                  colorFilter: ColorFilter.mode(ink, BlendMode.srcIn),
+                ),
+              ),
+            ),
 
       ElementRole.logo => logo == null
           ? const SizedBox.shrink()
@@ -170,7 +207,7 @@ class SpecRenderer extends StatelessWidget {
     // اللوح خلف العنصر: هو ما يجعل زرّ الحثّ زرًّا لا نصًّا عائمًا.
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: resolveColorRole(e.fill!, art),
+        color: resolveColorRole(e.fill!, art, seasonColor: seasonColor),
         borderRadius: BorderRadius.circular(
           e.role == ElementRole.cta ? canvasWidth * 0.06 : canvasWidth * 0.02,
         ),

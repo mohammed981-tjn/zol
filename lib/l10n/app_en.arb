@@ -134,6 +134,7 @@
   "roleLogo": "Logo",
   "roleTags": "Hashtags",
   "roleShape": "Shape",
+  "roleOrnament": "Ornament",
   "editorTitle": "Edit design",
   "editorResizeHandle": "Resize handle",
   "editorSpecHint": "Tap an element to select it, then drag to move it or drag the handle to resize",

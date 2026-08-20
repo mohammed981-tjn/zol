@@ -15,6 +15,8 @@ class DesignBrief {
     this.cta,
     this.badge,
     this.tags,
+    this.seasonBadge,
+    this.ornament = false,
     this.hasImage = false,
     this.hasLogo = false,
     this.preferLight,
@@ -29,6 +31,15 @@ class DesignBrief {
   final String? badge;
   final String? tags;
 
+  /// شارة الموسم («🇸🇦 اليوم الوطني») — بلون الموسم لا بلون اللوحة.
+  ///
+  /// مفصولة عن `badge` عمدًا: التاجر قد يعلن خصمًا **في** موسم، وضمّهما
+  /// في حقلٍ واحد يُسقط أحدهما — وكلاهما اختيار صريح اختاره بيده.
+  final String? seasonBadge;
+
+  /// زخرفة ركن مستوحاة من نشاط التاجر.
+  final bool ornament;
+
   final bool hasImage;
   final bool hasLogo;
 
@@ -39,6 +50,7 @@ class DesignBrief {
   bool get hasCta => (cta ?? '').trim().isNotEmpty;
   bool get hasBadge => (badge ?? '').trim().isNotEmpty;
   bool get hasTags => (tags ?? '').trim().isNotEmpty;
+  bool get hasSeasonBadge => (seasonBadge ?? '').trim().isNotEmpty;
 }
 
 /// تخطيط محلّي بدرجته.
@@ -112,6 +124,7 @@ class LocalDesigner {
   static List<LocalDesign> compose(
     DesignBrief rawBrief, {
     required Color brandColor,
+    Color? seasonColor,
     int count = 3,
   }) {
     // المصمّم **يُكمل** لا يصمت.
@@ -179,7 +192,11 @@ class LocalDesigner {
                   variant: variant.abs(),
                   note: _noteFor(archetype),
                 );
-                final score = DesignCritic.score(spec, brandColor: brandColor);
+                final score = DesignCritic.score(
+                  spec,
+                  brandColor: brandColor,
+                  seasonColor: seasonColor,
+                );
                 if (!score.usable) continue;
 
                 // المعروض هو ما بعد الطبيب لا ما قبله: الدرجة حُسبت على
@@ -187,6 +204,7 @@ class LocalDesigner {
                 final healed = SpecDoctor.review(
                   spec,
                   brandColor: brandColor,
+                  seasonColor: seasonColor,
                 ).spec;
                 candidates.add(
                   LocalDesign(spec: healed, score: score, archetype: archetype),
@@ -262,6 +280,8 @@ class LocalDesigner {
       cta: 'اطلب الآن',
       badge: b.badge,
       tags: b.tags,
+      seasonBadge: b.seasonBadge,
+      ornament: b.ornament,
       hasImage: b.hasImage,
       hasLogo: b.hasLogo,
       preferLight: b.preferLight,
@@ -276,6 +296,9 @@ class LocalDesigner {
     String? brandName,
     bool hasImage = false,
     bool hasLogo = false,
+    String? seasonBadge,
+    String? merchantBadge,
+    bool ornament = false,
   }) {
     // ما ذكره التاجر في أمنيته أولى بما خزّناه عنه: هو يكتب الآن،
     // والمخزَّن قد يكون من جلسة أخرى وسلعة أخرى.
@@ -319,7 +342,12 @@ class LocalDesigner {
       headline: headline,
       subhead: subhead,
       cta: cta,
-      badge: pct != null ? 'خصم $pct٪' : null,
+      // نسبةُ الأمنية أولى من الشارة المخزَّنة، بالقاعدة نفسها التي
+      // قدّمت موضوعَ الأمنية على المنتج المحفوظ: التاجر يكتب الآن.
+      // وشارتان بمعنيين متقاربين تزدحمان في ركن واحد.
+      badge: pct != null ? 'خصم $pct٪' : merchantBadge,
+      seasonBadge: seasonBadge,
+      ornament: ornament,
       format: intent.format ?? fallbackFormat,
       hasImage: hasImage,
       hasLogo: hasLogo,
@@ -366,7 +394,7 @@ class LocalDesigner {
             .clamp(0.030, 0.11);
     final tall = brief.format.aspectClass == AspectClass.tall;
 
-    return switch (archetype) {
+    final body = switch (archetype) {
       'stackTop' => _stack(
         grid,
         brief,
@@ -396,8 +424,28 @@ class LocalDesigner {
         textAtStart,
         productWeight,
       ),
-      _ => const [],
+      _ => const <DesignElement>[],
     };
+    if (body.isEmpty || !brief.ornament) return body;
+
+    // الزخرفة **أوّل** القائمة لا آخرها: العارض يرسم بترتيبها، فوضعها
+    // آخرًا يجعلها طبقةً فوق العنوان والمنتج.
+    return [_ornament(brief.format), ...body];
+  }
+
+  /// زخرفة الركن — ركنٌ ينزف خارج اللوحة كما في المطبوعات.
+  ///
+  /// عرضها كسرٌ من **العرض**، وارتفاعها يُشتقّ من نسبة اللوحة حتى يبقى
+  /// الرسم مربّعًا على الشاشة: كسرٌ ثابت للارتفاع يُخرج في الرول أب
+  /// ‎85×200‎ صندوقًا ممطوطًا يضيع الرسم في وسطه.
+  static DesignElement _ornament(AdFormat format) {
+    const w = 0.52;
+    const bleed = 0.22; // ما ينزف خارج الحافّة من الزخرفة نفسها.
+    final h = (w * format.aspect).clamp(0.18, 0.60);
+    return DesignElement(
+      role: ElementRole.ornament,
+      rect: SpecRect(1 - w * (1 - bleed), 1 - h * (1 - bleed), w, h),
+    );
   }
 
   /// **موزّع العمود** — المفتاح الذي جعل كل نمط يعمل على كل لوحة.
@@ -447,7 +495,7 @@ class LocalDesigner {
     final align = textAtStart ? SpecAlign.start : SpecAlign.end;
     final col = textAtStart ? 0 : 2;
 
-    final badge = _badgeBlock(g, b, col: col);
+    final badges = _badgeBlocks(g, b, col: col);
     final head = _headBlock(b, headSize, 2.0, align, span: 10, col: col);
     final sub = _subBlock(b, headSize, 1.1, align, span: 9, col: col);
     final product = _productBlock(b, productWeight, col: 1, span: 10);
@@ -456,7 +504,7 @@ class LocalDesigner {
     return _column(g, [
       _logoBlock(b, col: 0, span: 2),
       if (!productBelow) product,
-      badge,
+      ...badges,
       head,
       sub,
       if (productBelow) product,
@@ -490,7 +538,8 @@ class LocalDesigner {
     // عمود النصّ يُوزَّع في نصف اللوحة، والمنتج يملأ ارتفاعها كاملًا.
     final textGrid = _Grid(margin: g.margin);
     final text = _column(textGrid, [
-      _badgeBlock(g, b, col: textCol, span: 3),
+      _logoBlock(b, col: textCol, span: 2),
+      ..._badgeBlocks(g, b, col: textCol, span: 3),
       _headBlock(b, headSize * 0.86, 2.2, align, span: 5, col: textCol),
       _subBlock(b, headSize, 1.1, align, span: 5, col: textCol),
       _ctaBlock(b, headSize, 1.0, col: textCol, span: 4),
@@ -517,7 +566,7 @@ class LocalDesigner {
     if (!b.hasImage) return const [];
     return _column(g, [
       _logoBlock(b, col: 5, span: 2),
-      _badgeBlock(g, b, col: 4, span: 4),
+      ..._badgeBlocks(g, b, col: 4, span: 4),
       _headBlock(b, headSize, 1.6, SpecAlign.center, span: 10, col: 1),
       _productBlock(b, productWeight + 0.8, col: 1, span: 10),
       _subBlock(b, headSize, 1.0, SpecAlign.center, span: 10, col: 1),
@@ -536,7 +585,8 @@ class LocalDesigner {
   ) {
     final body = _column(g, [
       _headBlock(b, headSize, tall ? 1.8 : 2.2, SpecAlign.center, span: 12),
-      _badgeBlock(g, b, col: 4, span: 4),
+      ..._badgeBlocks(g, b, col: 4, span: 4),
+      _logoBlock(b, col: 5, span: 2),
       _productBlock(b, productWeight, col: 1, span: 10),
       _subBlock(b, headSize, 1.0, SpecAlign.center, span: 10, col: 1),
       _ctaBlock(b, headSize, 1.0, col: 4, span: 4),
@@ -571,7 +621,7 @@ class LocalDesigner {
   ) => _column(g, [
     _logoBlock(b, col: 5, span: 2),
     _headBlock(b, headSize, 2.0, SpecAlign.center, span: 10, col: 1),
-    _badgeBlock(g, b, col: 4, span: 4),
+    ..._badgeBlocks(g, b, col: 4, span: 4),
     _subBlock(b, headSize, 1.0, SpecAlign.center, span: 8, col: 2),
     _productBlock(b, productWeight - 0.4, col: 2, span: 8),
     _ctaBlock(b, headSize, 1.0, col: 4, span: 4),
@@ -593,7 +643,8 @@ class LocalDesigner {
     final col = textAtStart ? 0 : 4;
     final align = textAtStart ? SpecAlign.start : SpecAlign.end;
     return _column(g, [
-      _badgeBlock(g, b, col: col, span: 3),
+      _logoBlock(b, col: col, span: 2),
+      ..._badgeBlocks(g, b, col: col, span: 3),
       _headBlock(b, headSize, 2.0, align, span: 8, col: col),
       // المنتج غير مركزي عمدًا: قِستُ في بنر كانفا حقيقي منتجًا عند ٤٢٪
       // من العرض لا في المنتصف، وهو ما يعطي التكوين حركةً.
@@ -660,6 +711,43 @@ class LocalDesigner {
       rect: g.rect(col: col, span: span, y: y, h: h),
     ),
   );
+
+  /// صفّا الشارتين: الموسم ثمّ العرض.
+  ///
+  /// دالّة واحدة يستدعيها كل نمط بدل تكرار السطرين سبع مرّات — والسبب
+  /// ليس الاختصار: `logo` و`tags` و`badge` كانت حقولًا تُحسب ولا يضعها
+  /// بعض الأنماط، فتسقط شارة الخصم من تصميم فائز بلا أن يُنبَّه أحد.
+  /// موضعُ إضافةٍ واحد يجعل نسيان نمطٍ مستحيلًا.
+  static List<_Block> _badgeBlocks(
+    _Grid g,
+    DesignBrief b, {
+    int col = 0,
+    int span = 4,
+  }) => [
+    _seasonBlock(b, col: col, span: span),
+    _badgeBlock(g, b, col: col, span: span),
+  ];
+
+  /// شارة الموسم — بلوحٍ بلون الموسم لا بلون اللوحة.
+  ///
+  /// وهي شارة كبقيّة الشارات في نظر الطبيب والناقد: يُقاس تباين حروفها،
+  /// ويُحسب موضعها في الاصطفاف. وهذا الفرق كلّه بينها وبين ما كانت
+  /// عليه — ملصقًا يُحقن في ركنٍ بعد أن يفرغ التكوين من الحساب، فيقع
+  /// حيث اتّفق ولا يعلم به مقياس.
+  static _Block _seasonBlock(DesignBrief b, {int col = 0, int span = 4}) =>
+      _Block(
+        weight: b.hasSeasonBadge ? 0.7 : 0,
+        build: (g, y, h) => DesignElement(
+          role: ElementRole.badge,
+          rect: g.rect(col: col, span: span, y: y, h: h),
+          text: b.seasonBadge,
+          fill: ColorRole.season,
+          align: SpecAlign.center,
+          maxLines: 1,
+          sizeFactor: 0.030,
+          weight: 800,
+        ),
+      );
 
   static _Block _badgeBlock(
     _Grid g,

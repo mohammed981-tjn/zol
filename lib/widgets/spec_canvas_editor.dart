@@ -193,8 +193,13 @@ class SpecCanvasEditorState extends State<SpecCanvasEditor> {
                 ),
               ),
 
+              // الزخرفة لا مقبض لها: ركنٌ خافت يقع تحت زرّ الحثّ غالبًا،
+              // فصندوقُ إمساكه يبتلع لمسة التاجر على الزرّ ويعطيه بدله
+              // ما لم يقصد. وهي أيضًا الوحيدة التي تنزف خارج اللوحة،
+              // فمقبض تحجيمها يقع حيث لا يُرى.
               for (var i = 0; i < spec.elements.length; i++)
-                _box(context, l, i, spec.elements[i], w, h),
+                if (spec.elements[i].role != ElementRole.ornament)
+                  _box(context, l, i, spec.elements[i], w, h),
             ],
           );
         },
@@ -295,6 +300,7 @@ class SpecCanvasEditorState extends State<SpecCanvasEditor> {
     ElementRole.logo => l.roleLogo,
     ElementRole.tags => l.roleTags,
     ElementRole.shape => l.roleShape,
+    ElementRole.ornament => l.roleOrnament,
   };
 }
 

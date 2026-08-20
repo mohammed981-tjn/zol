@@ -33,10 +33,15 @@ class SpecDoctor {
   /// [hasLogo] هل يملك التاجر شعارًا مرفوعًا؟ يحسم مصير عنصر `logo`:
   /// بلا صورة لا يرسم العارض شيئًا، فاسم العلامة الذي وضعه النموذج نصًّا
   /// في ذلك العنصر يختفي من التصميم بصمت.
+  ///
+  /// [seasonColor] لون الموسم — يجب أن يكون **نفسه** الذي يمرّره العارض.
+  /// فحصُ التباين على لونٍ غير الذي يُرسم فحصٌ لتصميم آخر: شارةٌ خضراء
+  /// تُقاس على البنفسجيّ فتمرّ، ثم تُرسم بحبر لا يُقرأ عليها.
   static SpecReport review(
     DesignSpec spec, {
     required Color brandColor,
     bool hasLogo = false,
+    Color? seasonColor,
   }) {
     final art = ArtPalette.from(brandColor, variant: spec.variant);
     final margin = spec.format.safeMargin;
@@ -66,7 +71,14 @@ class SpecDoctor {
 
       // ١) داخل الهامش الآمن. على المطبوع هذا ليس تجميلًا: سكّين القصّ
       //    لا تقع على الخطّ، وشعارٌ على الحافّة يخرج مقصوصًا في ألف نسخة.
-      final clamped = e.rect.clampInside(margin);
+      //
+      //    والزخرفة تُستثنى وحدها: نزفُها خارج الحافّة **تكوينٌ مقصود**
+      //    كما في المطبوعات، وحشرُها داخل الهامش يحوّلها من ركنٍ إلى
+      //    بقعةٍ معلّقة في الفراغ. ولا خسارة في قصّها: لا رسالة فيها
+      //    تُقصّ، بخلاف الشعار والنصّ.
+      final clamped = e.role == ElementRole.ornament
+          ? e.rect
+          : e.rect.clampInside(margin);
       if (!_sameRect(clamped, e.rect)) {
         issues.add(
           SpecIssue(
@@ -83,8 +95,13 @@ class SpecDoctor {
 
       // ٢) الحبر يُقرأ فوق ما تحته فعلًا.
       if (e.isText) {
-        final behind = backgroundBehind(e, spec, art);
-        final ink = resolveColorRole(e.color, art, behind: behind);
+        final behind = backgroundBehind(e, spec, art, seasonColor: seasonColor);
+        final ink = resolveColorRole(
+          e.color,
+          art,
+          behind: behind,
+          seasonColor: seasonColor,
+        );
         final ratio = ArtPalette.contrast(behind, ink);
         if (ratio < minContrast) {
           issues.add(
@@ -240,7 +257,8 @@ class SpecDoctor {
   /// هل يحجب هذا العنصر ما تحته؟
   ///
   /// المنتج صورة معتمة، والشكل ذو اللوح لوحٌ معتم. أما الشكل بلا لوح
-  /// فلا يرسم العارضُ له شيئًا، فلا يحجب.
+  /// فلا يرسم العارضُ له شيئًا، فلا يحجب. والزخرفة تُرسم خافتةً جدًّا
+  /// خلف المحتوى، فعدّها حاجبًا يرفض كل تصميم اختار التاجر زخرفته.
   static bool _isOpaque(DesignElement e) =>
       e.role == ElementRole.product ||
       (e.role == ElementRole.shape && e.fill != null) ||
@@ -261,6 +279,7 @@ class SpecDoctor {
     ElementRole.logo => 'الشعار',
     ElementRole.tags => 'الهاشتاقات',
     ElementRole.shape => 'شكل',
+    ElementRole.ornament => 'الزخرفة',
   };
 }
 

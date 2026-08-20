@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../models/ad_badge.dart';
 import '../../models/ad_brief.dart';
 import '../../models/ad_format.dart';
+import '../../models/seasonal_theme.dart';
 import '../../models/ad_template.dart';
 import '../../models/design_spec.dart';
 import '../../models/generated_ad.dart';
@@ -386,22 +388,27 @@ class _MagicScreenState extends State<MagicScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// هل يحمل الموجز زينةً لا يرسمها مسار التخطيط المولَّد؟
+  /// زينة التاجر كما تدخل المواصفة.
   ///
-  /// الموسم والشارة الترويجية والخلفية الزخرفية تُرسم في مسار القوالب
-  /// وحده. فلو ركّبنا تكوينًا لتاجرٍ اختار شارة «خصم» صراحةً لاختفت
-  /// شارته بلا أن يُقال له — وإسقاطُ اختيارٍ صريح بصمت أسوأ من ألّا
-  /// نعرض التكوين أصلًا. فيُخفى الزرّ عنه حتى يدعم العارضُ الثلاثة.
-  bool get _hasDecorations =>
-      widget.brief.season != null ||
-      widget.brief.badge != null ||
-      widget.brief.useDecorativeBackground;
+  /// الموسم والشارة الترويجية والزخرفة كانت تُرسم في مسار القوالب وحده،
+  /// فكان التركيب المحلّي محجوبًا عمّن اختار أيًّا منها: إسقاطُ اختيارٍ
+  /// صريح بصمت أسوأ من ألّا نعرض التكوين. وصارت الثلاثة **عناصر في
+  /// المواصفة** يقيسها الطبيب والناقد كبقيّة العناصر، فلا حجب ولا حقن.
+  String? get _seasonBadge {
+    final s = widget.brief.season;
+    return s == null ? null : '${s.emoji} ${s.label}';
+  }
+
+  Color? get _seasonColor {
+    final s = widget.brief.season;
+    return s == null ? null : Color(s.colorValue);
+  }
 
   /// يُركّب تخطيطات على الجهاز من نصّ إعلانٍ جاهز — **عند الطلب**.
   ///
-  /// ولا يُركَّب تلقائيًّا عند فتح الشاشة: ذلك يجعل التكوين المولَّد هو
-  /// المخرَج الافتراضي، وهو لا يرسم زينة التاجر بعد. فالتاجر يطلبه بزرّ
-  /// فيكون اختيارًا لا مفاجأة.
+  /// التركيب يبقى بزرّ لا افتراضًا عند فتح الشاشة: التاجر اختار قالبًا
+  /// ونبرةً في شاشة التفاصيل، واستبدالُ تكوينٍ آخر به قبل أن يطلبه
+  /// يفاجئه بما لم يختره.
   List<GeneratedAd> _composeFromAd(GeneratedAd? ad) {
     if (ad == null) return const [];
     try {
@@ -418,10 +425,14 @@ class _MagicScreenState extends State<MagicScreen> {
           subhead: ad.body,
           cta: ad.cta,
           format: adFormatFromLabel(widget.brief.format),
+          badge: widget.brief.badge?.label,
+          seasonBadge: _seasonBadge,
+          ornament: widget.brief.useDecorativeBackground,
           hasImage: widget.brief.hasProductImage,
           hasLogo: state.brandLogoBytes != null,
         ),
         brandColor: Color(brandArgb),
+        seasonColor: _seasonColor,
         count: 8,
       );
       if (designs.isEmpty) return const [];
@@ -477,10 +488,15 @@ class _MagicScreenState extends State<MagicScreen> {
         product: widget.brief.productName,
         brandName: widget.brief.brandName,
         hasImage: widget.brief.hasProductImage,
+        hasLogo: AppStateScope.of(context).brandLogoBytes != null,
+        seasonBadge: _seasonBadge,
+        merchantBadge: widget.brief.badge?.label,
+        ornament: widget.brief.useDecorativeBackground,
       );
       final designs = LocalDesigner.compose(
         brief,
         brandColor: Color(brandArgb),
+        seasonColor: _seasonColor,
         count: 8,
       );
       if (designs.isEmpty) return const [];
@@ -764,7 +780,7 @@ class _MagicScreenState extends State<MagicScreen> {
                 // التكوين التالي محسوبٌ سلفًا: لا شبكة ولا حصّة، وكان
                 // التاجر يدفع إعادة توليدٍ كاملة لأن موضع عنوان لم
                 // يعجبه.
-                onNextComposition: _hasDecorations ? null : _nextComposition,
+                onNextComposition: _nextComposition,
               ),
             ),
           ),

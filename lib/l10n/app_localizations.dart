@@ -901,6 +901,12 @@ abstract class L {
   /// **'شكل'**
   String get roleShape;
 
+  /// No description provided for @roleOrnament.
+  ///
+  /// In ar, this message translates to:
+  /// **'الزخرفة'**
+  String get roleOrnament;
+
   /// No description provided for @editorTitle.
   ///
   /// In ar, this message translates to:
