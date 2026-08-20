@@ -496,6 +496,19 @@ class LAr extends L {
   String get guideTitle => 'دليل الاستخدام';
 
   @override
+  String get shopPanelTitle => 'لوحة المطبعة';
+
+  @override
+  String get shopPanelHeading => 'لوحة المطبعة قيد البناء';
+
+  @override
+  String get shopPanelBody =>
+      'طوابير الطباعة وحالاتها تحتاج صلاحية مطبعة في الخادم، وهي المرحلة التالية. ولم يصل طلب طباعة إلى أي مطبعة بعد، فلا شيء يُعرض هنا اليوم إلا هذا السطر الصادق.';
+
+  @override
+  String get shopPanelOpenMerchant => 'افتح واجهة التاجر';
+
+  @override
   String get guideUnavailable => 'تعذّر فتح الدليل على هذا الجهاز.';
 
   @override

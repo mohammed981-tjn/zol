@@ -497,6 +497,19 @@ class LEn extends L {
   String get guideTitle => 'User guide';
 
   @override
+  String get shopPanelTitle => 'Print shop panel';
+
+  @override
+  String get shopPanelHeading => 'The print shop panel is being built';
+
+  @override
+  String get shopPanelBody =>
+      'Print queues and their statuses need a shop role on the server — that is the next stage. No print order has reached any shop yet, so there is nothing to show here today but this honest line.';
+
+  @override
+  String get shopPanelOpenMerchant => 'Open the merchant view';
+
+  @override
   String get guideUnavailable =>
       'The guide could not be opened on this device.';
 

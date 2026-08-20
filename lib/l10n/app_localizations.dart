@@ -913,6 +913,30 @@ abstract class L {
   /// **'دليل الاستخدام'**
   String get guideTitle;
 
+  /// No description provided for @shopPanelTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لوحة المطبعة'**
+  String get shopPanelTitle;
+
+  /// No description provided for @shopPanelHeading.
+  ///
+  /// In ar, this message translates to:
+  /// **'لوحة المطبعة قيد البناء'**
+  String get shopPanelHeading;
+
+  /// No description provided for @shopPanelBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'طوابير الطباعة وحالاتها تحتاج صلاحية مطبعة في الخادم، وهي المرحلة التالية. ولم يصل طلب طباعة إلى أي مطبعة بعد، فلا شيء يُعرض هنا اليوم إلا هذا السطر الصادق.'**
+  String get shopPanelBody;
+
+  /// No description provided for @shopPanelOpenMerchant.
+  ///
+  /// In ar, this message translates to:
+  /// **'افتح واجهة التاجر'**
+  String get shopPanelOpenMerchant;
+
   /// No description provided for @guideUnavailable.
   ///
   /// In ar, this message translates to:

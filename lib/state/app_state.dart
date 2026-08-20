@@ -70,6 +70,14 @@ class AppState extends ChangeNotifier {
   /// هل شاهد المستخدم شاشة الترحيب؟ تُعرض مرة واحدة عند أول تشغيل.
   bool hasOnboarded = false;
 
+  /// صفة صاحب الجلسة — يقرؤها جذر التطبيق ليختار واجهته.
+  ///
+  /// وكلاهما **يفشل نحو التاجر**: تعذّر السؤال أو انقطاع الشبكة يعني
+  /// «تاجر»، لا شاشةً فارغة ولا لوحةَ إدارة تُفتح بالخطأ. ومن يملك
+  /// الصفة يراها بعد أن يصل الجواب، وأسوأ ما يقع تأخّرُ لحظة.
+  bool isPlatformAdmin = false;
+  bool isShopOwner = false;
+
   /// ذوق التاجر في التكوين: كم مرّة أبقى تخطيطًا من كل نمط.
   ///
   /// هذه ذاكرة المصمّم المحلّي الوحيدة. بدونها يُرتّب لكل التجّار
@@ -211,6 +219,39 @@ class AppState extends ChangeNotifier {
     // بعد استعادة الجلسة لا قبلها: المزامنة تحتاج مستخدمًا معروفًا.
     // ومنفصلة عن try أعلاه لأنها تفشل بصمت أصلًا، فلا تُخفي فشل الحساب.
     await syncBrandIdentityFromCloud();
+    await refreshRoles();
+  }
+
+  /// يسأل الخادم عن صفة صاحب الجلسة.
+  ///
+  /// السؤالان مستقلّان ويُبتلع فشلهما: الصفة امتيازٌ يُضاف، وغيابُها
+  /// يعيد التاجر إلى واجهته الطبيعية. أمّا إسقاط التطبيق لأن سؤال
+  /// امتيازٍ تعثّر فمنعُ الأكثريّة لأجل الأقلّية.
+  Future<void> refreshRoles() async {
+    final client = _client;
+    final uid = client?.auth.currentUser?.id;
+    if (client == null || uid == null) {
+      isPlatformAdmin = false;
+      isShopOwner = false;
+      return;
+    }
+    try {
+      final res = await client.rpc('is_platform_admin');
+      isPlatformAdmin = res == true;
+    } catch (_) {
+      isPlatformAdmin = false;
+    }
+    try {
+      final rows = await client
+          .from('print_shops')
+          .select('id')
+          .eq('owner_user_id', uid)
+          .limit(1);
+      isShopOwner = (rows as List).isNotEmpty;
+    } catch (_) {
+      isShopOwner = false;
+    }
+    notifyListeners();
   }
 
   Future<MerchantAccount> _fetchMerchantProfile(supa.User user) async {
