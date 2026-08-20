@@ -567,6 +567,9 @@ class LEn extends L {
   }
 
   @override
+  String get pricePlatformFee => 'Platform fee';
+
+  @override
   String get shopPanelHeading => 'The print shop panel is being built';
 
   @override

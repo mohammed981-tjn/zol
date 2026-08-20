@@ -296,6 +296,7 @@
   "commonCancel": "إلغاء",
   "commonContinue": "متابعة",
   "priceVatIncluded": "شامل ضريبة القيمة المضافة {amount}",
+  "pricePlatformFee": "رسم المنصّة",
   "@orderShopLacksProduct": {
     "placeholders": { "shop": {}, "product": {} }
   },

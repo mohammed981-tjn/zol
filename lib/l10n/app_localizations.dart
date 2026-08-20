@@ -1021,6 +1021,12 @@ abstract class L {
   /// **'شامل ضريبة القيمة المضافة {amount}'**
   String priceVatIncluded(Object amount);
 
+  /// No description provided for @pricePlatformFee.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسم المنصّة'**
+  String get pricePlatformFee;
+
   /// No description provided for @shopPanelHeading.
   ///
   /// In ar, this message translates to:

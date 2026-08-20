@@ -563,6 +563,9 @@ class LAr extends L {
   }
 
   @override
+  String get pricePlatformFee => 'رسم المنصّة';
+
+  @override
   String get shopPanelHeading => 'لوحة المطبعة قيد البناء';
 
   @override

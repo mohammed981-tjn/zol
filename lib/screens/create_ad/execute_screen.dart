@@ -74,6 +74,58 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   /// يمنع ضغطتين متتاليتين من إنشاء طلبين — والطلب يُقبض ثمنه.
   bool _placing = false;
 
+  /// تسعيرة الخادم للاختيار الحالي. `null` قبل وصولها أو عند تعذّرها،
+  /// وحينها يُعرض التقدير المحلّي موسومًا بأنه تقدير.
+  PrintQuote? _quote;
+  int _quoteSeq = 0;
+
+  /// يجلب التسعيرة الحقيقية للاختيار الحالي.
+  ///
+  /// **قبل الشراء لا عنده**: رسمُ المنصّة على التاجر نسبةٌ لا يعرفها
+  /// التطبيق (تعيش في إعدادات الخادم)، فبلا هذا النداء لا يظهر البند
+  /// إلا في لحظة الدفع — ورسمٌ يُكتشف عند القبض رسمٌ يُعترض عليه.
+  ///
+  /// والتسلسل يمنع سباق النداءات: تاجرٌ يقلّب الكميات بسرعة قد يصله
+  /// جواب طلبٍ قديم بعد الجديد، فيثبت في الشاشة سعرُ اختيارٍ تركه.
+  Future<void> _refreshQuote() async {
+    final seq = ++_quoteSeq;
+    if (widget.isDigital) return;
+    try {
+      final shops = await _backend.shops();
+      if (shops.isEmpty) return;
+      final point = _deliveryPoint;
+      final shop = (point == null
+              ? null
+              : nearestShopRow(shops, point.latitude, point.longitude)) ??
+          shops.first;
+      final products = await _backend.products(shop.id);
+      final size = _product.sizes[_sizeIndex].label;
+      final sameKind = products.where((p) => p.kind == _product.kind);
+      final match = _firstOrNull(sameKind.where((p) => p.size == size)) ??
+          _firstOrNull(sameKind);
+      if (match == null) return;
+      final q = await _backend.quote(
+        shopId: shop.id,
+        productId: match.id,
+        quantity: _quantity,
+      );
+      if (!mounted || seq != _quoteSeq) return;
+      setState(() => _quote = q);
+    } catch (_) {
+      // التقدير المحلّي يكفي للعرض — والحسم عند التأكيد على أي حال.
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // أوّل تسعيرة عند فتح مسار الطباعة، فيرى التاجر أرقام المطبعة
+    // لا تقديرنا منذ أوّل نظرة.
+    if (!widget.isDigital) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _refreshQuote());
+    }
+  }
+
   PrintBackend? _backendCache;
   PrintBackend get _backend =>
       _backendCache ??= widget.backend ??
@@ -414,6 +466,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                 _product = product;
                 _sizeIndex = 0;
                 _quantity = product.quantities.first;
+                _quote = null;
+                WidgetsBinding.instance
+                    .addPostFrameCallback((_) => _refreshQuote());
               }),
               selectedColor: context.scheme.primary,
               labelStyle: TextStyle(
@@ -442,7 +497,13 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
             return ChoiceChip(
               label: Text('${size.label} — ${formatPrice(size.unitPrice)}'),
               selected: isSelected,
-              onSelected: (_) => setState(() => _sizeIndex = i),
+              onSelected: (_) {
+                setState(() {
+                  _sizeIndex = i;
+                  _quote = null;
+                });
+                _refreshQuote();
+              },
               selectedColor: context.scheme.primary,
               labelStyle: TextStyle(
                 color: isSelected
@@ -467,7 +528,13 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
             return ChoiceChip(
               label: Text('$q'),
               selected: isSelected,
-              onSelected: (_) => setState(() => _quantity = q),
+              onSelected: (_) {
+                setState(() {
+                  _quantity = q;
+                  _quote = null;
+                });
+                _refreshQuote();
+              },
               selectedColor: context.scheme.primary,
               labelStyle: TextStyle(
                 color: isSelected
@@ -526,8 +593,8 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
               : _confirmOrder,
           child: Text(
             _payMethod == PayMethod.card
-                ? 'ادفع وأكّد الطلب — ${formatPrice(_subtotal + deliveryFee)}'
-                : 'تأكيد الطلب — ${formatPrice(_subtotal + deliveryFee)}',
+                ? 'ادفع وأكّد الطلب — ${formatPrice(_quote?.grandTotal ?? (_subtotal + deliveryFee))}'
+                : 'تأكيد الطلب — ${formatPrice(_quote?.grandTotal ?? (_subtotal + deliveryFee))}',
           ),
         ),
       ],
@@ -596,6 +663,7 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   }
 
   Widget _buildPriceSummary() {
+    final q = _quote;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -605,22 +673,29 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
       child: Column(
         children: [
           _priceRow(
-            'المطبوعات ($_quantity × ${formatPrice(_product.sizes[_sizeIndex].unitPrice)})',
-            _subtotal,
+            'المطبوعات ($_quantity × ${formatPrice(q == null ? _product.sizes[_sizeIndex].unitPrice : q.itemsTotal / _quantity)})',
+            q?.itemsTotal ?? _subtotal,
           ),
           const SizedBox(height: 8),
-          _priceRow('التوصيل', deliveryFee),
+          _priceRow('التوصيل', q?.deliveryFee ?? deliveryFee),
+          // رسم المنصّة بندٌ مستقلّ لا مدسوسٌ في سعر المنتج: رسمٌ يدفعه
+          // التاجر ولا يراه سيعترض عليه أوّل مرّة ينتبه له.
+          if ((q?.merchantFee ?? 0) > 0) ...[
+            const SizedBox(height: 8),
+            _priceRow(L.of(context).pricePlatformFee, q!.merchantFee),
+          ],
           const Divider(height: 24),
           // الضريبة **مشمولة** في الإجمالي لا مضافة فوقه — وهي الفوترة
           // السعودية، وهي ما يحسبه الخادم. وكان العرض يجمعها فوق
           // الإجمالي فيُقبض من التاجر خمسة عشر بالمئة زيادةً عمّا
           // يُسجَّل في طلبه.
-          _priceRow('الإجمالي', _subtotal + deliveryFee, isTotal: true),
+          _priceRow('الإجمالي', q?.grandTotal ?? (_subtotal + deliveryFee),
+              isTotal: true),
           const SizedBox(height: 6),
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: Text(
-              L.of(context).priceVatIncluded(formatPrice(_vat)),
+              L.of(context).priceVatIncluded(formatPrice(q?.vatIncluded ?? _vat)),
               style: TextStyle(color: context.textMuted, fontSize: 11.5),
             ),
           ),

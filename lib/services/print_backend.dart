@@ -102,6 +102,7 @@ class PrintQuote {
     required this.deliveryFee,
     required this.vatIncluded,
     required this.grandTotal,
+    this.merchantFee = 0,
     this.turnaroundHours,
   });
 
@@ -109,11 +110,20 @@ class PrintQuote {
   final double deliveryFee;
   final double vatIncluded;
   final double grandTotal;
+
+  /// رسم المنصّة على التاجر — صفر يعني معطّل.
+  ///
+  /// يُعرض بندًا مستقلًّا في الفاتورة ولا يُدسّ في سعر المنتج: رسمٌ
+  /// يدفعه التاجر ولا يراه رسمٌ سيعترض عليه أوّل مرّة ينتبه له، وثقةٌ
+  /// تُفقد في بندٍ خفيّ لا تُستعاد بشرحٍ بعده.
+  final double merchantFee;
+
   final int? turnaroundHours;
 
   factory PrintQuote.fromJson(Map<String, dynamic> j) => PrintQuote(
     itemsTotal: (j['items_total'] as num?)?.toDouble() ?? 0,
     deliveryFee: (j['delivery_fee'] as num?)?.toDouble() ?? 0,
+    merchantFee: (j['merchant_fee'] as num?)?.toDouble() ?? 0,
     vatIncluded: (j['vat_included'] as num?)?.toDouble() ?? 0,
     grandTotal: (j['grand_total'] as num?)?.toDouble() ?? 0,
     turnaroundHours: (j['turnaround_hours'] as num?)?.toInt(),
