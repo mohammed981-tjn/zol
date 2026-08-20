@@ -27,6 +27,27 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # ذاكرة Gradle. كانت فلاتر وpub وحدهما مخبّأين، فيُعيد كل تشغيل
+      # تنزيل شجرة Kotlin وAGP كاملةً من Maven Central وplugins.gradle.org
+      # — عشرات الملفّات في كل بناء. وردّت الخوادم أخيرًا بـ‎429 Too Many
+      # Requests‎ فسقط البناء بعد أن نجح التحليل والاختبارات: عطلٌ لا
+      # علاقة له بالشيفرة، ولا سبيل لإصلاحه بتعديلها.
+      #
+      # والمفتاح على ملفّات Gradle **و**‏`pubspec.lock`: كل إضافة فلاتر
+      # تُدخل مشروعًا فرعيًّا في البناء بتبعيّاته، فقفلٌ تغيّر يعني شجرةً
+      # تغيّرت. و`restore-keys` يقبل ذاكرةً أقدم عند التغيير فيُنزَّل
+      # الفارق وحده لا الشجرة كلّها.
+      - name: ذاكرة Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: >-
+            ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*',
+            'android/**/gradle-wrapper.properties', 'pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
       # مفتاح التوقيع الثابت. بدونه يسقط البناء إلى مفتاح التنقيح، وهو
       # يُولَّد عشوائيًا في كل مُشغّل، فتخرج كل نسخة ببصمة مغايرة وترفض
       # أن تُثبَّت فوق سابقتها. هنا يتحدّد إن كان التحديث فوق الجهاز ممكنًا.
