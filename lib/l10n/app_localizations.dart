@@ -1045,6 +1045,12 @@ abstract class L {
   /// **'افتح واجهة التاجر'**
   String get shopPanelOpenMerchant;
 
+  /// No description provided for @shopPanelEntrySubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طوابير الطباعة وحالاتها'**
+  String get shopPanelEntrySubtitle;
+
   /// No description provided for @guideUnavailable.
   ///
   /// In ar, this message translates to:

@@ -4614,6 +4614,9 @@ void main() {
       AppStateScope(
         notifier: state,
         child: MaterialApp(
+          // مثبَّتة: النصّ المتوقَّع أدناه عربيّ، فلو تبدّلت لغة بيئة
+          // الاختبار صار الفحص يبحث عن نصّ لا يُعرض.
+          locale: const Locale('ar'),
           localizationsDelegates: L.localizationsDelegates,
           supportedLocales: L.supportedLocales,
           home: const SettingsScreen(),
@@ -4622,13 +4625,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('لوحة المطبعة'), 200);
-    await tester.tap(find.text('لوحة المطبعة'));
+    final door = find.widgetWithText(ListTile, 'لوحة المطبعة');
+    await tester.scrollUntilVisible(door, 200);
+    await tester.tap(door);
     await tester.pumpAndSettle();
     expect(find.byType(PrintShopScreen), findsOneWidget);
 
     // ويرجع منها — وهو بالضبط ما لم يكن ممكنًا حين كانت جذرًا.
-    await tester.pageBack();
+    //
+    // و`pageBack()` لا تصلح هنا: تبحث عن `tooltip: 'Back'`، والتطبيق
+    // عربيّ فتسمية الزرّ «رجوع». فالنوع أصدق من النصّ المترجَم.
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
   });
@@ -4642,6 +4649,9 @@ void main() {
       AppStateScope(
         notifier: state,
         child: MaterialApp(
+          // مثبَّتة: النصّ المتوقَّع أدناه عربيّ، فلو تبدّلت لغة بيئة
+          // الاختبار صار الفحص يبحث عن نصّ لا يُعرض.
+          locale: const Locale('ar'),
           localizationsDelegates: L.localizationsDelegates,
           supportedLocales: L.supportedLocales,
           home: const SettingsScreen(),

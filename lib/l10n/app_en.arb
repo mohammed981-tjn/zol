@@ -158,6 +158,7 @@
   "shopPanelHeading": "The print shop panel is being built",
   "shopPanelBody": "Print queues and their statuses need a shop role on the server — that is the next stage. No print order has reached any shop yet, so there is nothing to show here today but this honest line.",
   "shopPanelOpenMerchant": "Open the merchant view",
+  "shopPanelEntrySubtitle": "Print queues and their statuses",
   "guideUnavailable": "The guide could not be opened on this device.",
   "editorTitle": "Edit design",
   "editorResizeHandle": "Resize handle",

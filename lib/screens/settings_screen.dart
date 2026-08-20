@@ -577,13 +577,14 @@ class _ShopEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!AppStateScope.of(context).isShopOwner) return const SizedBox.shrink();
+    final l = L.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Card(
         child: ListTile(
           leading: const Icon(Icons.print_outlined),
-          title: const Text('لوحة المطبعة'),
-          subtitle: const Text('طوابير الطباعة وحالاتها'),
+          title: Text(l.shopPanelTitle),
+          subtitle: Text(l.shopPanelEntrySubtitle),
           trailing: const Icon(Icons.chevron_left),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const PrintShopScreen()),

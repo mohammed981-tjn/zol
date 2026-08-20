@@ -580,6 +580,9 @@ class LEn extends L {
   String get shopPanelOpenMerchant => 'Open the merchant view';
 
   @override
+  String get shopPanelEntrySubtitle => 'Print queues and their statuses';
+
+  @override
   String get guideUnavailable =>
       'The guide could not be opened on this device.';
 

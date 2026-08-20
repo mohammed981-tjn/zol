@@ -576,6 +576,9 @@ class LAr extends L {
   String get shopPanelOpenMerchant => 'افتح واجهة التاجر';
 
   @override
+  String get shopPanelEntrySubtitle => 'طوابير الطباعة وحالاتها';
+
+  @override
   String get guideUnavailable => 'تعذّر فتح الدليل على هذا الجهاز.';
 
   @override
