@@ -268,7 +268,6 @@
   "wishHint": "اكتب ما تريد… مثال: استاند رول بخصم ٣٠٪ وفخم",
   "wishRun": "نفّذ",
   "wishFailed": "تعذّر تنفيذ الطلب. حاول مجددًا.",
-  "wishDefaultCta": "اطلب الآن",
   "roleHeadline": "العنوان",
   "roleSubhead": "السطر الثانوي",
   "roleProduct": "المنتج",
@@ -372,5 +371,31 @@
       }
     }
   },
-  "wishLocalOnly": "صُمّم على جهازك — تعذّر الوصول إلى الذكاء السحابي"
+  "wishLocalOnly": "صُمّم على جهازك — تعذّر الوصول إلى الذكاء السحابي",
+  "magicTitle": "شاشة السحر",
+  "magicRegenerate": "إعادة توليد",
+  "magicFailed": "تعذّر إكمال التوليد. حاول مجددًا.",
+  "magicSceneFailed": "تعذّر توليد المشهد. حاول مجددًا.",
+  "magicQuotaTitle": "انتهت حصتك لهذا الشهر",
+  "magicErrorTitle": "تعذّر التوليد",
+  "magicRetry": "إعادة المحاولة",
+  "magicBackAndEdit": "العودة وتعديل الوصف",
+  "magicWorking": "الذكاء الاصطناعي يعمل على إعلانك…",
+  "magicStepKicker": "الخطوة 2 من 3",
+  "magicPickBest": "اختر النسخة الأنسب",
+  "magicSaveAndPublish": "حفظ ونشر",
+  "magicPrintAndDeliver": "اطبعه وصلّه",
+  "magicSavedToLibrary": "تم الحفظ في «إعلاناتي»",
+  "magicCopied": "تم نسخ النص الإعلاني",
+  "magicRealScene": "مشهد واقعي بالذكاء",
+  "magicCopyText": "نسخ النص",
+  "magicSave": "حفظ",
+  "magicMatchScore": "توافق {score}%",
+  "@magicMatchScore": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  }
 }

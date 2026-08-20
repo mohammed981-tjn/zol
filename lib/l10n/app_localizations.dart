@@ -853,12 +853,6 @@ abstract class L {
   /// **'تعذّر تنفيذ الطلب. حاول مجددًا.'**
   String get wishFailed;
 
-  /// No description provided for @wishDefaultCta.
-  ///
-  /// In ar, this message translates to:
-  /// **'اطلب الآن'**
-  String get wishDefaultCta;
-
   /// No description provided for @roleHeadline.
   ///
   /// In ar, this message translates to:
@@ -1398,6 +1392,120 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'صُمّم على جهازك — تعذّر الوصول إلى الذكاء السحابي'**
   String get wishLocalOnly;
+
+  /// No description provided for @magicTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'شاشة السحر'**
+  String get magicTitle;
+
+  /// No description provided for @magicRegenerate.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة توليد'**
+  String get magicRegenerate;
+
+  /// No description provided for @magicFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر إكمال التوليد. حاول مجددًا.'**
+  String get magicFailed;
+
+  /// No description provided for @magicSceneFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر توليد المشهد. حاول مجددًا.'**
+  String get magicSceneFailed;
+
+  /// No description provided for @magicQuotaTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت حصتك لهذا الشهر'**
+  String get magicQuotaTitle;
+
+  /// No description provided for @magicErrorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر التوليد'**
+  String get magicErrorTitle;
+
+  /// No description provided for @magicRetry.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get magicRetry;
+
+  /// No description provided for @magicBackAndEdit.
+  ///
+  /// In ar, this message translates to:
+  /// **'العودة وتعديل الوصف'**
+  String get magicBackAndEdit;
+
+  /// No description provided for @magicWorking.
+  ///
+  /// In ar, this message translates to:
+  /// **'الذكاء الاصطناعي يعمل على إعلانك…'**
+  String get magicWorking;
+
+  /// No description provided for @magicStepKicker.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخطوة 2 من 3'**
+  String get magicStepKicker;
+
+  /// No description provided for @magicPickBest.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر النسخة الأنسب'**
+  String get magicPickBest;
+
+  /// No description provided for @magicSaveAndPublish.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ ونشر'**
+  String get magicSaveAndPublish;
+
+  /// No description provided for @magicPrintAndDeliver.
+  ///
+  /// In ar, this message translates to:
+  /// **'اطبعه وصلّه'**
+  String get magicPrintAndDeliver;
+
+  /// No description provided for @magicSavedToLibrary.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الحفظ في «إعلاناتي»'**
+  String get magicSavedToLibrary;
+
+  /// No description provided for @magicCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ النص الإعلاني'**
+  String get magicCopied;
+
+  /// No description provided for @magicRealScene.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشهد واقعي بالذكاء'**
+  String get magicRealScene;
+
+  /// No description provided for @magicCopyText.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ النص'**
+  String get magicCopyText;
+
+  /// No description provided for @magicSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ'**
+  String get magicSave;
+
+  /// No description provided for @magicMatchScore.
+  ///
+  /// In ar, this message translates to:
+  /// **'توافق {score}%'**
+  String magicMatchScore(int score);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

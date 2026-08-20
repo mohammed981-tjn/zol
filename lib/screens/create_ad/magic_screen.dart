@@ -139,7 +139,7 @@ class _MagicScreenState extends State<MagicScreen> {
       await ticker;
       if (!mounted) return;
       setState(
-        () => _error = GatewayException('تعذّر إكمال التوليد. حاول مجددًا.'),
+        () => _error = GatewayException(L.of(context).magicFailed),
       );
     }
   }
@@ -223,7 +223,7 @@ class _MagicScreenState extends State<MagicScreen> {
       if (!mounted) return;
       setState(() => _sceneLoading.remove(ad));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذّر توليد المشهد. حاول مجددًا.')),
+        SnackBar(content: Text(L.of(context).magicSceneFailed)),
       );
     }
   }
@@ -399,7 +399,9 @@ class _MagicScreenState extends State<MagicScreen> {
                 .split(RegExp(r'\s+'))
                 .where((t) => t.isNotEmpty)
                 .toList(growable: false),
-      cta: textOf(ElementRole.cta) ?? L.of(context).wishDefaultCta,
+      // نصّ الإعلان لا يتبع لغة الواجهة: التاجر قد يقرأ الإنجليزية
+      // وجمهوره عربيّ. ولغة الإعلان المولَّد تُحسم في دفعتها الخاصّة.
+      cta: textOf(ElementRole.cta) ?? 'اطلب الآن',
       angle: spec.note,
       createdAt: DateTime.now(),
       spec: spec,
@@ -412,11 +414,11 @@ class _MagicScreenState extends State<MagicScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('شاشة السحر'),
+        title: Text(L.of(context).magicTitle),
         actions: [
           if (ads != null)
             IconButton(
-              tooltip: 'إعادة توليد',
+              tooltip: L.of(context).magicRegenerate,
               onPressed: _regenerate,
               icon: const Icon(Icons.refresh),
             ),
@@ -453,6 +455,7 @@ class _MagicScreenState extends State<MagicScreen> {
   }
 
   Widget _buildError(GatewayException e) {
+    final l = L.of(context);
     final quotaHit = e.isQuota;
     return Center(
       child: SingleChildScrollView(
@@ -482,7 +485,7 @@ class _MagicScreenState extends State<MagicScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                quotaHit ? 'انتهت حصتك لهذا الشهر' : 'تعذّر التوليد',
+                quotaHit ? l.magicQuotaTitle : l.magicErrorTitle,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
@@ -501,7 +504,7 @@ class _MagicScreenState extends State<MagicScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _generate,
                     icon: const Icon(Icons.refresh, size: 20),
-                    label: const Text('إعادة المحاولة'),
+                    label: Text(l.magicRetry),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -509,7 +512,7 @@ class _MagicScreenState extends State<MagicScreen> {
                 // يعيده إلى نفس الجدار.
                 TextButton(
                   onPressed: () => Navigator.of(context).maybePop(),
-                  child: const Text('العودة وتعديل الوصف'),
+                  child: Text(l.magicBackAndEdit),
                 ),
               ],
             ],
@@ -533,7 +536,7 @@ class _MagicScreenState extends State<MagicScreen> {
           ),
           const SizedBox(height: 28),
           Text(
-            'الذكاء الاصطناعي يعمل على إعلانك…',
+            L.of(context).magicWorking,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.bold,
@@ -604,15 +607,16 @@ class _MagicScreenState extends State<MagicScreen> {
   }
 
   Widget _buildResults(List<GeneratedAd> ads) {
+    final l = L.of(context);
     return Column(
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
           child: Align(
             alignment: AlignmentDirectional.centerStart,
             child: SectionHeader(
-              kicker: 'الخطوة 2 من 3',
-              title: 'اختر النسخة الأنسب',
+              kicker: L.of(context).magicStepKicker,
+              title: L.of(context).magicPickBest,
             ),
           ),
         ),
@@ -685,14 +689,14 @@ class _MagicScreenState extends State<MagicScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _goExecute(ads, isDigital: true),
-                  child: const Text('حفظ ونشر'),
+                  child: Text(l.magicSaveAndPublish),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () => _goExecute(ads, isDigital: false),
-                  child: const Text('اطبعه وصلّه'),
+                  child: Text(l.magicPrintAndDeliver),
                 ),
               ),
             ],
@@ -706,7 +710,7 @@ class _MagicScreenState extends State<MagicScreen> {
     AppStateScope.of(context).saveAd(ad);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('تم الحفظ في «إعلاناتي»')));
+    ).showSnackBar(SnackBar(content: Text(L.of(context).magicSavedToLibrary)));
   }
 
   Future<void> _copyAd(GeneratedAd ad) async {
@@ -714,7 +718,7 @@ class _MagicScreenState extends State<MagicScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('تم نسخ النص الإعلاني')));
+    ).showSnackBar(SnackBar(content: Text(L.of(context).magicCopied)));
   }
 
   void _goExecute(List<GeneratedAd> ads, {required bool isDigital}) {
@@ -1031,7 +1035,7 @@ class _AdPreviewCard extends StatelessWidget {
                       : OutlinedButton.icon(
                           onPressed: onScene,
                           icon: const Icon(Icons.auto_awesome, size: 18),
-                          label: const Text('مشهد واقعي بالذكاء'),
+                          label: Text(L.of(context).magicRealScene),
                         ),
                 ),
               ],
@@ -1083,12 +1087,12 @@ class _AdPreviewCard extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onCopy,
                   icon: const Icon(Icons.copy_outlined, size: 18),
-                  label: const Text('نسخ النص'),
+                  label: Text(L.of(context).magicCopyText),
                 ),
                 TextButton.icon(
                   onPressed: onSave,
                   icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                  label: const Text('حفظ'),
+                  label: Text(L.of(context).magicSave),
                 ),
               ],
             ),
@@ -1118,7 +1122,7 @@ class _ScoreBadge extends StatelessWidget {
           const Icon(Icons.bolt, size: 14, color: Color(0xFF8A6D00)),
           const SizedBox(width: 2),
           Text(
-            'توافق $score%',
+            L.of(context).magicMatchScore(score),
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,

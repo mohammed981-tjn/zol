@@ -466,9 +466,6 @@ class LAr extends L {
   String get wishFailed => 'تعذّر تنفيذ الطلب. حاول مجددًا.';
 
   @override
-  String get wishDefaultCta => 'اطلب الآن';
-
-  @override
   String get roleHeadline => 'العنوان';
 
   @override
@@ -755,4 +752,63 @@ class LAr extends L {
   @override
   String get wishLocalOnly =>
       'صُمّم على جهازك — تعذّر الوصول إلى الذكاء السحابي';
+
+  @override
+  String get magicTitle => 'شاشة السحر';
+
+  @override
+  String get magicRegenerate => 'إعادة توليد';
+
+  @override
+  String get magicFailed => 'تعذّر إكمال التوليد. حاول مجددًا.';
+
+  @override
+  String get magicSceneFailed => 'تعذّر توليد المشهد. حاول مجددًا.';
+
+  @override
+  String get magicQuotaTitle => 'انتهت حصتك لهذا الشهر';
+
+  @override
+  String get magicErrorTitle => 'تعذّر التوليد';
+
+  @override
+  String get magicRetry => 'إعادة المحاولة';
+
+  @override
+  String get magicBackAndEdit => 'العودة وتعديل الوصف';
+
+  @override
+  String get magicWorking => 'الذكاء الاصطناعي يعمل على إعلانك…';
+
+  @override
+  String get magicStepKicker => 'الخطوة 2 من 3';
+
+  @override
+  String get magicPickBest => 'اختر النسخة الأنسب';
+
+  @override
+  String get magicSaveAndPublish => 'حفظ ونشر';
+
+  @override
+  String get magicPrintAndDeliver => 'اطبعه وصلّه';
+
+  @override
+  String get magicSavedToLibrary => 'تم الحفظ في «إعلاناتي»';
+
+  @override
+  String get magicCopied => 'تم نسخ النص الإعلاني';
+
+  @override
+  String get magicRealScene => 'مشهد واقعي بالذكاء';
+
+  @override
+  String get magicCopyText => 'نسخ النص';
+
+  @override
+  String get magicSave => 'حفظ';
+
+  @override
+  String magicMatchScore(int score) {
+    return 'توافق $score%';
+  }
 }

@@ -467,9 +467,6 @@ class LEn extends L {
   String get wishFailed => 'Could not carry out your request. Try again.';
 
   @override
-  String get wishDefaultCta => 'Order now';
-
-  @override
   String get roleHeadline => 'Headline';
 
   @override
@@ -759,4 +756,63 @@ class LEn extends L {
   @override
   String get wishLocalOnly =>
       'Designed on your device — the cloud AI was unreachable';
+
+  @override
+  String get magicTitle => 'Magic screen';
+
+  @override
+  String get magicRegenerate => 'Regenerate';
+
+  @override
+  String get magicFailed => 'Generation could not finish. Try again.';
+
+  @override
+  String get magicSceneFailed => 'The scene could not be generated. Try again.';
+
+  @override
+  String get magicQuotaTitle => 'You have used this month\'s quota';
+
+  @override
+  String get magicErrorTitle => 'Generation failed';
+
+  @override
+  String get magicRetry => 'Try again';
+
+  @override
+  String get magicBackAndEdit => 'Go back and edit the description';
+
+  @override
+  String get magicWorking => 'AI is working on your ad…';
+
+  @override
+  String get magicStepKicker => 'Step 2 of 3';
+
+  @override
+  String get magicPickBest => 'Pick the version that fits';
+
+  @override
+  String get magicSaveAndPublish => 'Save and publish';
+
+  @override
+  String get magicPrintAndDeliver => 'Print and deliver';
+
+  @override
+  String get magicSavedToLibrary => 'Saved to “My ads”';
+
+  @override
+  String get magicCopied => 'Ad text copied';
+
+  @override
+  String get magicRealScene => 'Realistic AI scene';
+
+  @override
+  String get magicCopyText => 'Copy text';
+
+  @override
+  String get magicSave => 'Save';
+
+  @override
+  String magicMatchScore(int score) {
+    return '$score% match';
+  }
 }

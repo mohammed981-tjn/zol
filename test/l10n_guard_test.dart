@@ -27,7 +27,6 @@ void main() {
     'lib/screens/create_ad/execute_screen.dart': 36,
     'lib/screens/settings_screen.dart': 35,
     'lib/screens/create_ad/upload_details_screen.dart': 26,
-    'lib/screens/create_ad/magic_screen.dart': 20,
     'lib/screens/pick_location_screen.dart': 10,
     'lib/screens/payment/moyasar_payment_screen.dart': 10,
     'lib/screens/payment/payment_flow.dart': 6,
@@ -39,6 +38,11 @@ void main() {
     // خاص»، «لفترة محدودة»)، فلغتها لغة الجمهور لا لغة التاجر. تُحسم
     // في الدفعة الثالثة مع لغة الإعلان المولَّد، لا هنا.
     'lib/widgets/ad_design_preview.dart': 2,
+
+    // وشاشة السحر هوجرت كاملةً إلا دعوةَ إجراءٍ افتراضية تدخل **نصّ
+    // الإعلان** نفسه: تاجرٌ يقرأ الإنجليزية قد يكون جمهوره عربيًّا،
+    // فترجمتُها بلغة الواجهة تضع كلمة إنجليزية في إعلان عربي.
+    'lib/screens/create_ad/magic_screen.dart': 2,
 
     // نبرة العيّنة في معرض القوالب — نصّ محتوى للسبب نفسه.
     'lib/screens/templates_screen.dart': 1,
