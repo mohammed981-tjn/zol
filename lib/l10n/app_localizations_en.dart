@@ -815,4 +815,11 @@ class LEn extends L {
   String magicMatchScore(int score) {
     return '$score% match';
   }
+
+  @override
+  String get magicNextComposition => 'Another composition';
+
+  @override
+  String get magicRegenerateConfirm =>
+      'Regenerating clears the designs you made with your own request. Continue?';
 }

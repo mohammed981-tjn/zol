@@ -80,6 +80,10 @@ class _MagicScreenState extends State<MagicScreen> {
   /// كم بطاقةً محلّية في مقدّمة القائمة الآن — تُستبدل حين تصل السحابة.
   int _localCount = 0;
 
+  /// المرشّحون المحسوبون سلفًا — ذخيرة زرّ «تكوين آخر».
+  List<LocalDesign> _variants = const [];
+  int _variantAt = 0;
+
   /// ملاحظات الطبيب على آخر تخطيط مولَّد. تُعرض للتاجر لا تُبتلع: تصميمٌ
   /// أُصلح خلسةً يجعل التاجر يظنّ الذكاء معصومًا، فإذا أخطأ يومًا لم يعرف
   /// أن عليه أن ينظر.
@@ -115,6 +119,9 @@ class _MagicScreenState extends State<MagicScreen> {
       _error = null;
       _stage = 0;
       _selectedCard = 0;
+      _localCount = 0;
+      _variants = const [];
+      _variantAt = 0;
     });
 
     final request = _gateway.generatePreview(widget.brief);
@@ -184,7 +191,37 @@ class _MagicScreenState extends State<MagicScreen> {
     ];
   }
 
-  void _regenerate() => _generate();
+  /// إعادة التوليد تمسح كل شيء — فتُستأذن حين يكون هناك ما يُمسَح.
+  ///
+  /// `_generate` يُسند `_ads` من جديد، فيمحو التصاميم التي صنعها التاجر
+  /// بأمنيته. وأيقونةُ تحديثٍ في شريط العنوان تُضغط بالخطأ كثيرًا، ولا
+  /// سبيل بعدها لاسترجاع تكوينٍ كتبه وعدّله.
+  Future<void> _regenerate() async {
+    final hasOwn = (_ads ?? const []).any((a) => a.spec != null);
+    if (!hasOwn) {
+      await _generate();
+      return;
+    }
+
+    final l = L.of(context);
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: Text(l.magicRegenerateConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.actionCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l.magicRegenerate),
+          ),
+        ],
+      ),
+    );
+    if (go == true && mounted) await _generate();
+  }
 
   /// توليد مشهد سحابي للصيغة المختارة وحدها — نداء واحد عند الضرورة،
   /// وفشله لا يمس البطاقة: القالب المحلي يبقى معروضًا كما هو.
@@ -349,6 +386,84 @@ class _MagicScreenState extends State<MagicScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// هل يحمل الموجز زينةً لا يرسمها مسار التخطيط المولَّد؟
+  ///
+  /// الموسم والشارة الترويجية والخلفية الزخرفية تُرسم في مسار القوالب
+  /// وحده. فلو ركّبنا تكوينًا لتاجرٍ اختار شارة «خصم» صراحةً لاختفت
+  /// شارته بلا أن يُقال له — وإسقاطُ اختيارٍ صريح بصمت أسوأ من ألّا
+  /// نعرض التكوين أصلًا. فيُخفى الزرّ عنه حتى يدعم العارضُ الثلاثة.
+  bool get _hasDecorations =>
+      widget.brief.season != null ||
+      widget.brief.badge != null ||
+      widget.brief.useDecorativeBackground;
+
+  /// يُركّب تخطيطات على الجهاز من نصّ إعلانٍ جاهز — **عند الطلب**.
+  ///
+  /// ولا يُركَّب تلقائيًّا عند فتح الشاشة: ذلك يجعل التكوين المولَّد هو
+  /// المخرَج الافتراضي، وهو لا يرسم زينة التاجر بعد. فالتاجر يطلبه بزرّ
+  /// فيكون اختيارًا لا مفاجأة.
+  List<GeneratedAd> _composeFromAd(GeneratedAd? ad) {
+    if (ad == null) return const [];
+    try {
+      final state = AppStateScope.of(context);
+      final brandArgb =
+          state.brandColorValue ??
+          widget.brief.brandColor ??
+          widget.brief.paletteColor ??
+          0xFF2C6BED;
+
+      final designs = LocalDesigner.compose(
+        DesignBrief(
+          headline: ad.headline,
+          subhead: ad.body,
+          cta: ad.cta,
+          format: adFormatFromLabel(widget.brief.format),
+          hasImage: widget.brief.hasProductImage,
+          hasLogo: state.brandLogoBytes != null,
+        ),
+        brandColor: Color(brandArgb),
+        count: 8,
+      );
+      if (designs.isEmpty) return const [];
+      _variants = designs;
+      _variantAt = 0;
+      return [for (final d in designs.take(2)) _adFromSpec(d.spec)];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// يستبدل البطاقة المعروضة بالتكوين التالي في الترتيب.
+  ///
+  /// بلا شبكة وبلا حصّة: المرشّحون محسوبون سلفًا. وهذا ما كان يكلّف
+  /// التاجر إعادةَ توليدٍ كاملة لأنه لم يعجبه موضع عنوان.
+  void _nextComposition() {
+    final ads = _ads;
+    if (ads == null || _selectedCard >= ads.length) return;
+
+    // أوّل ضغطة تُركّب، وما بعدها يتنقّل بين المحسوبين سلفًا.
+    if (_variants.isEmpty) {
+      final made = _composeFromAd(ads[_selectedCard]);
+      if (made.isEmpty || _variants.isEmpty) return;
+      setState(() {
+        final list = [...ads];
+        list[_selectedCard] = made.first;
+        _ads = list;
+      });
+      return;
+    }
+
+    final v = _variants;
+    if (v.length < 2) return;
+    _variantAt = (_variantAt + 1) % v.length;
+    final next = _adFromSpec(v[_variantAt].spec);
+    setState(() {
+      final list = [...ads];
+      list[_selectedCard] = next;
+      _ads = list;
+    });
+  }
+
   /// يُركّب تخطيطات على الجهاز من نصّ الأمنية.
   ///
   /// القارئ يستخرج نوع العرض والنسبة والصيغة والموضوع، والمصمّح يُولّد
@@ -366,9 +481,12 @@ class _MagicScreenState extends State<MagicScreen> {
       final designs = LocalDesigner.compose(
         brief,
         brandColor: Color(brandArgb),
-        count: 3,
+        count: 8,
       );
-      return [for (final d in designs) _adFromSpec(d.spec)];
+      if (designs.isEmpty) return const [];
+      _variants = designs;
+      _variantAt = 0;
+      return [for (final d in designs.take(3)) _adFromSpec(d.spec)];
     } catch (_) {
       // التوليد المحلّي إثراء لا شرط: عطلٌ فيه لا يمنع مسار السحابة.
       return const [];
@@ -643,6 +761,10 @@ class _MagicScreenState extends State<MagicScreen> {
                     ? () => _generateScene(ads[i])
                     : null,
                 sceneLoading: _sceneLoading.contains(ads[i]),
+                // التكوين التالي محسوبٌ سلفًا: لا شبكة ولا حصّة، وكان
+                // التاجر يدفع إعادة توليدٍ كاملة لأن موضع عنوان لم
+                // يعجبه.
+                onNextComposition: _hasDecorations ? null : _nextComposition,
               ),
             ),
           ),
@@ -926,6 +1048,7 @@ class _AdPreviewCard extends StatelessWidget {
     required this.onCopy,
     this.onScene,
     this.sceneLoading = false,
+    this.onNextComposition,
   });
 
   final GeneratedAd ad;
@@ -935,6 +1058,9 @@ class _AdPreviewCard extends StatelessWidget {
   /// طلب مشهد سحابي لهذه الصيغة (null = غير متاح: صورة موجودة أو لا منتج).
   final VoidCallback? onScene;
   final bool sceneLoading;
+
+  /// تبديل التكوين إلى المرشّح التالي — محلّيًّا وفورًا.
+  final VoidCallback? onNextComposition;
 
   @override
   Widget build(BuildContext context) {
@@ -1094,6 +1220,12 @@ class _AdPreviewCard extends StatelessWidget {
                   icon: const Icon(Icons.bookmark_add_outlined, size: 18),
                   label: Text(L.of(context).magicSave),
                 ),
+                if (onNextComposition != null)
+                  TextButton.icon(
+                    onPressed: onNextComposition,
+                    icon: const Icon(Icons.auto_mode, size: 18),
+                    label: Text(L.of(context).magicNextComposition),
+                  ),
               ],
             ),
           ],

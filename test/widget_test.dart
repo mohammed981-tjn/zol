@@ -4288,6 +4288,254 @@ void main() {
     expect(find.textContaining('على جهازك'), findsWidgets);
   });
 
+
+  // ── ما كسره الفريق الأحمر، مثبَّتًا ─────────────────────────────────
+
+  test('النسبة: مبلغ بالريال ليس خصمًا مئويًّا', () {
+    // أخطر ما وجده الفحص: «خصم ١٥ ريال» كان يخرج «خصم ١٥٪» على شارة
+    // ولوحة **مطبوعة**. خطأ تجاريّ لا تجميليّ — ورقة لا تُسترجَع.
+    for (final w in [
+      'خصم ١٥ ريال على كل وجبة',
+      'وفر 30 ريال عند الشراء',
+      'تخفيض 15 ريال لكل وجبة',
+      'خصم ٥٠ ر.س',
+    ]) {
+      expect(
+        WishParser.parse(w).discountPercent,
+        isNull,
+        reason: 'قرأ مبلغًا بالريال نسبةً مئوية: $w',
+      );
+    }
+    // والنسبة الحقيقية تُقرأ.
+    expect(WishParser.parse('خصم ٣٠٪ على القهوة').discountPercent, 30);
+    expect(WishParser.parse('25% off today').discountPercent, 25);
+    expect(WishParser.parse('خصم 40 بالمئة').discountPercent, 40);
+  });
+
+  test('المطابقة بحدود كلمات: «معرض» ليست «عرض»', () {
+    // كان البحث بـ`contains`، فيخرج لمعرض سيارات إعلانُ خصم، ولعيادة
+    // أسنان إعلانٌ موسميّ، ولـ«مرحبا» نبرةٌ مرحة.
+    expect(WishParser.parse('معرض سيارات في الرياض').offer, isNot(WishOffer.discount));
+    expect(WishParser.parse('مواعيد العيادة').offer, isNot(WishOffer.season));
+    expect(WishParser.parse('المنتج متوفر الحين').offer, isNot(WishOffer.discount));
+    expect(WishParser.parse('مرحبا ابي تصميم لمغسلة').tone, isNull);
+    expect(WishParser.parse('علبة كرتون لمنتجاتنا').format, isNot(AdFormat.businessCard));
+    expect(WishParser.parse('انشر بالانستقرام').urgent, isFalse);
+    expect(WishParser.parse('coffee shop menu').offer, isNot(WishOffer.discount));
+
+    // ومع ذلك تبقى اللواصق والصرف مفهومة.
+    expect(WishParser.parse('والخصم مستمر').offer, WishOffer.discount);
+    expect(WishParser.parse('خلفية فاتحة').wantsLight, isTrue);
+  });
+
+  test('النفي يُقرأ نفيًا: «بدون خصم» ليست طلب خصم', () {
+    expect(WishParser.parse('بدون خصم، اعلان تعريفي').offer, isNot(WishOffer.discount));
+    expect(WishParser.parse('ما ابي خصم').offer, isNot(WishOffer.discount));
+    expect(WishParser.parse('لا يوجد توصيل').offer, isNot(WishOffer.delivery));
+  });
+
+  test('الموضوع: لامٌ من بنية الكلمة ليست لام جرّ', () {
+    // «لدينا» ليست «دينا»، و«لوحة» ليست «وحة» — وكانت تُطبع عنوانًا.
+    expect(WishParser.parse('لدينا خصم كبير').subject, isNull);
+    expect(WishParser.parse('لازم يكون فخم').subject, isNull);
+
+    // و«للمخبز» لامان، و«لِمقهى» بتشكيل، و«لـمقهى» بتطويل.
+    expect(WishParser.parse('شي حلو للمخبز').subject, 'مخبز');
+    expect(WishParser.parse('ابي خصم لِمقهى مختص').subject, 'مقهى مختص');
+    expect(WishParser.parse('ستوري لـمقهى مختص').subject, 'مقهى مختص');
+
+    // ومحرف التوجيه الملصَق من واتساب لا يمنع الفهم.
+    expect(WishParser.parse('بنر ‏لمطعم برجر').subject, 'مطعم برجر');
+  });
+
+  test('المصمّح يُكمل الناقص ولا يصمت', () {
+    const brand = Color(0xFF2C6BED);
+    // موجزٌ بلا زرّ حثّ كان يُسقط المرشّحين كلّهم فتعود القائمة فارغة
+    // بلا سبب — ومسحٌ على ٣٨٤ توليفة أظهر أن نصفها بالضبط يعود صفرًا.
+    const noCta = DesignBrief(
+      headline: 'خصم ٣٠٪ على العسل',
+      subhead: 'لفترة محدودة',
+      format: AdFormat.square,
+      hasImage: true,
+    );
+    final out = LocalDesigner.compose(noCta, brandColor: brand, count: 3);
+    expect(out, hasLength(3));
+    expect(out.first.spec.firstOf(ElementRole.cta), isNotNull);
+
+    // والعنوان لا يُخترع: هو رسالة التاجر. فموجزٌ بلا عنوان يُرفض بدل
+    // أن يخرج رول أب ‎85×200‎ سم بلا رسالة — وكان يخرج بدرجة كاملة.
+    const noHead = DesignBrief(
+      headline: '   ',
+      cta: 'اطلب',
+      format: AdFormat.rollUp,
+      hasImage: true,
+    );
+    expect(LocalDesigner.compose(noHead, brandColor: brand), isEmpty);
+  });
+
+  test('التنوّع بالهندسة لا بالاسم', () {
+    const brand = Color(0xFF2C6BED);
+    // بلا صورة منتج كانت ثلاثة أنماط تُخرج المستطيلات نفسها بالضبط،
+    // وشرحان منها يَعِدان بمنتج لا وجود له.
+    const noImage = DesignBrief(
+      headline: 'وصل جديدنا',
+      subhead: 'جديدنا بين يديك',
+      cta: 'اكتشفه',
+      format: AdFormat.square,
+      hasImage: false,
+    );
+    final out = LocalDesigner.compose(noImage, brandColor: brand, count: 3);
+    expect(out, hasLength(3));
+
+    final geometries = out
+        .map(
+          (d) => d.spec.elements
+              .map(
+                (e) =>
+                    '${e.role.name}${e.rect.x.toStringAsFixed(3)}'
+                    '${e.rect.y.toStringAsFixed(3)}',
+              )
+              .join('|'),
+        )
+        .toSet();
+    expect(geometries, hasLength(3), reason: 'تخطيطات متطابقة بأسماء مختلفة');
+
+    // ولا يَعِد شرحٌ بمنتج غائب.
+    for (final d in out) {
+      expect(d.spec.firstOf(ElementRole.product), isNull);
+    }
+  });
+
+  test('الناقد لا يُخدَع بشريط ضيّق ولا بعناصر لا تُرسم', () {
+    const brand = Color(0xFF2C6BED);
+
+    // ١) كل المحتوى في خيط ارتفاعه ٦٪ واللوحة خالية — كان يأخذ ٩٣٫٤
+    //    لأن الفراغ كان يجمع الصناديق لا يوحّدها.
+    final strip = <DesignElement>[
+      for (var i = 0; i < 8; i++)
+        const DesignElement(
+          role: ElementRole.shape,
+          rect: SpecRect(0.07, 0.47, 0.86, 0.06),
+          fill: ColorRole.deep,
+        ),
+      const DesignElement(
+        role: ElementRole.headline,
+        rect: SpecRect(0.07, 0.47, 0.40, 0.06),
+        text: 'عنوان',
+        sizeFactor: 0.05,
+      ),
+      const DesignElement(
+        role: ElementRole.cta,
+        rect: SpecRect(0.55, 0.47, 0.30, 0.06),
+        text: 'اطلب',
+        sizeFactor: 0.02,
+      ),
+    ];
+    final stripScore = DesignCritic.score(
+      DesignSpec(
+        format: AdFormat.banner,
+        backdrop: SpecBackdrop.mesh,
+        elements: strip,
+      ),
+      brandColor: brand,
+    );
+    expect(
+      stripScore.total,
+      lessThan(80),
+      reason: 'شريط ٦٪ ما زال يُخدع الناقد: $stripScore',
+    );
+
+    // ٢) أشكال «شبح» بلا لوح لا يرسمها العارض — وكانت ترفع الاصطفاف.
+    List<DesignElement> withGhosts(int n) => [
+      const DesignElement(
+        role: ElementRole.headline,
+        rect: SpecRect(0.07, 0.08, 0.40, 0.10),
+        text: 'عنوان',
+        sizeFactor: 0.05,
+      ),
+      const DesignElement(
+        role: ElementRole.cta,
+        rect: SpecRect(0.41, 0.50, 0.30, 0.08),
+        text: 'اطلب',
+        sizeFactor: 0.02,
+      ),
+      for (var i = 0; i < n; i++)
+        DesignElement(
+          role: ElementRole.shape,
+          rect: SpecRect(0.07, 0.05 + i * 0.0005, 0.025, 0.03),
+        ),
+    ];
+    double align(int n) =>
+        DesignCritic.score(
+          DesignSpec(
+            format: AdFormat.square,
+            backdrop: SpecBackdrop.mesh,
+            elements: withGhosts(n),
+          ),
+          brandColor: brand,
+        ).parts['alignment']!;
+
+    expect(
+      align(24),
+      closeTo(align(0), 1e-9),
+      reason: 'عناصر لا تُرسم غيّرت درجة الاصطفاف',
+    );
+  });
+
+
+  testWidgets('«إعادة توليد» لا تحرق تصاميم التاجر بلا استئذان', (
+    tester,
+  ) async {
+    // أيقونة التحديث في شريط العنوان تُضغط بالخطأ كثيرًا، وكانت تمسح
+    // كل تخطيط صنعه التاجر بأمنيته بلا سؤال ولا استرجاع.
+    MagicScreen.debugWishServiceOverride = () => wishService(
+      MockClient(
+        (req) async => http.Response.bytes(utf8.encode(liveDesignBody()), 200),
+      ),
+    );
+    addTearDown(() => MagicScreen.debugWishServiceOverride = null);
+
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: MagicScreen(
+            brief: AdBrief(
+              productName: 'قهوة',
+              description: '',
+              tone: 'فخم',
+              platform: 'إنستغرام',
+              format: 'ستوري',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).last, 'خصم ٣٠٪ لمقهى');
+    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pumpAndSettle();
+    expect(find.byType(SpecRenderer), findsWidgets);
+
+    // ضغطة تحديث ⇒ سؤال لا مسح.
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tap(find.text('إلغاء'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byType(SpecRenderer),
+      findsWidgets,
+      reason: 'أُلغي السؤال ومع ذلك ضاعت التصاميم',
+    );
+  });
+
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────
 
   test('الهجرة تمنع المزوّد من اعتماد نفسه وتوثيق نفسه', () {

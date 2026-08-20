@@ -204,7 +204,16 @@ class SpecDoctor {
     }
 
     // ٤) الأركان التي لا يقوم إعلان بدونها.
-    if (spec.firstOf(ElementRole.headline) == null) {
+    //
+    // والعبرة بالنصّ لا بوجود الدور: عنصرُ عنوانٍ نصّه فارغ يمرّ فحص
+    // الوجود ويُخرج رول أب ‎85×200‎ سم بلا رسالة — بدرجةٍ كاملة. وقد
+    // كان يفعل.
+    bool blank(ElementRole r) {
+      final e = spec.firstOf(r);
+      return e == null || (e.text ?? '').trim().isEmpty;
+    }
+
+    if (blank(ElementRole.headline)) {
       issues.add(
         const SpecIssue(
           code: SpecIssueCode.missingHeadline,
@@ -214,7 +223,7 @@ class SpecDoctor {
         ),
       );
     }
-    if (spec.firstOf(ElementRole.cta) == null) {
+    if (blank(ElementRole.cta)) {
       issues.add(
         const SpecIssue(
           code: SpecIssueCode.missingCta,

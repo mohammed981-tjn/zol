@@ -234,5 +234,7 @@
   "magicRealScene": "Realistic AI scene",
   "magicCopyText": "Copy text",
   "magicSave": "Save",
-  "magicMatchScore": "{score}% match"
+  "magicMatchScore": "{score}% match",
+  "magicNextComposition": "Another composition",
+  "magicRegenerateConfirm": "Regenerating clears the designs you made with your own request. Continue?"
 }

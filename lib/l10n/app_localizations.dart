@@ -1506,6 +1506,18 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'توافق {score}%'**
   String magicMatchScore(int score);
+
+  /// No description provided for @magicNextComposition.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكوين آخر'**
+  String get magicNextComposition;
+
+  /// No description provided for @magicRegenerateConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة التوليد تمسح التصاميم التي صنعتها بطلبك. أتريد المتابعة؟'**
+  String get magicRegenerateConfirm;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

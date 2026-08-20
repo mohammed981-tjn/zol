@@ -103,10 +103,20 @@ class LocalDesigner {
 
   /// يُركّب ويقيس ويختار. `count` عدد التخطيطات المعادة.
   static List<LocalDesign> compose(
-    DesignBrief brief, {
+    DesignBrief rawBrief, {
     required Color brandColor,
     int count = 3,
   }) {
+    // المصمّم **يُكمل** لا يصمت.
+    //
+    // الطبيب يحجب كل تصميم بلا دعوة إجراء أو بلا عنوان، فموجزٌ ناقصهما
+    // كان يُسقط المرشّحين كلّهم فتعود القائمة فارغة بلا سبب مفهوم —
+    // ومسحٌ على ٣٨٤ توليفة أظهر أن نصفها بالضبط (كل ما خلا من زرّ حثّ)
+    // يعود صفرًا. ومصمّمٌ بشريّ يُعطى إعلانًا بلا زرّ لا يعتذر: يضع
+    // زرًّا. فنفعل مثله، ونترك الطبيب حارسًا على ما لا يُصلَح.
+    final brief = _completed(rawBrief);
+    if (brief == null) return const [];
+
     final margin = brief.format.safeMargin;
     final grid = _Grid(margin: margin);
     final candidates = <LocalDesign>[];
@@ -114,7 +124,22 @@ class LocalDesigner {
     // البذرة من المحتوى لا من الساعة: نفس الموجز ينتج نفس التصاميم.
     final seed = _seedOf(brief);
 
-    for (final archetype in archetypes) {
+    // بلا صورة منتج تنهار أنماطُ المنتج إلى تخطيط واحد بأسماء ثلاثة:
+    // `_sideBySide` يفوّض إلى الكدس، و`stackBottom` يسقط منه المنتج
+    // فيصير `stackTop`. فيرى التاجر «ثلاثة خيارات» متطابقة البايتات،
+    // وشرحان منها يَعِدان بمنتج لا وجود له.
+    final usable = brief.hasImage
+        ? archetypes
+        : archetypes
+              .where((a) => !const {
+                'stackBottom',
+                'sideBySide',
+                'heroCentre',
+                'magazine',
+              }.contains(a))
+              .toList();
+
+    for (final archetype in usable) {
       for (final textAtStart in [true, false]) {
         for (final headStep in [0, 1, 2]) {
           for (final backdrop in _backdropsFor(brief)) {
@@ -153,20 +178,52 @@ class LocalDesigner {
 
     // تنوّع الأنماط مفروض: ثلاثة تكوينات من نمط واحد تبدو للتاجر خيارًا
     // واحدًا مكرّرًا، ولو كانت أعلى الدرجات.
+    // التنوّع يُقاس بالهندسة لا بالاسم.
+    //
+    // كان الفرز على اسم النمط، والأسماء تكذب: ثلاثة أنماط قد تُخرج
+    // المستطيلات نفسها بالضبط فيمرّ التكرار مصنَّفًا «تنوّعًا».
     final picked = <LocalDesign>[];
-    final used = <String>{};
+    final seen = <String>{};
     for (final c in candidates) {
-      if (used.contains(c.archetype)) continue;
+      final key = _geometryKey(c.spec);
+      if (seen.contains(key)) continue;
       picked.add(c);
-      used.add(c.archetype);
+      seen.add(key);
       if (picked.length >= count) break;
-    }
-    // وإن لم تكفِ الأنماط الصالحة نُكمل بالأعلى درجةً مهما تكرّر نمطه.
-    for (final c in candidates) {
-      if (picked.length >= count) break;
-      if (!picked.contains(c)) picked.add(c);
     }
     return picked;
+  }
+
+  /// بصمة هندسية: الأدوار ومواضعها مقرَّبة. تكوينان بالبصمة نفسها
+  /// يُرسمان متطابقين مهما اختلف اسماهما.
+  static String _geometryKey(DesignSpec s) => s.elements
+      .map(
+        (e) =>
+            '${e.role.name}:${e.rect.x.toStringAsFixed(3)},'
+            '${e.rect.y.toStringAsFixed(3)},'
+            '${e.rect.w.toStringAsFixed(3)},'
+            '${e.rect.h.toStringAsFixed(3)}',
+      )
+      .join('|');
+
+  /// يُكمل الموجز بما لا يقوم إعلان بدونه، ويرفض ما لا يُكمَّل.
+  ///
+  /// العنوان لا يُخترع: هو رسالة التاجر، واختراعُه يضع في إعلانه كلامًا
+  /// لم يقله. أما دعوة الإجراء فصيغة عامّة يضعها كل مصمّم.
+  static DesignBrief? _completed(DesignBrief b) {
+    if (b.headline.trim().isEmpty) return null;
+    if (b.hasCta) return b;
+    return DesignBrief(
+      headline: b.headline,
+      format: b.format,
+      subhead: b.subhead,
+      cta: 'اطلب الآن',
+      badge: b.badge,
+      tags: b.tags,
+      hasImage: b.hasImage,
+      hasLogo: b.hasLogo,
+      preferLight: b.preferLight,
+    );
   }
 
   /// يبني موجزًا من أمنية التاجر — الجسر بين القارئ والمصمّم.

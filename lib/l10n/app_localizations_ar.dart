@@ -811,4 +811,11 @@ class LAr extends L {
   String magicMatchScore(int score) {
     return 'توافق $score%';
   }
+
+  @override
+  String get magicNextComposition => 'تكوين آخر';
+
+  @override
+  String get magicRegenerateConfirm =>
+      'إعادة التوليد تمسح التصاميم التي صنعتها بطلبك. أتريد المتابعة؟';
 }

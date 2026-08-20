@@ -73,10 +73,26 @@ class DesignCritic {
     'formatFit': 1.2,
     'rhythm': 1.0,
     'focus': 0.9,
+    'intact': 0.9,
   };
 
   /// تسامح اعتبار حافّتين مصطفّتين — ١٪ من اللوحة.
   static const _edgeTolerance = 0.012;
+
+  /// هل يرسم العارض هذا العنصر أصلًا؟
+  ///
+  /// `shape` بلا `fill` لا يُرسم له شيء، ونصٌّ فارغ لا يظهر. وحسابُهما
+  /// يفتح بابًا لخداع الدرجة بعناصر «شبح»: أربعة وعشرون شكلًا لا يُرى
+  /// منها شيء رفعت الاصطفاف من ٠٫٤٠ إلى ٠٫٨٦ وأضافت تسع درجات.
+  static bool _rendered(DesignElement e) {
+    if (e.role == ElementRole.shape) return e.fill != null;
+    if (e.isText) return (e.text ?? '').trim().isNotEmpty;
+    return true;
+  }
+
+  /// العناصر المرسومة وحدها.
+  static List<DesignElement> _live(DesignSpec s) =>
+      s.elements.where(_rendered).toList();
 
   static DesignScore score(DesignSpec spec, {required Color brandColor}) {
     final report = SpecDoctor.review(spec, brandColor: brandColor);
@@ -93,6 +109,7 @@ class DesignCritic {
         'formatFit': _formatFit(s),
         'rhythm': _rhythm(s),
         'focus': _focus(s, art),
+        'intact': _intact(report),
       },
     );
   }
@@ -136,7 +153,7 @@ class DesignCritic {
   /// عناصره على محاور قليلة، والمركِّب يترك كل عنصر حيث وقع. فنعدّ
   /// الحواف المتمايزة (بداية ونهاية ومنتصف) ونكافئ القلّة.
   static double _alignment(DesignSpec s) {
-    final visible = s.elements.where((e) => e.rect.w > 0.02).toList();
+    final visible = _live(s).where((e) => e.rect.w > 0.02).toList();
     if (visible.length < 2) return 1;
 
     double edgeScore(Iterable<double> values) {
@@ -171,7 +188,7 @@ class DesignCritic {
   /// وتبقى ثلاثة أرباع اللوحة خاوية.
   static double _balance(DesignSpec s) {
     var mx = 0.0, my = 0.0, mass = 0.0;
-    for (final e in s.elements) {
+    for (final e in _live(s)) {
       final a = e.rect.w * e.rect.h * _visualWeight(e);
       if (a <= 0) continue;
       mx += (e.rect.x + e.rect.w / 2) * a;
@@ -186,17 +203,47 @@ class DesignCritic {
     return 1 - ((dist - 0.08) / 0.22).clamp(0.0, 1.0);
   }
 
-  /// **الفراغ**: لا مزدحم ولا خاوٍ.
+  /// **الفراغ**: لا مزدحم ولا خاوٍ — بالتغطية الحقيقية لا بمجموع الصناديق.
   ///
-  /// التغطية بين ٣٥٪ و٧٠٪ هي المجال الذي يبدو فيه الإعلان ممتلئًا
-  /// ومتنفّسًا. دونها لوحةٌ فارغة تبدو ناقصة، وفوقها زحام لا يُقرأ.
+  /// كان الحساب `covered += w * h` — مجموعًا لا اتّحادًا. فثمانية ألواح
+  /// فوق بعضها بالضبط تُشبع البند بلا بكسل جديد واحد: تصميمٌ محتواه كلّه
+  /// محشور في خيط ارتفاعه ٦٪ من اللوحة كان يأخذ ١٫٠٠ كاملة.
+  ///
+  /// والقياس الآن بشبكة عيّنات ٤٠×٤٠: تقريبٌ كافٍ ورخيص (١٦٠٠ فحص لكل
+  /// مرشَّح)، ويقول الحقيقة التي يقولها البصر.
+  ///
+  /// والمنتج الذي يملأ اللوحة يُستثنى: هو **خلفية** المشهد لا ازدحامًا
+  /// فيه، وحسابُه ضمن التغطية كان يُسقط تصميمًا سليمًا تمامًا (صورة ملء
+  /// الإطار ولوح داكن أسفلها) إلى ٦٤ درجة.
   static double _whitespace(DesignSpec s) {
-    var covered = 0.0;
-    for (final e in s.elements) {
-      covered += e.rect.w * e.rect.h;
+    final live = _live(s)
+        .where((e) => !(e.role == ElementRole.product && _isBackdrop(e)))
+        .toList();
+    if (live.isEmpty) return 0;
+
+    const n = 40;
+    var hit = 0;
+    for (var i = 0; i < n; i++) {
+      final x = (i + 0.5) / n;
+      for (var j = 0; j < n; j++) {
+        final y = (j + 0.5) / n;
+        for (final e in live) {
+          if (x >= e.rect.x &&
+              x < e.rect.right &&
+              y >= e.rect.y &&
+              y < e.rect.bottom) {
+            hit++;
+            break;
+          }
+        }
+      }
     }
-    return _band(covered.clamp(0.0, 1.5), 0.35, 0.70);
+    return _band(hit / (n * n), 0.28, 0.72);
   }
+
+  /// عنصرٌ يكاد يملأ اللوحة — خلفية لا محتوى.
+  static bool _isBackdrop(DesignElement e) =>
+      e.rect.w >= 0.85 && e.rect.h >= 0.85;
 
   /// **ملاءمة الصيغة**: التكوين يتبع اللوحة لا العكس.
   ///
@@ -227,26 +274,37 @@ class DesignCritic {
   /// فجوةٌ ٢٪ ثم ٩٪ ثم ٣٪ تبدو صدفة. والمصمّم يستعمل مقياسًا واحدًا
   /// ومضاعفاته — فنقيس تشتّت الفجوات لا مقدارها.
   static double _rhythm(DesignSpec s) {
-    final blocks = s.elements.where((e) => e.rect.h > 0.02).toList()
+    final blocks = _live(s).where((e) => e.rect.h > 0.02).toList()
       ..sort((a, b) => a.rect.y.compareTo(b.rect.y));
     if (blocks.length < 3) return 1;
 
+    // الفجوات السالبة **تُعاقَب** لا تُحذَف.
+    //
+    // كانت `if (g >= 0)` تُسقطها من العيّنة، فكلّ زوج متراكب يختفي من
+    // الحساب. وأثر ذلك مقلوب تمامًا: توسيعُ كتلةٍ حتى تبتلع تاليتيها
+    // رفع الدرجة من ٧٣ إلى ٩٢ — البند الذي يُعاقب الفوضى كافأها.
     final gaps = <double>[];
+    var overlaps = 0;
     for (var i = 1; i < blocks.length; i++) {
       final g = blocks[i].rect.y - blocks[i - 1].rect.bottom;
-      if (g >= 0) gaps.add(g);
+      if (g < 0) {
+        overlaps++;
+      } else {
+        gaps.add(g);
+      }
     }
-    if (gaps.length < 2) return 1;
+    final penalty = 1 - (overlaps / (blocks.length - 1)).clamp(0.0, 1.0);
+    if (gaps.length < 2) return penalty * 0.5;
 
     final mean = gaps.reduce((a, b) => a + b) / gaps.length;
-    if (mean <= 0) return 0.6;
+    if (mean <= 0) return penalty * 0.6;
     var variance = 0.0;
     for (final g in gaps) {
       variance += (g - mean) * (g - mean);
     }
     final cv = math.sqrt(variance / gaps.length) / mean;
     // معامل اختلاف تحت ٠٫٤ إيقاعٌ منتظم، وفوق ١٫٢ فوضى.
-    return 1 - ((cv - 0.4) / 0.8).clamp(0.0, 1.0);
+    return penalty * (1 - ((cv - 0.4) / 0.8).clamp(0.0, 1.0));
   }
 
   /// **البؤرة**: عنصرٌ واحد يسيطر.
@@ -254,9 +312,10 @@ class DesignCritic {
   /// إعلانٌ كل عناصره بالحجم نفسه لا بؤرة له، والعين لا تعرف أين تقع.
   /// نقيس نسبة أكبر عنصر إلى مجموع المساحات.
   static double _focus(DesignSpec s, ArtPalette art) {
-    if (s.elements.isEmpty) return 0;
+    final live = _live(s);
+    if (live.isEmpty) return 0;
     var largest = 0.0, sum = 0.0;
-    for (final e in s.elements) {
+    for (final e in live) {
       final a = e.rect.w * e.rect.h;
       sum += a;
       if (a > largest) largest = a;
@@ -264,6 +323,21 @@ class DesignCritic {
     if (sum <= 0) return 0;
     // بين ٣٠٪ و٦٥٪ من مجموع المساحة: بؤرة واضحة بلا ابتلاع البقيّة.
     return _band(largest / sum, 0.30, 0.65);
+  }
+
+  /// **السلامة**: كم أصلح الطبيب؟
+  ///
+  /// الدرجة تُحسب على المواصفة **بعد** الإصلاح — وهذا صحيح لأنه ما
+  /// يُرسم فعلًا. لكنه يفتح بابًا مقلوبًا: تخطيطٌ فوضويّ يُصلحه الطبيب
+  /// بإزاحاتٍ منتظمة قد يخرج أنظف إيقاعًا من تخطيطٍ كان سليمًا أصلًا،
+  /// فيتقدّم عليه. وقياسًا: توسيعُ كتلةٍ حتى تبتلع تاليتيها رفع الدرجة
+  /// من ٧٢ إلى ٨٩.
+  ///
+  /// فالإصلاح يُخصَم: «لم يحتج تصحيحًا» إشارةُ جودةٍ حقيقية، ومصمّمٌ
+  /// أصاب من أوّل مرّة أولى ممّن أصابه المدقّق.
+  static double _intact(SpecReport report) {
+    final repaired = report.issues.where((i) => i.repaired).length;
+    return (1 - repaired / 3).clamp(0.0, 1.0);
   }
 
   /// وزن العنصر البصري: المنتج والألواح تثقل، والنصّ الخفيف يخفّ.

@@ -397,5 +397,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "magicNextComposition": "تكوين آخر",
+  "magicRegenerateConfirm": "إعادة التوليد تمسح التصاميم التي صنعتها بطلبك. أتريد المتابعة؟"
 }
