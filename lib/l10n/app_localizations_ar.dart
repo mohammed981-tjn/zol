@@ -499,6 +499,70 @@ class LAr extends L {
   String get shopPanelTitle => 'لوحة المطبعة';
 
   @override
+  String get orderNoShopYet =>
+      'لا مطبعة معتمدة تخدم موقعك بعد. صمّم واحفظ الآن، ويمكنك طلب عرض سعر من تبويب السوق.';
+
+  @override
+  String orderShopLacksProduct(Object shop, Object product) {
+    return 'مطبعة $shop لا تقدّم $product حاليًا. جرّب منتجًا آخر أو اطلب عرض سعر من السوق.';
+  }
+
+  @override
+  String get orderQuoteFailed =>
+      'تعذّر تسعير الطلب الآن. تحقّق من اتصالك وحاول ثانية.';
+
+  @override
+  String get orderArtworkCaptureFailed =>
+      'تعذّر تجهيز ملفّ التصميم على هذا الجهاز.';
+
+  @override
+  String get orderArtworkUploadFailed =>
+      'تعذّر رفع ملفّ التصميم. سجّل الدخول ثم أعد المحاولة.';
+
+  @override
+  String get orderPaymentIncomplete =>
+      'لم يكتمل الدفع. طلبك محفوظ غير مدفوع ويمكنك إكماله.';
+
+  @override
+  String get orderNeedsAccount =>
+      'يلزم تسجيل الدخول قبل طلب الطباعة — الطلب يُنسب إلى صاحبه.';
+
+  @override
+  String get orderOffline =>
+      'تعذّر الوصول إلى الخادم. لم يُنشأ طلب ولم يُقبض شيء.';
+
+  @override
+  String get orderShopUnavailable => 'المطبعة غير متاحة الآن.';
+
+  @override
+  String get orderProductUnavailable => 'هذا المنتج غير متاح لدى المطبعة.';
+
+  @override
+  String get orderBelowMinQty => 'الكمية أقل من الحدّ الأدنى لدى المطبعة.';
+
+  @override
+  String get orderCreateFailed => 'تعذّر إنشاء الطلب. لم يُقبض شيء.';
+
+  @override
+  String get orderPriceChangedTitle => 'تغيّر السعر';
+
+  @override
+  String orderPriceChangedBody(Object actual, Object shown) {
+    return 'سعر المطبعة $actual بدل $shown المعروض. المبلغ المعروض تقديريّ، والمعتمد ما تسعّره المطبعة.';
+  }
+
+  @override
+  String get commonCancel => 'إلغاء';
+
+  @override
+  String get commonContinue => 'متابعة';
+
+  @override
+  String priceVatIncluded(Object amount) {
+    return 'شامل ضريبة القيمة المضافة $amount';
+  }
+
+  @override
   String get shopPanelHeading => 'لوحة المطبعة قيد البناء';
 
   @override

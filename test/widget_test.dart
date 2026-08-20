@@ -29,6 +29,7 @@ import 'package:zol/models/ad_format.dart';
 import 'package:zol/services/spec_doctor.dart';
 import 'package:zol/services/local_designer.dart';
 import 'package:zol/services/print_backend.dart';
+import 'package:zol/screens/create_ad/execute_screen.dart';
 import 'package:zol/screens/user_guide_screen.dart';
 import 'package:zol/config/app_role.dart';
 import 'package:zol/screens/print_shop_screen.dart';
@@ -287,6 +288,14 @@ void main() {
   testWidgets('Print flow computes a price and creates a tracked order', (
     tester,
   ) async {
+    final backend = _FakePrintBackend();
+    ExecuteScreen.debugBackendOverride = () => backend;
+    ExecuteScreen.debugCaptureOverride = () async => Uint8List.fromList([1, 2, 3]);
+    addTearDown(() {
+      ExecuteScreen.debugBackendOverride = null;
+      ExecuteScreen.debugCaptureOverride = null;
+    });
+
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -294,10 +303,12 @@ void main() {
     await tester.tap(find.text('اطبعه وصلّه'));
     await tester.pumpAndSettle();
 
-    // بنر 1×2 متر: 90 + توصيل 25 + ضريبة 15% = 132.25
+    // بنر 1×2 متر: 90 + توصيل 25 = 115، **والضريبة مشمولة فيه** لا
+    // مضافة فوقه. وكان المعروض 132.25 — أي أن التاجر كان يُقبض منه
+    // خمسة عشر بالمئة زيادةً عمّا يُسجَّل في طلبه على الخادم.
     final confirm = find.widgetWithText(
       ElevatedButton,
-      'تأكيد الطلب — 132.25 ر.س',
+      'تأكيد الطلب — 115 ر.س',
     );
     // التمرير لأسفل القائمة (السحب المباشر يتفادى التباس تعدد الـ Scrollables).
     await tester.drag(find.byType(ListView).last, const Offset(0, -1600));
@@ -314,10 +325,19 @@ void main() {
     await tester.tap(confirm);
     await tester.pump();
 
+    await tester.pumpAndSettle();
+
     expect(find.text('تم استلام طلب الطباعة'), findsOneWidget);
     expect(state.orders, hasLength(1));
     expect(state.orders.first.id, 'AD-1001');
-    expect(state.orders.first.total, closeTo(132.25, 0.01));
+    expect(state.orders.first.total, closeTo(115, 0.01));
+
+    // وهذا هو الوصل: الطلب **غادر الجهاز** ومعه ملفّه. وبلا هذين
+    // السطرين يمرّ الاختبار على تطبيق يكتب في هاتفه ولا يعلم به أحد.
+    expect(backend.creates, 1);
+    expect(backend.uploads, 1);
+    expect(state.orders.first.serverId, 'srv-order-1');
+    expect(state.orders.first.artworkUrl, isNotNull);
 
     // العودة ثم فتح تبويب «طلباتي» والتحقق من ظهور الطلب.
     await tester.tap(find.text('العودة للرئيسية'));
@@ -366,9 +386,17 @@ void main() {
     expect(second.nextOrderId(), 'AD-1002');
   });
 
-  testWidgets('Card payment (simulated) marks the order as paid', (
+  testWidgets('الدفع الناجح يربط مرجعه بالطلب ولا يدّعي الدفع محليًّا', (
     tester,
   ) async {
+    final backend = _FakePrintBackend();
+    ExecuteScreen.debugBackendOverride = () => backend;
+    ExecuteScreen.debugCaptureOverride = () async => Uint8List.fromList([1, 2, 3]);
+    addTearDown(() {
+      ExecuteScreen.debugBackendOverride = null;
+      ExecuteScreen.debugCaptureOverride = null;
+    });
+
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -396,12 +424,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('تم استلام طلب الطباعة'), findsOneWidget);
-    expect(find.textContaining('مدفوع بالبطاقة ✓'), findsOneWidget);
-    expect(state.orders.single.isPaid, isTrue);
     expect(state.orders.single.paymentId, startsWith('SIM-'));
+
+    // المرجع يُربط بالطلب على الخادم…
+    expect(backend.attached, hasLength(1));
+    expect(backend.attached.single, startsWith('srv-order-1:SIM-'));
+
+    // …و`isPaid` **تبقى false** محليًّا. من يستطيع أن يقول «دفعتُ»
+    // يستطيع أن يكذب، فالخادم وحده يضبطها — والنسخة المحلية لا تدّعي
+    // ما لا تملك إثباته.
+    expect(state.orders.single.isPaid, isFalse);
   });
 
-  testWidgets('Cancelling card payment creates no order', (tester) async {
+  testWidgets('إلغاء الدفع يترك طلبًا غير مدفوع لا عدمًا', (tester) async {
+    final backend = _FakePrintBackend();
+    ExecuteScreen.debugBackendOverride = () => backend;
+    ExecuteScreen.debugCaptureOverride = () async => Uint8List.fromList([1, 2, 3]);
+    addTearDown(() {
+      ExecuteScreen.debugBackendOverride = null;
+      ExecuteScreen.debugCaptureOverride = null;
+    });
+
     final state = AppState();
     await _pumpApp(tester, state);
     await _reachMagicResults(tester);
@@ -422,9 +465,15 @@ void main() {
     await tester.tap(find.text('إلغاء'));
     await tester.pumpAndSettle();
 
-    // لا طلب بلا دفع ناجح (قاعدة zadgo2).
-    expect(state.orders, isEmpty);
-    expect(find.text('تم استلام طلب الطباعة'), findsNothing);
+    // انقلبت القاعدة عن قصد، والخطآن ليسا سواء: كان الترتيب «ادفع ثم
+    // أنشئ الطلب»، فإن سقط الإنشاء بعد قبض البطاقة ضاع مالٌ بلا أثر
+    // يُنسب إليه. وصار «أنشئ ثم ادفع»، فإلغاء الدفع يترك طلبًا **غير
+    // مدفوع** يراه صاحبه ويراه المشغّل فيُلغى أو يُكمَل.
+    expect(state.orders, hasLength(1));
+    expect(state.orders.single.isPaid, isFalse);
+    expect(state.orders.single.paymentId, isNull);
+    expect(state.orders.single.serverId, 'srv-order-1');
+    expect(backend.attached, isEmpty);
   });
 
   testWidgets('Pro upgrade removes the watermark plan card', (tester) async {
@@ -5835,6 +5884,96 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(SvgPicture), findsNothing);
   });
+}
+
+
+/// شبكة طباعة مزيَّفة — مطبعة واحدة ومنتج واحد، بلا شبكة.
+///
+/// تُسجّل ما نُودي عليه، فيصير الفحص على **ما فعله التطبيق** لا على ما
+/// ظهر في الشاشة وحده: رفعُ الملفّ وربطُ الدفع لا أثر لهما في الواجهة،
+/// وهما أهمّ ما في الوصل.
+class _FakePrintBackend implements PrintBackend {
+  _FakePrintBackend({this.shopsResult, this.createOutcome});
+
+  final List<ShopRow>? shopsResult;
+  final OrderOutcome? createOutcome;
+
+  int uploads = 0;
+  int creates = 0;
+  final List<String> attached = [];
+  double? quotedTotal;
+
+  static const _shop = ShopRow(
+    id: 'shop-1',
+    name: 'مطبعة الاختبار',
+    city: 'الرياض',
+    lat: 24.71,
+    lng: 46.67,
+  );
+  static const _product = ProductRow(
+    id: 'prod-1',
+    shopId: 'shop-1',
+    kind: 'banner',
+    title: 'بنر 1×2 متر',
+    unitPrice: 90,
+    size: '1×2 متر',
+  );
+
+  @override
+  Future<List<ShopRow>> shops() async => shopsResult ?? const [_shop];
+
+  @override
+  Future<List<ProductRow>> products(String shopId) async => const [_product];
+
+  @override
+  Future<PrintQuote?> quote({
+    required String shopId,
+    required String productId,
+    required int quantity,
+  }) async {
+    // نفس حساب الخادم: الضريبة **مشمولة** في الإجمالي.
+    final items = _product.unitPrice * quantity;
+    final total = items + 25;
+    quotedTotal = total;
+    return PrintQuote(
+      itemsTotal: items,
+      deliveryFee: 25,
+      vatIncluded: double.parse((total * 0.15 / 1.15).toStringAsFixed(2)),
+      grandTotal: total,
+    );
+  }
+
+  @override
+  Future<String?> uploadArtwork(Uint8List png) async {
+    uploads++;
+    return 'https://example.test/artwork/$uploads.png';
+  }
+
+  @override
+  Future<OrderResult> createOrder({
+    required String shopId,
+    required String productId,
+    required int quantity,
+    required String address,
+    double? lat,
+    double? lng,
+    String? artworkUrl,
+    String? artworkNotes,
+    Map<String, dynamic>? specs,
+    String paymentMethod = 'cash',
+  }) async {
+    creates++;
+    if (createOutcome != null && createOutcome != OrderOutcome.created) {
+      return OrderResult(createOutcome!);
+    }
+    return const OrderResult(OrderOutcome.created, orderId: 'srv-order-1');
+  }
+
+  @override
+  Future<bool> attachPayment(String orderId, String paymentRef) async {
+    attached.add('$orderId:$paymentRef');
+    return true;
+  }
 }
 
 /// اسم القالب للرسائل التشخيصية.

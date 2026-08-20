@@ -919,6 +919,108 @@ abstract class L {
   /// **'لوحة المطبعة'**
   String get shopPanelTitle;
 
+  /// No description provided for @orderNoShopYet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا مطبعة معتمدة تخدم موقعك بعد. صمّم واحفظ الآن، ويمكنك طلب عرض سعر من تبويب السوق.'**
+  String get orderNoShopYet;
+
+  /// No description provided for @orderShopLacksProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطبعة {shop} لا تقدّم {product} حاليًا. جرّب منتجًا آخر أو اطلب عرض سعر من السوق.'**
+  String orderShopLacksProduct(Object shop, Object product);
+
+  /// No description provided for @orderQuoteFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تسعير الطلب الآن. تحقّق من اتصالك وحاول ثانية.'**
+  String get orderQuoteFailed;
+
+  /// No description provided for @orderArtworkCaptureFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تجهيز ملفّ التصميم على هذا الجهاز.'**
+  String get orderArtworkCaptureFailed;
+
+  /// No description provided for @orderArtworkUploadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر رفع ملفّ التصميم. سجّل الدخول ثم أعد المحاولة.'**
+  String get orderArtworkUploadFailed;
+
+  /// No description provided for @orderPaymentIncomplete.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يكتمل الدفع. طلبك محفوظ غير مدفوع ويمكنك إكماله.'**
+  String get orderPaymentIncomplete;
+
+  /// No description provided for @orderNeedsAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'يلزم تسجيل الدخول قبل طلب الطباعة — الطلب يُنسب إلى صاحبه.'**
+  String get orderNeedsAccount;
+
+  /// No description provided for @orderOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر الوصول إلى الخادم. لم يُنشأ طلب ولم يُقبض شيء.'**
+  String get orderOffline;
+
+  /// No description provided for @orderShopUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'المطبعة غير متاحة الآن.'**
+  String get orderShopUnavailable;
+
+  /// No description provided for @orderProductUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المنتج غير متاح لدى المطبعة.'**
+  String get orderProductUnavailable;
+
+  /// No description provided for @orderBelowMinQty.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكمية أقل من الحدّ الأدنى لدى المطبعة.'**
+  String get orderBelowMinQty;
+
+  /// No description provided for @orderCreateFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر إنشاء الطلب. لم يُقبض شيء.'**
+  String get orderCreateFailed;
+
+  /// No description provided for @orderPriceChangedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيّر السعر'**
+  String get orderPriceChangedTitle;
+
+  /// No description provided for @orderPriceChangedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر المطبعة {actual} بدل {shown} المعروض. المبلغ المعروض تقديريّ، والمعتمد ما تسعّره المطبعة.'**
+  String orderPriceChangedBody(Object actual, Object shown);
+
+  /// No description provided for @commonCancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء'**
+  String get commonCancel;
+
+  /// No description provided for @commonContinue.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة'**
+  String get commonContinue;
+
+  /// No description provided for @priceVatIncluded.
+  ///
+  /// In ar, this message translates to:
+  /// **'شامل ضريبة القيمة المضافة {amount}'**
+  String priceVatIncluded(Object amount);
+
   /// No description provided for @shopPanelHeading.
   ///
   /// In ar, this message translates to:

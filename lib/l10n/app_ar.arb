@@ -279,6 +279,32 @@
   "roleOrnament": "الزخرفة",
   "guideTitle": "دليل الاستخدام",
   "shopPanelTitle": "لوحة المطبعة",
+  "orderNoShopYet": "لا مطبعة معتمدة تخدم موقعك بعد. صمّم واحفظ الآن، ويمكنك طلب عرض سعر من تبويب السوق.",
+  "orderShopLacksProduct": "مطبعة {shop} لا تقدّم {product} حاليًا. جرّب منتجًا آخر أو اطلب عرض سعر من السوق.",
+  "orderQuoteFailed": "تعذّر تسعير الطلب الآن. تحقّق من اتصالك وحاول ثانية.",
+  "orderArtworkCaptureFailed": "تعذّر تجهيز ملفّ التصميم على هذا الجهاز.",
+  "orderArtworkUploadFailed": "تعذّر رفع ملفّ التصميم. سجّل الدخول ثم أعد المحاولة.",
+  "orderPaymentIncomplete": "لم يكتمل الدفع. طلبك محفوظ غير مدفوع ويمكنك إكماله.",
+  "orderNeedsAccount": "يلزم تسجيل الدخول قبل طلب الطباعة — الطلب يُنسب إلى صاحبه.",
+  "orderOffline": "تعذّر الوصول إلى الخادم. لم يُنشأ طلب ولم يُقبض شيء.",
+  "orderShopUnavailable": "المطبعة غير متاحة الآن.",
+  "orderProductUnavailable": "هذا المنتج غير متاح لدى المطبعة.",
+  "orderBelowMinQty": "الكمية أقل من الحدّ الأدنى لدى المطبعة.",
+  "orderCreateFailed": "تعذّر إنشاء الطلب. لم يُقبض شيء.",
+  "orderPriceChangedTitle": "تغيّر السعر",
+  "orderPriceChangedBody": "سعر المطبعة {actual} بدل {shown} المعروض. المبلغ المعروض تقديريّ، والمعتمد ما تسعّره المطبعة.",
+  "commonCancel": "إلغاء",
+  "commonContinue": "متابعة",
+  "priceVatIncluded": "شامل ضريبة القيمة المضافة {amount}",
+  "@orderShopLacksProduct": {
+    "placeholders": { "shop": {}, "product": {} }
+  },
+  "@orderPriceChangedBody": {
+    "placeholders": { "actual": {}, "shown": {} }
+  },
+  "@priceVatIncluded": {
+    "placeholders": { "amount": {} }
+  },
   "shopPanelHeading": "لوحة المطبعة قيد البناء",
   "shopPanelBody": "طوابير الطباعة وحالاتها تحتاج صلاحية مطبعة في الخادم، وهي المرحلة التالية. ولم يصل طلب طباعة إلى أي مطبعة بعد، فلا شيء يُعرض هنا اليوم إلا هذا السطر الصادق.",
   "shopPanelOpenMerchant": "افتح واجهة التاجر",

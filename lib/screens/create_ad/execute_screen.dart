@@ -1,16 +1,18 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 import '../../models/ad_template.dart';
 import '../../models/generated_ad.dart';
 import '../../models/payment_result.dart';
 import '../../models/ad_format.dart';
 import '../../models/print_catalog.dart';
 import '../../models/print_order.dart';
-import '../../models/print_shop.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/print_backend.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/payment_config.dart';
@@ -32,7 +34,24 @@ class ExecuteScreen extends StatefulWidget {
     this.initialProduct,
     this.initialSizeIndex,
     this.initialQuantity,
+    this.backend,
   });
+
+  /// شبكة الطباعة على الخادم. تُحقن في الاختبار بواجهة مزيَّفة بلا شبكة.
+  final PrintBackend? backend;
+
+  /// منفذ الاختبارات التي تصل هذه الشاشة بالتنقّل لا بالبناء المباشر —
+  /// على نمط `debugGatewayOverride` في شاشة السحر.
+  static PrintBackend Function()? debugBackendOverride;
+
+  /// منفذ التقاط التصميم في الاختبار.
+  ///
+  /// `RenderRepaintBoundary.toImage` يحتاج تنفيذًا حقيقيًّا خارج حلقة
+  /// `pump` (‏`runAsync`)، ولا سبيل إلى ذلك من داخل معالج ضغطةٍ يجري
+  /// في الاختبار — فيعود الالتقاط فارغًا ويُلغى الطلب، فيبدو الوصل
+  /// مكسورًا وهو سليم. والمنفذ يزيّف البايتات وحدها ويترك بقيّة المسار
+  /// كما هو.
+  static Future<Uint8List?> Function()? debugCaptureOverride;
 
   /// القالب القادم من معرض القوالب (إن وُجد).
   final AdTemplate? initialTemplate;
@@ -51,6 +70,15 @@ class ExecuteScreen extends StatefulWidget {
 
 class _ExecuteScreenState extends State<ExecuteScreen> {
   final GlobalKey _designKey = GlobalKey();
+
+  /// يمنع ضغطتين متتاليتين من إنشاء طلبين — والطلب يُقبض ثمنه.
+  bool _placing = false;
+
+  PrintBackend? _backendCache;
+  PrintBackend get _backend =>
+      _backendCache ??= widget.backend ??
+          ExecuteScreen.debugBackendOverride?.call() ??
+          SupabasePrintBackend(Supabase.instance.client);
 
   /// الإعلان المعروض — يبدأ بالوارد ويُستبدل بمخرَج المحرر، فيسري
   /// التعديل على التصدير والحفظ والطباعة معًا لا على المعاينة وحدها.
@@ -94,7 +122,13 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   }
 
   double get _subtotal => _product.sizes[_sizeIndex].unitPrice * _quantity;
-  double get _vat => (_subtotal + deliveryFee) * vatRate;
+  /// الضريبة **المشمولة** في الإجمالي، لا المضافة فوقه.
+  ///
+  /// نفس صيغة الخادم: `(الإجمالي) × ٠٫١٥ ÷ ١٫١٥`. وكانت `× ٠٫١٥` فتُخرج
+  /// رقمًا يُجمع على الإجمالي — فيُقبض من التاجر أكثر ممّا يُسجَّل في
+  /// طلبه بخمسة عشر بالمئة.
+  double get _vat =>
+      (_subtotal + deliveryFee) * vatRate / (1 + vatRate);
 
   @override
   Widget build(BuildContext context) {
@@ -298,17 +332,33 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
 
   /// يلتقط التصميم المُركّب من محرك القوالب كصورة PNG عالية الدقة
   /// ويعرض ورقة المشاركة/الحفظ الخاصة بالنظام.
-  Future<void> _exportDesign() async {
-    setState(() => _exporting = true);
+  /// يلتقط التصميم بايتاتٍ — يستعمله التصدير ورفعُ ملفّ الطباعة معًا.
+  ///
+  /// مصدرٌ واحد للصورة: ما يشاركه التاجر هو نفسه ما تطبعه المطبعة. ولو
+  /// التُقطت مرّتين بإعدادين لاختلف المطبوع عمّا رآه.
+  Future<Uint8List?> _captureDesign() async {
+    final override = ExecuteScreen.debugCaptureOverride;
+    if (override != null) return override();
     try {
       final boundary =
           _designKey.currentContext!.findRenderObject()!
               as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      return data?.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _exportDesign() async {
+    setState(() => _exporting = true);
+    try {
+      final png = await _captureDesign();
+      if (png == null) throw StateError('capture_failed');
       await Share.shareXFiles([
         XFile.fromData(
-          data!.buffer.asUint8List(),
+          png,
           mimeType: 'image/png',
           name: 'zol_${_ad.brief.productName}.png',
         ),
@@ -476,8 +526,8 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
               : _confirmOrder,
           child: Text(
             _payMethod == PayMethod.card
-                ? 'ادفع وأكّد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}'
-                : 'تأكيد الطلب — ${formatPrice(_subtotal + deliveryFee + _vat)}',
+                ? 'ادفع وأكّد الطلب — ${formatPrice(_subtotal + deliveryFee)}'
+                : 'تأكيد الطلب — ${formatPrice(_subtotal + deliveryFee)}',
           ),
         ),
       ],
@@ -560,10 +610,20 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
           ),
           const SizedBox(height: 8),
           _priceRow('التوصيل', deliveryFee),
-          const SizedBox(height: 8),
-          _priceRow('الضريبة (15%)', _vat),
           const Divider(height: 24),
-          _priceRow('الإجمالي', _subtotal + deliveryFee + _vat, isTotal: true),
+          // الضريبة **مشمولة** في الإجمالي لا مضافة فوقه — وهي الفوترة
+          // السعودية، وهي ما يحسبه الخادم. وكان العرض يجمعها فوق
+          // الإجمالي فيُقبض من التاجر خمسة عشر بالمئة زيادةً عمّا
+          // يُسجَّل في طلبه.
+          _priceRow('الإجمالي', _subtotal + deliveryFee, isTotal: true),
+          const SizedBox(height: 6),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              L.of(context).priceVatIncluded(formatPrice(_vat)),
+              style: TextStyle(color: context.textMuted, fontSize: 11.5),
+            ),
+          ),
         ],
       ),
     );
@@ -594,58 +654,197 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
     );
   }
 
+  /// يُنشئ الطلب على الخادم ثم يقبض ثمنه.
+  ///
+  /// **الترتيب هنا هو كل شيء.** كان التطبيق يقبض البطاقة ثم يكتب الطلب في
+  /// `SharedPreferences` وحدها: تُقبض الأموال ولا يعلم بالطلب خادمٌ ولا
+  /// مطبعة، ومن أعاد تثبيت التطبيق فقد طلبًا دفع ثمنه.
+  ///
+  /// وحتى بعد الوصل يبقى السؤال: أيّهما أوّلًا؟ فاخترنا **الطلب قبل
+  /// الدفع**، لأن الخطأين ليسا سواء: طلبٌ أُنشئ ولم يُدفع يظهر في اللوحة
+  /// غيرَ مدفوع فيُلغى أو يُتابَع، أمّا دفعٌ بلا طلب فمالٌ أُخذ بلا أثر
+  /// يُنسب إليه — ولا يعرف صاحبه كيف يطالب به.
+  ///
+  /// والسعر من `print_order_quote` لا من حساب الشاشة: الخادم يعدّ الضريبة
+  /// مشمولة والتطبيق كان يجمعها فوق الإجمالي، فبنران بتسعين يُقبضان
+  /// بـ‎٢٣٥٫٧٥‎ ويُسجَّلان بـ‎٢٠٥٫٠٠‎. من يحسب المال هو من يسجّله.
   Future<void> _confirmOrder() async {
+    if (_placing) return;
     final state = AppStateScope.of(context);
-    final total = _subtotal + deliveryFee + _vat;
-
-    String? paymentId;
-    var isPaid = false;
-    if (_payMethod == PayMethod.card) {
-      final result = await startCardPayment(
-        context,
-        amountSar: total,
-        description: 'طلب طباعة ${_product.label} × $_quantity',
-      );
-      // قاعدة zadgo2: لا يُنشأ طلب مدفوع إلا بتأكيد البوابة.
-      if (result == null || !result.success) {
-        if (mounted && result?.errorMessage != null) {
-          _showConfirmation(result!.errorMessage!);
-        }
+    final l = L.of(context);
+    final backend = _backend;
+    setState(() => _placing = true);
+    try {
+      // ١) مَن يطبع؟ ولا مطبعة معتمدة تعني **لا طلب**، لا طلبًا معلّقًا
+      //    في الهواء: توجيهُ طلبٍ مدفوع إلى جهة لم توافق أسوأ من ردّه.
+      final shops = await backend.shops();
+      if (!mounted) return;
+      if (shops.isEmpty) {
+        _showConfirmation(l.orderNoShopYet);
         return;
       }
-      paymentId = result.paymentId;
-      isPaid = true;
+      final point = _deliveryPoint;
+      final shop = (point == null
+              ? null
+              : nearestShopRow(shops, point.latitude, point.longitude)) ??
+          shops.first;
+
+      // ٢) وهل تبيع هذه المطبعة ما اختاره التاجر؟ المطابقة على الصنف
+      //    ثم المقاس، فإن لم يوجد المقاس بعينه فأقرب سعر في الصنف نفسه.
+      final products = await backend.products(shop.id);
+      if (!mounted) return;
+      final size = _product.sizes[_sizeIndex].label;
+      final sameKind =
+          products.where((p) => p.kind == _product.kind).toList();
+      final match = _firstOrNull(sameKind.where((p) => p.size == size)) ??
+          _firstOrNull(sameKind);
+      if (match == null) {
+        _showConfirmation(
+          l.orderShopLacksProduct(shop.name, _product.label),
+        );
+        return;
+      }
+
+      // ٣) السعر من الخادم، ويُعرض على التاجر قبل أن يُقبض منه شيء إن
+      //    خالف ما رآه. مفاجأةٌ في المبلغ تكسر الثقة مرّة ولا تعود.
+      final quote = await backend.quote(
+        shopId: shop.id,
+        productId: match.id,
+        quantity: _quantity,
+      );
+      if (!mounted) return;
+      if (quote == null) {
+        _showConfirmation(l.orderQuoteFailed);
+        return;
+      }
+      final shown = _subtotal + deliveryFee;
+      if ((quote.grandTotal - shown).abs() > 0.01) {
+        final ok = await _confirmNewPrice(shown, quote.grandTotal);
+        if (!mounted || ok != true) return;
+      }
+
+      // ٤) الملفّ قبل الطلب: مطبعةٌ تستلم طلبًا بلا ما تطبعه لا تستطيع
+      //    تنفيذه، فلا معنى لإنشائه.
+      final png = await _captureDesign();
+      if (!mounted) return;
+      if (png == null) {
+        _showConfirmation(l.orderArtworkCaptureFailed);
+        return;
+      }
+      final artworkUrl = await backend.uploadArtwork(png);
+      if (!mounted) return;
+      if (artworkUrl == null) {
+        _showConfirmation(l.orderArtworkUploadFailed);
+        return;
+      }
+
+      // ٥) الطلب — غيرَ مدفوع بعد.
+      final created = await backend.createOrder(
+        shopId: shop.id,
+        productId: match.id,
+        quantity: _quantity,
+        address: _addressController.text.trim(),
+        lat: _deliveryPoint?.latitude,
+        lng: _deliveryPoint?.longitude,
+        artworkUrl: artworkUrl,
+        specs: {'size': size, 'product': _product.label},
+        paymentMethod: _payMethod == PayMethod.card ? 'card' : 'cash',
+      );
+      if (!mounted) return;
+      if (!created.ok) {
+        _showConfirmation(_orderError(l, created));
+        return;
+      }
+
+      // ٦) ثم الدفع. وفشلُه لا يمحو الطلب: يبقى غير مدفوع في اللوحة،
+      //    والتاجر يعرف أن طلبه قائم لا ضائع.
+      String? paymentId;
+      if (_payMethod == PayMethod.card) {
+        final result = await startCardPayment(
+          context,
+          amountSar: quote.grandTotal,
+          description: 'طلب طباعة ${_product.label} × $_quantity',
+        );
+        if (!mounted) return;
+        if (result == null || !result.success) {
+          _showConfirmation(result?.errorMessage ?? l.orderPaymentIncomplete);
+        } else {
+          paymentId = result.paymentId;
+          // مرجعٌ للمطابقة لا إعلانُ دفع: `is_paid` يضبطه الخادم وحده،
+          // فمن يستطيع أن يقول «دفعتُ» يستطيع أن يكذب.
+          await backend.attachPayment(created.orderId!, paymentId!);
+        }
+      }
+      if (!mounted) return;
+
+      final order = PrintOrder(
+        id: state.nextOrderId(),
+        productLabel: _product.label,
+        sizeLabel: size,
+        quantity: _quantity,
+        subtotal: quote.itemsTotal,
+        deliveryFee: quote.deliveryFee,
+        vat: quote.vatIncluded,
+        address: _addressController.text.trim(),
+        status: OrderStatus.received,
+        createdAt: DateTime.now(),
+        deliveryLat: _deliveryPoint?.latitude,
+        deliveryLng: _deliveryPoint?.longitude,
+        payMethod: _payMethod,
+        // النسخة المحلية لا تدّعي الدفع أيضًا: الخادم مصدره.
+        isPaid: false,
+        paymentId: paymentId,
+        shopName: shop.name,
+        shopLat: shop.lat,
+        shopLng: shop.lng,
+        serverId: created.orderId,
+        artworkUrl: artworkUrl,
+        grandTotal: quote.grandTotal,
+      );
+      state.addOrder(order);
+      setState(() => _confirmedOrder = order);
+    } finally {
+      if (mounted) setState(() => _placing = false);
     }
-    if (!mounted) return;
+  }
 
-    // توجيه تلقائي لأقرب مطبعة شريكة عند توفر إحداثيات التوصيل.
-    final point = _deliveryPoint;
-    final shop = point == null
-        ? null
-        : nearestShop(point.latitude, point.longitude);
+  /// أوّل عنصر أو `null` — بلا اعتمادية `collection` لأجل سطر واحد.
+  static ProductRow? _firstOrNull(Iterable<ProductRow> xs) =>
+      xs.isEmpty ? null : xs.first;
 
-    final order = PrintOrder(
-      id: state.nextOrderId(),
-      productLabel: _product.label,
-      sizeLabel: _product.sizes[_sizeIndex].label,
-      quantity: _quantity,
-      subtotal: _subtotal,
-      deliveryFee: deliveryFee,
-      vat: _vat,
-      address: _addressController.text.trim(),
-      status: OrderStatus.received,
-      createdAt: DateTime.now(),
-      deliveryLat: _deliveryPoint?.latitude,
-      deliveryLng: _deliveryPoint?.longitude,
-      payMethod: _payMethod,
-      isPaid: isPaid,
-      paymentId: paymentId,
-      shopName: shop?.name,
-      shopLat: shop?.lat,
-      shopLng: shop?.lng,
+  /// يترجم رمز رفض الخادم إلى جملة يفهمها التاجر.
+  String _orderError(L l, OrderResult r) => switch (r.outcome) {
+    OrderOutcome.needsAccount => l.orderNeedsAccount,
+    OrderOutcome.offline => l.orderOffline,
+    _ => switch (r.reason) {
+      'shop_not_available' => l.orderShopUnavailable,
+      'product_not_available' => l.orderProductUnavailable,
+      'below_min_qty' => l.orderBelowMinQty,
+      _ => l.orderCreateFailed,
+    },
+  };
+
+  Future<bool?> _confirmNewPrice(double shown, double actual) {
+    final l = L.of(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.orderPriceChangedTitle),
+        content: Text(
+          l.orderPriceChangedBody(formatPrice(actual), formatPrice(shown)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l.commonContinue),
+          ),
+        ],
+      ),
     );
-    state.addOrder(order);
-    setState(() => _confirmedOrder = order);
   }
 
   Widget _buildOrderConfirmed(PrintOrder order) {

@@ -500,6 +500,73 @@ class LEn extends L {
   String get shopPanelTitle => 'Print shop panel';
 
   @override
+  String get orderNoShopYet =>
+      'No approved print shop serves your area yet. Design and save now — you can request a quote from the Market tab.';
+
+  @override
+  String orderShopLacksProduct(Object shop, Object product) {
+    return '$shop does not offer $product right now. Try another product or request a quote from the Market.';
+  }
+
+  @override
+  String get orderQuoteFailed =>
+      'Could not price the order right now. Check your connection and try again.';
+
+  @override
+  String get orderArtworkCaptureFailed =>
+      'Could not prepare the design file on this device.';
+
+  @override
+  String get orderArtworkUploadFailed =>
+      'Could not upload the design file. Sign in and try again.';
+
+  @override
+  String get orderPaymentIncomplete =>
+      'Payment did not complete. Your order is saved as unpaid and you can finish it.';
+
+  @override
+  String get orderNeedsAccount =>
+      'Sign in before ordering a print — the order belongs to its owner.';
+
+  @override
+  String get orderOffline =>
+      'Could not reach the server. No order was created and nothing was charged.';
+
+  @override
+  String get orderShopUnavailable =>
+      'The print shop is not available right now.';
+
+  @override
+  String get orderProductUnavailable =>
+      'This product is not available at the print shop.';
+
+  @override
+  String get orderBelowMinQty => 'The quantity is below the shop\'s minimum.';
+
+  @override
+  String get orderCreateFailed =>
+      'Could not create the order. Nothing was charged.';
+
+  @override
+  String get orderPriceChangedTitle => 'The price changed';
+
+  @override
+  String orderPriceChangedBody(Object actual, Object shown) {
+    return 'The shop\'s price is $actual instead of the $shown shown. The displayed amount is an estimate; the shop\'s price is what counts.';
+  }
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get commonContinue => 'Continue';
+
+  @override
+  String priceVatIncluded(Object amount) {
+    return 'VAT included: $amount';
+  }
+
+  @override
   String get shopPanelHeading => 'The print shop panel is being built';
 
   @override

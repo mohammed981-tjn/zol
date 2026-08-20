@@ -24,7 +24,7 @@ void main() {
   const budget = <String, int>{
     // شاشات لم تُهاجَر بعد — الدفعة الثانية.
     'lib/screens/admin_screen.dart': 76,
-    'lib/screens/create_ad/execute_screen.dart': 36,
+    'lib/screens/create_ad/execute_screen.dart': 35,
     'lib/screens/settings_screen.dart': 35,
     'lib/screens/create_ad/upload_details_screen.dart': 26,
     'lib/screens/pick_location_screen.dart': 10,

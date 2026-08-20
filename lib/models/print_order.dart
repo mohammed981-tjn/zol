@@ -39,6 +39,9 @@ class PrintOrder {
     this.shopName,
     this.shopLat,
     this.shopLng,
+    this.serverId,
+    this.artworkUrl,
+    this.grandTotal,
   });
 
   final String id;
@@ -68,9 +71,28 @@ class PrintOrder {
   final double? shopLat;
   final double? shopLng;
 
+  /// معرّف الطلب على الخادم. `null` يعني أنه لم يصل — والفرق ليس تفصيلًا:
+  /// طلبٌ بلا معرّف لا تعلم به مطبعة ولا يظهر في لوحة الإدارة، فحالتُه
+  /// المعروضة للتاجر تقديرٌ لا خبر.
+  final String? serverId;
+
+  /// رابط ملفّ التصميم المرفوع — ما ستطبعه المطبعة فعلًا.
+  final String? artworkUrl;
+
+  bool get reachedServer => serverId != null;
+
+  /// الإجمالي كما حسبه الخادم ووافق عليه التاجر.
+  ///
+  /// يُخزَّن ولا يُعاد حسابه: صيغة الضريبة تغيّرت (كانت تُضاف فوق
+  /// الإجمالي وصارت مشمولة فيه)، ولو حُسب الإجمالي بالصيغة الجديدة
+  /// لتغيّر المعروض لطلباتٍ قديمة دُفعت بالصيغة القديمة — فيرى التاجر
+  /// في سجلّه مبلغًا غير الذي خرج من بطاقته.
+  final double? grandTotal;
+
   bool get hasDeliveryPoint => deliveryLat != null && deliveryLng != null;
 
-  double get total => subtotal + deliveryFee + vat;
+  /// ما دفعه التاجر. المخزَّن أوّلًا، وإلّا فحسابُ الطلبات القديمة.
+  double get total => grandTotal ?? (subtotal + deliveryFee + vat);
 
   PrintOrder copyWith({OrderStatus? status}) => PrintOrder(
     id: id,
@@ -91,6 +113,9 @@ class PrintOrder {
     shopName: shopName,
     shopLat: shopLat,
     shopLng: shopLng,
+    serverId: serverId,
+    artworkUrl: artworkUrl,
+    grandTotal: grandTotal,
   );
 
   Map<String, dynamic> toJson() => {
@@ -112,6 +137,9 @@ class PrintOrder {
     'shopName': shopName,
     'shopLat': shopLat,
     'shopLng': shopLng,
+    'serverId': serverId,
+    'artworkUrl': artworkUrl,
+    'grandTotal': grandTotal,
   };
 
   factory PrintOrder.fromJson(Map<String, dynamic> json) => PrintOrder(
@@ -134,5 +162,8 @@ class PrintOrder {
     shopName: json['shopName'] as String?,
     shopLat: (json['shopLat'] as num?)?.toDouble(),
     shopLng: (json['shopLng'] as num?)?.toDouble(),
+    serverId: json['serverId'] as String?,
+    artworkUrl: json['artworkUrl'] as String?,
+    grandTotal: (json['grandTotal'] as num?)?.toDouble(),
   );
 }

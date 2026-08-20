@@ -20,11 +20,19 @@ class PrintProduct {
     required this.sizes,
     required this.quantities,
     required this.mockup,
+    required this.kind,
   });
 
   final String label;
   final IconData icon;
   final PrintMockup mockup;
+
+  /// تسمية الصنف كما يعرفها الخادم (`print_products.kind`).
+  ///
+  /// الجسر بين كتالوج التطبيق وكتالوج المطبعة: بدونه لا سبيل لمطابقة
+  /// ما اختاره التاجر بما تبيعه المطبعة فعلًا، ويبقى الطلب معلّقًا في
+  /// الهواء بين قائمتين لا تعرف إحداهما الأخرى.
+  final String kind;
 
   /// اسم وحدة البيع (قطعة، حزمة...) لعرضها بجانب الكمية.
   final String unitName;
@@ -35,6 +43,7 @@ class PrintProduct {
 const printCatalog = [
   PrintProduct(
     label: 'بنر',
+    kind: 'banner',
     icon: Icons.flag_outlined,
     unitName: 'بنر',
     mockup: PrintMockup.banner,
@@ -51,6 +60,7 @@ const printCatalog = [
   // فلايرًا ثم لا يجد كيف يطلبه.
   PrintProduct(
     label: 'فلايرات',
+    kind: 'flyer',
     icon: Icons.description_outlined,
     unitName: 'حزمة (100 ورقة)',
     mockup: PrintMockup.flyer,
@@ -63,6 +73,7 @@ const printCatalog = [
   ),
   PrintProduct(
     label: 'استيكرات',
+    kind: 'sticker',
     icon: Icons.sticky_note_2_outlined,
     unitName: 'حزمة (50 قطعة)',
     mockup: PrintMockup.stickers,
@@ -75,6 +86,7 @@ const printCatalog = [
   ),
   PrintProduct(
     label: 'كروت أعمال',
+    kind: 'card',
     icon: Icons.badge_outlined,
     unitName: 'حزمة (100 كرت)',
     mockup: PrintMockup.card,
@@ -86,6 +98,7 @@ const printCatalog = [
   ),
   PrintProduct(
     label: 'رول أب',
+    kind: 'roll_up',
     icon: Icons.view_agenda_outlined,
     unitName: 'ستاند',
     mockup: PrintMockup.rollup,
