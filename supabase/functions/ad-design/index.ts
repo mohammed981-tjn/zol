@@ -27,10 +27,19 @@ const FALLBACK_MODEL =
 const IN_PER_M = Number(Deno.env.get("AI_PRICE_IN") ?? "0.30");
 const OUT_PER_M = Number(Deno.env.get("AI_PRICE_OUT") ?? "2.50");
 
+/** ترويسات CORS: التطبيق يعمل على الويب أيضًا، وبلا هذه لا يولّد فيه
+ *  شيء — والمتصفّح يرفض قبل أن يصل النداء إلى الدالّة. */
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-gemini-key",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), {
     status: s,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS },
   });
 
 const rest = (path: string, init: RequestInit = {}) =>
@@ -101,7 +110,24 @@ function parseJson(text: string): Record<string, unknown> {
   return {};
 }
 
+/** عدّاد نداءات خلال اليوم الماضي — للتاجر أو للمنصّة كلّها. */
+async function usedSince(filter: string): Promise<number | null> {
+  const since = new Date(Date.now() - 86400000).toISOString();
+  try {
+    const r = await rest(
+      `generation_logs?created_at=gte.${since}&${filter}&select=id`,
+      { headers: { Prefer: "count=exact", Range: "0-0" } },
+    );
+    if (!r.ok) return null;
+    return Number((r.headers.get("content-range") ?? "/0").split("/")[1] || "0");
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
   const key = req.headers.get("x-gemini-key") ?? Deno.env.get("GEMINI_API_KEY") ?? "";
   if (!key) return json({ ok: false, error: "no_api_key" }, 400);
 
@@ -123,6 +149,36 @@ Deno.serve(async (req: Request) => {
   const wish = (b.wish ?? "").trim();
   if (!wish && !b.product) {
     return json({ ok: false, error: "wish_or_product_required" }, 400);
+  }
+
+  // الهوية شرط لا خيار.
+  //
+  // `verify_jwt` مطفأة على هذه الدالّة كبقيّة دوالّ المشروع، فمن يعرف
+  // رابطها ينفق مفتاحنا بلا حدّ. واشتراط `merchant_id` لا يمنع تزويرًا
+  // (لا نتحقّق من الرمز بعد)، لكنه يجعل الإنفاق **محسوبًا على أحد**
+  // ويُفعّل البوّابتين أدناه.
+  const merchant = (b.merchant_id ?? "").trim();
+  if (!merchant) return json({ ok: false, error: "merchant_required" }, 401);
+
+  const PER_MERCHANT = Number(Deno.env.get("DAILY_DESIGN_LIMIT") ?? "40");
+  const GLOBAL = Number(Deno.env.get("DAILY_DESIGN_LIMIT_GLOBAL") ?? "600");
+
+  // بوّابتان لا واحدة. الأولى تمنع تاجرًا واحدًا من استنزاف نفسه،
+  // والثانية تمنع من يزوّر هويّات كثيرة من استنزاف المفتاح كلّه — وهي
+  // السقف الحقيقي على الخسارة اليومية.
+  const mineUsed = await usedSince(
+    `merchant_id=eq.${encodeURIComponent(merchant)}&prompt_key=eq.ad_design_system`,
+  );
+  if (mineUsed !== null && mineUsed >= PER_MERCHANT) {
+    return json(
+      { ok: false, error: "daily_quota", limit: PER_MERCHANT, used: mineUsed },
+      429,
+    );
+  }
+
+  const allUsed = await usedSince("prompt_key=eq.ad_design_system");
+  if (allUsed !== null && allUsed >= GLOBAL) {
+    return json({ ok: false, error: "service_busy", limit: GLOBAL }, 429);
   }
 
   const t0 = Date.now();
@@ -152,34 +208,34 @@ Deno.serve(async (req: Request) => {
 
     // شكلان مقبولان: مواصفة واحدة، أو مصفوفة تحت "designs". النموذج
     // يخلط بينهما تحت الازدحام، ورفضُ الصالح لأن غلافه اختلف إهدار.
-    const specs = Array.isArray(parsed.designs)
+    const raw = Array.isArray(parsed.designs)
       ? parsed.designs as unknown[]
       : (parsed.elements ? [parsed] : []);
 
+    // الشكل يُفحص هنا لا في العميل وحده: مصفوفة فيها عنصر بلا
+    // `elements` كانت تمرّ بـ`ok:true` فيرى التاجر تصميمًا فارغًا
+    // ويظنّ التطبيق معطّلًا، ولا يظهر في السجل أن شيئًا أخفق.
+    const specs = raw.filter((d) => {
+      const o = d as Record<string, unknown>;
+      return o && Array.isArray(o.elements) && o.elements.length > 0;
+    });
+
     if (!specs.length) {
+      await logRow({
+        merchant, prompt: brief, model: r.model, p,
+        tin: r.tin, tout: r.tout, ms: Date.now() - t0,
+        status: "error", output: r.text.slice(0, 2000),
+      });
       return json({ ok: false, step: "designer", model: r.model, raw: r.text.slice(0, 400) }, 502);
     }
 
     const cost = +(r.tin / 1e6 * IN_PER_M + r.tout / 1e6 * OUT_PER_M).toFixed(6);
 
-    // السجلّ لا يُسقط الردّ: التاجر ينتظر تصميمه، وفشل الكتابة في جدول
-    // تحليلات لا يجوز أن يحرمه إياه.
-    if (b.merchant_id) {
-      try {
-        await rest("generation_logs", {
-          method: "POST",
-          body: JSON.stringify({
-            merchant_id: b.merchant_id,
-            prompt: brief,
-            output_text: JSON.stringify(specs).slice(0, 8000),
-            model: r.model, provider: "google",
-            prompt_key: "ad_design_system", prompt_version: p.version,
-            tokens_in: r.tin, tokens_out: r.tout, cost_usd: cost,
-            latency_ms: Date.now() - t0, status: "ok",
-          }),
-        });
-      } catch { /* تجاهَل: التحليلات ليست في مسار التاجر الحرج */ }
-    }
+    await logRow({
+      merchant, prompt: brief, model: r.model, p,
+      tin: r.tin, tout: r.tout, ms: Date.now() - t0,
+      status: "ok", output: JSON.stringify(specs).slice(0, 8000), cost,
+    });
 
     return json({
       ok: true,
@@ -188,6 +244,48 @@ Deno.serve(async (req: Request) => {
       designs: specs,
     });
   } catch (e) {
+    // العطل يُسجَّل أيضًا. صفوف النجاح وحدها تجعل لوحة الإدارة تقول إن
+    // كل شيء بخير بينما نصف النداءات تسقط.
+    await logRow({
+      merchant, prompt: wish.slice(0, 500), model: "-", p: null,
+      tin: 0, tout: 0, ms: Date.now() - t0,
+      status: "error", output: String(e).slice(0, 500),
+    });
     return json({ ok: false, error: String(e).slice(0, 300) }, 502);
   }
 });
+
+/** كتابة صفّ في سجل التوليد. لا تُسقط الردّ أبدًا: التاجر ينتظر تصميمه،
+ *  وفشلُ الكتابة في جدول تحليلات لا يجوز أن يحرمه إياه. */
+async function logRow(a: {
+  merchant: string;
+  prompt: string;
+  model: string;
+  p: { version: number } | null;
+  tin: number;
+  tout: number;
+  ms: number;
+  status: string;
+  output: string;
+  cost?: number;
+}) {
+  try {
+    await rest("generation_logs", {
+      method: "POST",
+      body: JSON.stringify({
+        merchant_id: a.merchant,
+        prompt: a.prompt,
+        output_text: a.output,
+        model: a.model,
+        provider: "google",
+        prompt_key: "ad_design_system",
+        prompt_version: a.p?.version ?? null,
+        tokens_in: a.tin,
+        tokens_out: a.tout,
+        cost_usd: a.cost ?? 0,
+        latency_ms: a.ms,
+        status: a.status,
+      }),
+    });
+  } catch { /* تجاهَل */ }
+}

@@ -751,4 +751,8 @@ class LAr extends L {
   String authAccountCreated(String name) {
     return 'تم إنشاء حسابك بنجاح، $name!';
   }
+
+  @override
+  String get wishLocalOnly =>
+      'صُمّم على جهازك — تعذّر الوصول إلى الذكاء السحابي';
 }

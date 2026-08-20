@@ -27,6 +27,9 @@ import 'package:zol/screens/create_ad/magic_screen.dart';
 import 'package:zol/screens/create_ad/design_editor_screen.dart';
 import 'package:zol/models/ad_format.dart';
 import 'package:zol/services/spec_doctor.dart';
+import 'package:zol/services/local_designer.dart';
+import 'package:zol/services/design_critic.dart';
+import 'package:zol/services/wish_parser.dart';
 import 'package:zol/services/design_wish_service.dart';
 import 'package:zol/models/design_spec.dart';
 import 'package:zol/theme/spec_palette.dart';
@@ -4031,6 +4034,258 @@ void main() {
       isNotEmpty,
       reason: 'تخطيط الأولى ضاع لأن الثانية سقطت — والتصميم كان في اليد',
     );
+  });
+
+
+  // ── الذكاء المحلّي: يقرأ، ويُركّب، ويحكم ─────────────────────────────
+
+  test('قارئ الأمنية: يفهم ما كتبه التاجر لا ما تمنّينا أن يكتبه', () {
+    // التطبيع أوّلًا: التاجر يكتب بالهمزات والتشكيل والأرقام الهندية،
+    // والمطابقة الحرفية تفشل في أكثر ما يكتبه فعلًا.
+    expect(WishParser.normalize('إفتتاح'), WishParser.normalize('افتتاح'));
+    expect(WishParser.normalize('٣٠٪'), '30%');
+    expect(WishParser.normalize('مِظَلَّة'), 'مظله');
+
+    final a = WishParser.parse('استاند رول لمقهى مختص، خصم ٣٠٪، فخم');
+    expect(a.offer, WishOffer.discount);
+    expect(a.discountPercent, 30);
+    expect(a.format, AdFormat.rollUp);
+    expect(a.tone, 'فخم');
+    expect(a.subject, 'مقهى مختص');
+
+    // الموضوع من الأمنية لا من المخزَّن: التاجر يكتب الآن.
+    expect(WishParser.parse('كرت أعمال لعيادة أسنان').subject, 'عيادة أسنان');
+
+    // والفاصلة حدّ معنويّ: «لمخبز، خلفية فاتحة» موضوعها المخبز.
+    final b = WishParser.parse('تصميم ستوري لمخبز، خلفية فاتحة');
+    expect(b.subject, 'مخبز');
+    expect(b.wantsLight, isTrue);
+    expect(b.format, AdFormat.story);
+
+    // و«لفترة محدودة» إلحاحٌ لا موضوع.
+    final c = WishParser.parse('خصم ٥٠٪ لفترة محدودة');
+    expect(c.urgent, isTrue);
+    expect(c.subject, isNull);
+    expect(c.discountPercent, 50);
+
+    // ورقمٌ خارج المعقول ليس نسبة خصم.
+    expect(WishParser.parse('خصم 900').discountPercent, isNull);
+  });
+
+  test('المصمّم المحلّي: كل صيغة تجد تكوينًا، وكل تكوين يمرّ الطبيب', () {
+    const brand = Color(0xFF6B4A2F);
+    for (final fmt in AdFormat.values) {
+      final brief = DesignBrief(
+        headline: 'خصم ٣٠٪ على القهوة المختصة',
+        subhead: 'اغتنمها قبل أن تنتهي',
+        cta: 'اطلب الآن',
+        badge: 'خصم ٣٠٪',
+        format: fmt,
+        hasImage: true,
+      );
+      final out = LocalDesigner.compose(brief, brandColor: brand, count: 3);
+
+      expect(
+        out.length,
+        3,
+        reason: 'صيغة ${fmt.name} لم تجد ثلاثة تكوينات صالحة',
+      );
+      for (final d in out) {
+        expect(d.score.usable, isTrue, reason: '${fmt.name}/${d.archetype}');
+        // والدرجة ليست صفرًا مموّهًا: تكوينٌ صالح يتجاوز السبعين.
+        expect(
+          d.score.total,
+          greaterThan(70),
+          reason: '${fmt.name}/${d.archetype} = ${d.score}',
+        );
+      }
+
+      // وتنوّع الأنماط مفروض: ثلاث نسخ من تكوين واحد ليست خيارًا.
+      expect(
+        out.map((d) => d.archetype).toSet().length,
+        greaterThanOrEqualTo(2),
+        reason: 'صيغة ${fmt.name} أعادت تكوينًا واحدًا مكرّرًا',
+      );
+    }
+  });
+
+  test('المصمّم المحلّي: حتميّ وسريع', () {
+    const brand = Color(0xFF2C6BED);
+    const brief = DesignBrief(
+      headline: 'وصل الجديد',
+      subhead: 'تشكيلة هذا الموسم',
+      cta: 'اكتشفه',
+      format: AdFormat.portrait,
+      hasImage: true,
+    );
+
+    final sw = Stopwatch()..start();
+    final first = LocalDesigner.compose(brief, brandColor: brand);
+    sw.stop();
+
+    // بلا شبكة وبلا حصّة: التركيب كلّه حسابٌ على الجهاز.
+    expect(
+      sw.elapsedMilliseconds,
+      lessThan(600),
+      reason: 'التركيب المحلّي بطيء: ${sw.elapsedMilliseconds}ms',
+    );
+
+    // ونفس الموجز يعطي نفس التصاميم: مولّدٌ يتغيّر كل مرّة يجعل
+    // «أعجبني الأول» خسارةً لا رجعة فيها.
+    final second = LocalDesigner.compose(brief, brandColor: brand);
+    expect(first.length, second.length);
+    for (var i = 0; i < first.length; i++) {
+      expect(first[i].archetype, second[i].archetype);
+      expect(
+        jsonEncode(first[i].spec.toJson()),
+        jsonEncode(second[i].spec.toJson()),
+        reason: 'التصميم ${i + 1} اختلف بين نداءين متطابقين',
+      );
+    }
+  });
+
+  test('الناقد يُميّز: تصميم مركَّب بالتقدير يسقط دون المُركَّب على شبكة', () {
+    const brand = Color(0xFF2C6BED);
+
+    // تصميم وُضعت عناصره حيث وقعت: بلا اصطفاف، بلا تسلسل، بلا فراغ.
+    const sloppy = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.07, 0.07, 0.30, 0.05),
+          text: 'عنوان',
+          sizeFactor: 0.030,
+        ),
+        DesignElement(
+          role: ElementRole.subhead,
+          rect: SpecRect(0.41, 0.63, 0.28, 0.05),
+          text: 'سطر ثانوي',
+          sizeFactor: 0.029,
+        ),
+        DesignElement(
+          role: ElementRole.cta,
+          rect: SpecRect(0.13, 0.86, 0.22, 0.05),
+          text: 'اطلب',
+          sizeFactor: 0.028,
+        ),
+      ],
+    );
+    final bad = DesignCritic.score(sloppy, brandColor: brand);
+
+    const brief = DesignBrief(
+      headline: 'عنوان',
+      subhead: 'سطر ثانوي',
+      cta: 'اطلب',
+      format: AdFormat.square,
+      hasImage: true,
+    );
+    final good = LocalDesigner.compose(brief, brandColor: brand).first;
+
+    expect(
+      good.score.total,
+      greaterThan(bad.total + 20),
+      reason:
+          'الناقد لا يُميّز: المُركَّب ${good.score.total.toStringAsFixed(1)} '
+          'والمبعثر ${bad.total.toStringAsFixed(1)}',
+    );
+
+    // ويُسمّي العلّة لا يكتفي برقم: الاصطفاف والفراغ هما ما انهار.
+    expect(bad.parts['alignment'], lessThan(0.5));
+    expect(bad.parts['whitespace'], lessThan(0.5));
+  });
+
+  test('الناقد بوّابة لا مفاضلة وحدها: ما لا يصلح يأخذ صفرًا', () {
+    // درجةٌ منخفضة لتصميم بلا عنوان تُبقيه في المنافسة، وقد يفوز على
+    // تصميم سليم بأن يتفوّق في التوازن والفراغ. والصفر يُخرجه منها: هو
+    // ليس «أقلّ جمالًا» بل غير صالح.
+    const noHeadline = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [
+        DesignElement(
+          role: ElementRole.subhead,
+          rect: SpecRect(0.1, 0.4, 0.8, 0.2),
+          text: 'سطر وحيد بلا عنوان',
+        ),
+      ],
+    );
+    final s = DesignCritic.score(
+      noHeadline,
+      brandColor: const Color(0xFF2C6BED),
+    );
+    expect(s.usable, isFalse);
+    expect(s.total, 0);
+    expect(s.blocked.map((i) => i.code), contains(SpecIssueCode.missingHeadline));
+  });
+
+
+  testWidgets('شاشة السحر: الأمنية تُنفَّذ بلا شبكة إطلاقًا', (tester) async {
+    // أهمّ ما في الذكاء المحلّي: أن يبقى التطبيق مفيدًا حين تسقط
+    // السحابة. قبله كان صندوق الأمنية يعرض رسالة عطل ولا شيء غيرها —
+    // وتاجرٌ في محلّه بشبكة متقطّعة يخرج بلا إعلان.
+    var calls = 0;
+    MagicScreen.debugWishServiceOverride = () => wishService(
+      MockClient((req) async {
+        calls++;
+        throw const SocketException('لا شبكة');
+      }),
+    );
+    addTearDown(() => MagicScreen.debugWishServiceOverride = null);
+
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: MagicScreen(
+            brief: AdBrief(
+              productName: 'قهوة',
+              description: '',
+              tone: 'فخم',
+              platform: 'إنستغرام',
+              format: 'ستوري',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).last,
+      'خصم ٣٠٪ لمقهى مختص، فخم',
+    );
+    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pumpAndSettle();
+
+    expect(calls, greaterThan(0), reason: 'لم تُحاوَل السحابة أصلًا');
+
+    // ومع ذلك: تصميم مرسوم في يده، لا رسالة عطل وحدها.
+    expect(
+      find.byType(SpecRenderer),
+      findsWidgets,
+      reason: 'سقطت الشبكة فلم يبقَ للتاجر شيء',
+    );
+
+    final drawn = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
+        .toList();
+
+    // والنصّ من فهم أمنيته: النسبة والموضوع اللذان كتبهما.
+    expect(
+      drawn.any((t) => t.contains('30') && t.contains('مقهى مختص')),
+      isTrue,
+      reason: 'التصميم المحلّي لم يستعمل ما فهمه من الأمنية: $drawn',
+    );
+
+    // ويُقال له بصراحة إن هذا صُمّم على جهازه.
+    expect(find.textContaining('على جهازك'), findsWidgets);
   });
 
   // ── لوحة تسجيل المزوّدين ────────────────────────────────────────────

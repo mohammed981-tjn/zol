@@ -755,4 +755,8 @@ class LEn extends L {
   String authAccountCreated(String name) {
     return 'Your account is ready, $name!';
   }
+
+  @override
+  String get wishLocalOnly =>
+      'Designed on your device — the cloud AI was unreachable';
 }

@@ -11,6 +11,8 @@ import '../../models/generation.dart';
 import '../../services/ad_generator.dart';
 import '../../services/ai_gateway.dart';
 import '../../services/design_wish_service.dart';
+import '../../services/local_designer.dart';
+import '../../services/wish_parser.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ad_design_preview.dart';
@@ -74,6 +76,9 @@ class _MagicScreenState extends State<MagicScreen> {
   /// افتراضها مطفأة: التاجر الذي يكتب أوّل أمنية يريد إعلانًا لا تعديلًا،
   /// وتشغيلُها من تلقائها يجعل أوّل طلبٍ يعدّل بطاقةً لم ينظر إليها.
   bool _refine = false;
+
+  /// كم بطاقةً محلّية في مقدّمة القائمة الآن — تُستبدل حين تصل السحابة.
+  int _localCount = 0;
 
   /// ملاحظات الطبيب على آخر تخطيط مولَّد. تُعرض للتاجر لا تُبتلع: تصميمٌ
   /// أُصلح خلسةً يجعل التاجر يظنّ الذكاء معصومًا، فإذا أخطأ يومًا لم يعرف
@@ -256,6 +261,25 @@ class _MagicScreenState extends State<MagicScreen> {
       _wishNotes = const [];
     });
 
+    // ١) الجهاز أوّلًا — قبل الشبكة لا بعد فشلها.
+    //
+    // القارئ المحلّي يفهم «خصم ٣٠٪ لمقهى مختص» في أجزاء من الثانية،
+    // والمصمّح المحلّي يُركّب تكوينًا مقيسًا. فيرى التاجر تصميمه **فورًا**
+    // بدل ثماني ثوانٍ من دوّارة انتظار — ولو انقطعت الشبكة أو نفدت
+    // الحصّة بقي في يده تصميم لا رسالة عطل.
+    //
+    // وهذا ليس احتياطًا: هو المخرَج الأساسي، والسحابة تُحسّنه.
+    final localMade = base == null ? _composeLocally(text, brandArgb) : const [];
+    if (localMade.isNotEmpty && mounted) {
+      setState(() {
+        _error = null;
+        _ads = [...localMade, ...?_ads];
+        _selectedCard = 0;
+        _localCount = localMade.length;
+      });
+      if (_pages.hasClients) _pages.jumpToPage(0);
+    }
+
     try {
       final result = await _wishes.design(
         DesignWish(
@@ -277,6 +301,12 @@ class _MagicScreenState extends State<MagicScreen> {
       final made = [for (final d in result.designs) _adFromDesign(d)];
       setState(() {
         _wishBusy = false;
+        // تخطيطات السحابة تحلّ محلّ المحلّية لا تُضاف إليها: التاجر طلب
+        // تصميمًا واحدًا، وستّ بطاقات لطلب واحد إرباك لا خيار.
+        if (_localCount > 0 && _ads != null) {
+          _ads = _ads!.sublist(_localCount.clamp(0, _ads!.length));
+          _localCount = 0;
+        }
         // تتقدّم على بطاقات القوالب: هي ما طلبه التاجر بنصّه، وتلك
         // افتراضاتنا حين لم يطلب.
         _ads = [...made, ...?_ads];
@@ -291,16 +321,57 @@ class _MagicScreenState extends State<MagicScreen> {
       if (_pages.hasClients) _pages.jumpToPage(0);
     } on DesignWishException catch (e) {
       if (!mounted) return;
-      setState(() => _wishBusy = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      setState(() {
+        _wishBusy = false;
+        _wishText.clear();
+      });
+      // التصميم المحلّي في يده فعلًا: نُخبره أن السحابة تعذّرت ولا
+      // نُوهمه أن شيئًا لم يحدث — ولا نُرعبه برسالة عطل فوق تصميم قائم.
+      _say(localMade.isEmpty ? e.message : L.of(context).wishLocalOnly);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _wishBusy = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(L.of(context).wishFailed)));
+      setState(() {
+        _wishBusy = false;
+        _wishText.clear();
+      });
+      _say(
+        localMade.isEmpty
+            ? L.of(context).wishFailed
+            : L.of(context).wishLocalOnly,
+      );
+    }
+  }
+
+  void _say(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// يُركّب تخطيطات على الجهاز من نصّ الأمنية.
+  ///
+  /// القارئ يستخرج نوع العرض والنسبة والصيغة والموضوع، والمصمّح يُولّد
+  /// مئات المرشّحين ويقيسها ويختار أعلاها درجةً بأنماط متنوّعة.
+  List<GeneratedAd> _composeLocally(String wish, int brandArgb) {
+    try {
+      final intent = WishParser.parse(wish);
+      final brief = LocalDesigner.briefFromIntent(
+        intent,
+        fallbackFormat: _wishFormat,
+        product: widget.brief.productName,
+        brandName: widget.brief.brandName,
+        hasImage: widget.brief.hasProductImage,
+      );
+      final designs = LocalDesigner.compose(
+        brief,
+        brandColor: Color(brandArgb),
+        count: 3,
+      );
+      return [for (final d in designs) _adFromSpec(d.spec)];
+    } catch (_) {
+      // التوليد المحلّي إثراء لا شرط: عطلٌ فيه لا يمنع مسار السحابة.
+      return const [];
     }
   }
 
@@ -308,8 +379,9 @@ class _MagicScreenState extends State<MagicScreen> {
   ///
   /// النصّ يُستخرج من عناصر المواصفة نفسها لا يُطلب ثانيةً: النموذج كتبه
   /// وهو يرى مكانه، ونصٌّ كُتب لموضعه أصدق من نصٍّ كُتب ثم حُشر فيه.
-  GeneratedAd _adFromDesign(WishDesign d) {
-    final spec = d.spec;
+  GeneratedAd _adFromDesign(WishDesign d) => _adFromSpec(d.spec);
+
+  GeneratedAd _adFromSpec(DesignSpec spec) {
     String? textOf(ElementRole r) {
       final t = spec.firstOf(r)?.text?.trim();
       return (t == null || t.isEmpty) ? null : t;

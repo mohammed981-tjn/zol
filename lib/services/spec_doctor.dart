@@ -123,24 +123,24 @@ class SpecDoctor {
       sweep++;
       for (var i = 0; i < fixed.length && settled; i++) {
         for (var j = i + 1; j < fixed.length && settled; j++) {
-          // يُفحص الزوج إن كان أحدهما نصًّا والآخر نصًّا أو حاجبًا.
+          // الحجب يتبع **ترتيب الرسم**: العارض يرسم اللاحق فوق السابق،
+          // فالعنصر المعتم لا يحجب إلا نصًّا **قبله** في القائمة.
+          //
+          // وبلا هذا الشرط يصير شريطٌ ملوّن خلف عنوان — وهو تكوين
+          // مقصود وأوضح تسلسل ممكن — «حجبًا» فيُرفض. وقد رفض بالفعل نمط
+          // `bandedHeadline` كلّه قبل أن يُقيَّد الفحص بالترتيب.
           final a = fixed[i], b = fixed[j];
-          final pairMatters =
-              (a.isText && b.isText) ||
-              (a.isText && _isOpaque(b)) ||
-              (b.isText && _isOpaque(a));
+          final bOccludesA = a.isText && _isOpaque(b); // j بعد i فيعلوه
+          final pairMatters = (a.isText && b.isText) || bOccludesA;
           if (!pairMatters) continue;
 
           final ratio = a.rect.overlapRatio(b.rect);
           if (ratio <= maxTextOverlap) continue;
 
-          // الحاجب لا يُزاح: موضعه تكوينٌ قصده النموذج، والنصّ هو الذي
+          // الحاجب لا يُزاح: موضعه تكوينٌ قصده المصمّم، والنصّ هو الذي
           // يجب أن يُقرأ. فإن كان أحدهما حاجبًا أُزيح النصّ.
           final int upper, lower;
-          if (_isOpaque(a) && b.isText) {
-            upper = i;
-            lower = j;
-          } else if (_isOpaque(b) && a.isText) {
+          if (bOccludesA) {
             upper = j;
             lower = i;
           } else {

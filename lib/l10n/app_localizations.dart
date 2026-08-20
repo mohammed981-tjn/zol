@@ -1392,6 +1392,12 @@ abstract class L {
   /// In ar, this message translates to:
   /// **'تم إنشاء حسابك بنجاح، {name}!'**
   String authAccountCreated(String name);
+
+  /// No description provided for @wishLocalOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'صُمّم على جهازك — تعذّر الوصول إلى الذكاء السحابي'**
+  String get wishLocalOnly;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

@@ -215,5 +215,6 @@
   "authSwitchToSignup": "No account yet? Create one",
   "authSwitchToLogin": "Already have an account? Sign in",
   "authWelcomeBack": "Welcome back, {name}!",
-  "authAccountCreated": "Your account is ready, {name}!"
+  "authAccountCreated": "Your account is ready, {name}!",
+  "wishLocalOnly": "Designed on your device — the cloud AI was unreachable"
 }
