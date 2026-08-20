@@ -1,4 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {
+  CORS,
+  identify,
+  json,
+  logCall,
+  objectKey,
+  quotaGate,
+} from "../_shared/guard.ts";
+
+/** مفتاح الحصّة في `generation_logs` — لكل دالّة عدّادها المستقلّ. */
+const KEY = "ad_director";
 
 // المخرج الفني — عقل بصري متعدد الوكلاء فوق سلسلة الصور.
 //
@@ -43,6 +54,7 @@ async function genText(key: string, payload: Record<string, unknown>) {
 }
 
 type Body = {
+  merchant_id?: string;
   headline: string; subline?: string; cta?: string;
   bg_prompt?: string; primary?: string; accent?: string;
   name?: string; verify?: boolean;
@@ -249,6 +261,10 @@ async function compose(
     method: "POST",
     headers: { "Content-Type": "application/json", "x-gemini-key": key },
     body: JSON.stringify({
+      // الهوية تُمرَّر إلى الداخل: `ad-compose` صارت محروسة أيضًا،
+      // ونداءٌ داخليّ بلا هوية يُحسب على المجهولين فيستنزف حصّتهم
+      // بعمل تاجرٍ معروف — ويُغلق البابَ في وجه من لا ذنب له.
+      merchant_id: b.merchant_id,
       name: b.name, headline: b.headline, subline: b.subline, cta: b.cta,
       primary: b.primary, accent: b.accent, verify: b.verify,
       ...(bgUrl ? { bg_url: bgUrl } : { bg_prompt: b.bg_prompt }),
@@ -265,15 +281,38 @@ async function compose(
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
   const key = req.headers.get("x-gemini-key") ?? Deno.env.get("GEMINI_API_KEY") ?? "";
   let b: Body;
   try { b = await req.json(); } catch { return json({ ok: false, error: "bad_json" }, 400); }
   if (!b?.headline) return json({ ok: false, error: "headline_required" }, 400);
   if (!b.bg_prompt) return json({ ok: false, error: "bg_prompt_required" }, 400);
 
+  // أغلى نداء في المشروع: سلّم كامل من توليد الصور والتدقيق. وكان
+  // مفتوحًا تمامًا — بلا هوية ولا حصّة ولا حتى تسجيل.
+  //
+  // وحصّته أضيق من حصّة `ad-image` عمدًا: النداء الواحد هنا قد ينزل
+  // درجات السلّم فيستهلك عدّة توليدات، فسقفٌ متساوٍ بينهما يعني سقفًا
+  // أعلى في الحقيقة.
+  const caller = identify(b.merchant_id);
+  const blocked = await quotaGate({
+    caller,
+    promptKey: KEY,
+    perMerchant: Number(Deno.env.get("DAILY_SCENE_LIMIT") ?? "15"),
+    perAnon: Number(Deno.env.get("DAILY_SCENE_LIMIT_ANON") ?? "10"),
+    global: Number(Deno.env.get("DAILY_SCENE_LIMIT_GLOBAL") ?? "150"),
+  });
+  if (blocked) return blocked;
+
   const quality = b.quality ?? "fast";
   const primary = b.primary ?? "#0B3D2E";
-  const name = b.name ?? "directed";
+  // المسار من عندنا لا من المتصل — انظر `objectKey` في الحارس المشترك.
+  const name = objectKey(caller.merchant, b.name, "directed");
+  /** اسم خلفية وسيطة مشتقّ من المفتاح نفسه. اللاحقة تدخل **قبل** الامتداد:
+   *  `objectKey` تُنهي المفتاح بـ`.png`، فإلحاق `-bg.png` به يُخرج
+   *  `…png-bg.png` — يعمل، ويبدو خطأً لمن يفتح السطل. */
+  const bgKey = (n: number) => name.replace(/\.png$/, `-bg${n}.png`);
   const t0 = Date.now();
   const trail: Record<string, unknown> = {};
 
@@ -382,13 +421,13 @@ Deno.serve(async (req: Request) => {
 
     // ٥) الخطاط على الفائزة — ومعها المنتج إن لم يوضَع توليديًا،
     // ٦) وإن انكسرت الحروف أعاد الرسم على الوصيفة.
-    const bgUrl = await upload(`${name}-bg.png`, Uint8Array.from(atob(winner.img), (c) => c.charCodeAt(0)));
+    const bgUrl = await upload(bgKey(1), Uint8Array.from(atob(winner.img), (c) => c.charCodeAt(0)));
     let composed = await compose(key, b, bgUrl, !!pB64 && !winner.placed);
     const broken = composed?.verify?.looks_broken === true ||
                    composed?.verify?.all_present === false;
     if (!composed?.ok || broken) {
       trail.retry_on_runner_up = true;
-      const altUrl = await upload(`${name}-bg2.png`, Uint8Array.from(atob(loser.img), (c) => c.charCodeAt(0)));
+      const altUrl = await upload(bgKey(2), Uint8Array.from(atob(loser.img), (c) => c.charCodeAt(0)));
       const second = await compose(key, b, altUrl, !!pB64 && !loser.placed);
       if (second?.ok && second?.verify?.looks_broken !== true) composed = second;
     }
@@ -404,6 +443,16 @@ Deno.serve(async (req: Request) => {
       trail.storyboard = sb;
     } catch (_) { /* الفيديو إثراء لا شرط */ }
 
+    // التسجيل ليس تحليلات هنا بل **شرط عمل البوّابة**: `quotaGate` تعدّ
+    // صفوف `generation_logs` بمفتاح الدالّة، فدالّةٌ لا تسجّل عدّادها
+    // صفرٌ أبدًا وحصّتها لا تُغلق. وهذه كانت لا تسجّل شيئًا.
+    await logCall(caller, {
+      promptKey: KEY,
+      prompt: b.bg_prompt ?? b.headline, output: name,
+      model: quality, provider: "google",
+      ms: Date.now() - t0, status: composed?.ok ? "ok" : "error",
+    });
+
     return json({
       ...composed,
       director: { quality, ...trail, total_ms: Date.now() - t0 },
@@ -411,6 +460,13 @@ Deno.serve(async (req: Request) => {
   } catch (e) {
     // آخر الدرج: السلوك القديم حرفياً — العقل الجديد لا يكون أسوأ من سابقه.
     trail.fallback = String((e as Error).message);
+    await logCall(caller, {
+      promptKey: KEY,
+      prompt: b.bg_prompt ?? b.headline,
+      output: String((e as Error).message),
+      model: quality, provider: "google",
+      ms: Date.now() - t0, status: "error",
+    });
     try {
       // قاع السلّم يحمل المنتج أيضًا: الخطاط يركّبه فوق خلفيته البسيطة.
       const plain = await compose(key, b, null, true);
@@ -421,8 +477,3 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-function json(o: unknown, status = 200) {
-  return new Response(JSON.stringify(o, null, 1), {
-    status, headers: { "Content-Type": "application/json" },
-  });
-}

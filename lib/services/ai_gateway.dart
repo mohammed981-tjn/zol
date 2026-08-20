@@ -364,6 +364,14 @@ class AiGateway {
               },
             },
             body: jsonEncode({
+              // الهوية تُرسل ليأخذ التاجر حصّته الخاصّة.
+              //
+              // وغيابها لا يمنع النداء: الدالّة تنسب المجهول إلى حصّة
+              // صغيرة مشتركة بدل أن تردّه. وهذا مقصود — نسخٌ مثبَّتة
+              // على أجهزة لا ترسل المعرّف بعد، وردُّها يُعطّل الميزة
+              // عند من لم يحدّث عقوبةً على ذنبٍ لم يقترفه.
+              if (resolvedMerchantId.isNotEmpty)
+                'merchant_id': resolvedMerchantId,
               'name': 'scene-${DateTime.now().millisecondsSinceEpoch}',
               'headline': headline,
               if (body != null && body.trim().isNotEmpty) 'subline': body,

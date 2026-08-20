@@ -1,10 +1,22 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {
+  CORS,
+  identify,
+  json,
+  logCall,
+  objectKey,
+  quotaGate,
+} from "../_shared/guard.ts";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const G = "https://generativelanguage.googleapis.com/v1beta/models";
 
+/** مفتاح الحصّة في `generation_logs` — لكل دالّة عدّادها المستقلّ. */
+const KEY = "ad_image";
+
 type Body = {
+  merchant_id?: string;
   prompt: string;
   expect?: string[];
   provider?: "gemini" | "pollinations" | "cloudflare";
@@ -79,16 +91,31 @@ async function genCloudflare(prompt: string, model: string) {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
   let b: Body;
   try { b = await req.json(); }
   catch { return json({ ok: false, error: "bad_json" }, 400); }
   if (!b?.prompt) return json({ ok: false, error: "prompt_required" }, 400);
 
+  // توليد الصور أغلى ما نستدعيه، وكانت هذه الدالّة بلا هوية ولا حصّة.
+  const caller = identify(b.merchant_id);
+  const blocked = await quotaGate({
+    caller,
+    promptKey: KEY,
+    perMerchant: Number(Deno.env.get("DAILY_IMAGE_LIMIT") ?? "30"),
+    perAnon: Number(Deno.env.get("DAILY_IMAGE_LIMIT_ANON") ?? "20"),
+    global: Number(Deno.env.get("DAILY_IMAGE_LIMIT_GLOBAL") ?? "300"),
+  });
+  if (blocked) return blocked;
+
   const provider = b.provider ?? "gemini";
   const aspect = b.aspect ?? "9:16";
   const w = b.width ?? 1080;
   const h = b.height ?? 1920;
-  const name = (b.name ?? "ad") + ".png";
+  // المسار من عندنا لا من المتصل: كان `b.name` يُركَّب خامًا فيدهس أيّ
+  // ملفّ في السطل، وكان افتراضيّه `ad.png` واحدًا لكل التجّار.
+  const name = objectKey(caller.merchant, b.name, "ad");
   const key = req.headers.get("x-gemini-key") ?? Deno.env.get("GEMINI_API_KEY") ?? "";
   const t0 = Date.now();
 
@@ -103,6 +130,14 @@ Deno.serve(async (req: Request) => {
       out = await genGemini(key, b.prompt, b.model ?? "gemini-3-pro-image", aspect);
     }
   } catch (e) {
+    // العطل يُسجَّل كالنجاح: نداءٌ فاشل ينفق المفتاح كما ينفقه الناجح،
+    // وما لا يُسجَّل لا تعدّه البوّابة — فيصير الفشل بابًا بلا حارس.
+    await logCall(caller, {
+      promptKey: KEY,
+      prompt: b.prompt, output: String((e as Error).message),
+      model: b.model ?? provider, provider,
+      ms: Date.now() - t0, status: "error",
+    });
     return json({ ok: false, step: "generate", provider, error: String((e as Error).message) }, 502);
   }
   const genMs = Date.now() - t0;
@@ -148,6 +183,13 @@ Deno.serve(async (req: Request) => {
     } catch (e) { verify = { error: String((e as Error).message) }; }
   }
 
+  await logCall(caller, {
+    promptKey: KEY,
+    prompt: b.prompt, output: up.ok ? name : upTxt.slice(0, 500),
+    model: b.model ?? provider, provider,
+    ms: Date.now() - t0, status: up.ok ? "ok" : "error",
+  });
+
   return json({
     ok: up.ok, provider, model: b.model ?? null,
     gen_ms: genMs, total_ms: Date.now() - t0,
@@ -157,9 +199,3 @@ Deno.serve(async (req: Request) => {
     verify,
   });
 });
-
-function json(o: unknown, status = 200) {
-  return new Response(JSON.stringify(o, null, 1), {
-    status, headers: { "Content-Type": "application/json" },
-  });
-}

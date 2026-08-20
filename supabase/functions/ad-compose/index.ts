@@ -1,5 +1,16 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
+import {
+  CORS,
+  identify,
+  json,
+  logCall,
+  objectKey,
+  quotaGate,
+} from "../_shared/guard.ts";
+
+/** مفتاح الحصّة في `generation_logs` — لكل دالّة عدّادها المستقلّ. */
+const KEY = "ad_compose";
 
 // v3: تطبيع المقارنة يوحّد ٪/% والأرقام الهندية/اللاتينية —
 // المدقّق كان يرفض نصوصاً صحيحة لأن القارئ كتب % بدل ٪.
@@ -77,6 +88,7 @@ function norm(s: string): string {
 }
 
 type Body = {
+  merchant_id?: string;
   headline: string; subline?: string; cta?: string;
   bg_url?: string; bg_prompt?: string;
   primary?: string; accent?: string;
@@ -86,14 +98,31 @@ type Body = {
 };
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
   let b: Body;
   try { b = await req.json(); } catch { return json({ ok: false, error: "bad_json" }, 400); }
   if (!b?.headline) return json({ ok: false, error: "headline_required" }, 400);
 
+  const caller = identify(b.merchant_id);
+  const blocked = await quotaGate({
+    caller,
+    promptKey: KEY,
+    // أوسع من حصّة `ad-director` بأضعاف عن قصد: النداء الواحد هناك
+    // ينزل درجات السلّم فيستدعي الخطّاط مرّتين أو ثلاثًا. وسقفٌ ضيّق
+    // هنا يجعل هذه الدالّة هي القيد الفعلي على المشاهد، فيُقطع المشهد
+    // في منتصفه بدل أن يُمنع من أوّله — وهو أسوأ الحالين.
+    perMerchant: Number(Deno.env.get("DAILY_COMPOSE_LIMIT") ?? "120"),
+    perAnon: Number(Deno.env.get("DAILY_COMPOSE_LIMIT_ANON") ?? "60"),
+    global: Number(Deno.env.get("DAILY_COMPOSE_LIMIT_GLOBAL") ?? "900"),
+  });
+  if (blocked) return blocked;
+
   const W = b.width ?? 1080, H = b.height ?? 1920;
   const primary = b.primary ?? "#0B3D2E";
   const accent  = b.accent  ?? "#D4A017";
-  const name = (b.name ?? "composed") + ".png";
+  // المسار من عندنا لا من المتصل — انظر `objectKey` في الحارس المشترك.
+  const name = objectKey(caller.merchant, b.name, "composed");
   const t0 = Date.now();
 
   try {
@@ -254,6 +283,13 @@ Deno.serve(async (req: Request) => {
       } catch (e) { verify = { error: String((e as Error).message) }; }
     }
 
+    await logCall(caller, {
+      promptKey: KEY,
+      prompt: b.headline, output: up.ok ? name : upTxt.slice(0, 500),
+      model: "resvg", provider: "self",
+      ms: Date.now() - t0, status: up.ok ? "ok" : "error",
+    });
+
     return json({
       ok: up.ok, bg_ms: bgMs, render_ms: renderMs, total_ms: Date.now() - t0,
       bytes: png.length, headline_size: hSize, headline_lines: hLines.length,
@@ -265,12 +301,12 @@ Deno.serve(async (req: Request) => {
       verify,
     });
   } catch (e) {
+    await logCall(caller, {
+      promptKey: KEY,
+      prompt: b.headline, output: String((e as Error).message),
+      model: "resvg", provider: "self",
+      ms: Date.now() - t0, status: "error",
+    });
     return json({ ok: false, error: String((e as Error).message) }, 502);
   }
 });
-
-function json(o: unknown, status = 200) {
-  return new Response(JSON.stringify(o, null, 1), {
-    status, headers: { "Content-Type": "application/json" },
-  });
-}

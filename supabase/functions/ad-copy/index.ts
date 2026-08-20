@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { identify, quotaGate } from "../_shared/guard.ts";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -219,6 +220,18 @@ Deno.serve(async (req: Request) => {
   try { b = await req.json(); } catch { return json({ ok: false, error: "bad_json" }, 400); }
   if (!b?.merchant_id || !b?.product) return json({ ok: false, error: "merchant_id_and_product_required" }, 400);
 
+  // الهوية كانت مشترطة هنا منذ البداية، والحصّة لا. والاشتراط وحده
+  // يقول **من** أنفق ولا يمنعه من الإنفاق: من يخترع معرّفًا في كل نداء
+  // يمرّ كأنه ألف تاجر. فالبوّابة العامّة أدناه هي ما يوقفه.
+  const blocked = await quotaGate({
+    caller: identify(b.merchant_id),
+    promptKey: "ad_copy_system",
+    perMerchant: Number(Deno.env.get("DAILY_COPY_LIMIT") ?? "60"),
+    perAnon: Number(Deno.env.get("DAILY_COPY_LIMIT") ?? "60"),
+    global: Number(Deno.env.get("DAILY_COPY_LIMIT_GLOBAL") ?? "800"),
+  });
+  if (blocked) return blocked;
+
   const rawPlatform = b.platform ?? "سناب شات";
   const platform = PLATFORM_AR[rawPlatform.toLowerCase()] ?? rawPlatform;
   const t0 = Date.now();
@@ -329,6 +342,9 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         merchant_id: b.merchant_id, prompt: b.product,
         model: MODEL, provider: PROVIDER === "openrouter" ? "openrouter" : "google",
+        // المفتاح كان غائبًا عن صفّ العطل وحده، فلا تعدّه البوّابة:
+        // من يهاجم بمدخلٍ يفشل دائمًا ينفق المفتاح والعدّاد ساكن.
+        prompt_key: "ad_copy_system",
         status: "error",
         error_code: msg.slice(0, 120), latency_ms: Date.now() - t0, platform,
       }),
