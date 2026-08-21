@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../config/app_config.dart';
 import '../models/ad_format.dart';
 import '../models/design_spec.dart';
+import 'design_critic.dart';
 import 'spec_doctor.dart';
 
 /// أمنية التاجر — ما يكتبه بحرّيته في شاشة السحر، ويُنفَّذ تخطيطًا.
@@ -77,11 +78,28 @@ class DesignWish {
   };
 }
 
-/// تخطيط واحد كما وصل من النموذج، وبعد أن مرّ عليه الطبيب.
+/// تخطيط واحد كما وصل من النموذج، وبعد أن مرّ عليه الطبيب **والناقد**.
 class WishDesign {
-  const WishDesign({required this.report, required this.attempt});
+  const WishDesign({
+    required this.report,
+    required this.score,
+    required this.attempt,
+  });
 
   final SpecReport report;
+
+  /// درجة الناقد — تسلسل واصطفاف وتوازن وفراغ وإيقاع وبؤرة.
+  ///
+  /// كان هذا المسار يفرز بـ`usable` ثم عدد العلل الحاجبة وحدهما، فيختار
+  /// من أربعة تخطيطات **أقلَّها عيوبًا** لا **أجودها**. والفرق ليس
+  /// لفظيًّا: انعدامُ العلل شرطُ عرضٍ لا دليلُ جودة — تخطيطان بلا علّة
+  /// واحدة يتساويان في ذلك الفرز مهما تباعدت درجتاهما، فيُحسم المعروض
+  /// بترتيب النموذج لا بقياس.
+  ///
+  /// والناقد كان مبنيًّا وموزونًا ويعمل — لكن في `LocalDesigner` وحده.
+  /// أي أن مسار الجهاز يقيس ألفًا ومئتَي مرشَّح ويختار أعلاها، ومسار
+  /// السحابة — وهو ما يراه التاجر حين يكتب أمنيته — يُحكَّم بمعيار أضعف.
+  final DesignScore score;
 
   /// المحاولة التي أنتجته (١ أو ٢). يُفيد في التشخيص: هل يُصيب النموذج
   /// من أوّل مرّة أم يحتاج إعادة؟
@@ -162,6 +180,18 @@ class DesignWishService {
   /// وحين تفشل المحاولتان **لا نرمي**: نعيد أقلّ التخطيطات عللًا مع
   /// تقريره. تصميمٌ فيه ملاحظة يراها التاجر ويصلحها خيرٌ من شاشة خطأ
   /// تُخفي عنه أن النموذج أجاب أصلًا.
+  /// ترتيب المرشّحين: الصالح أوّلًا، ثم **الأجود درجةً**، ثم الأقلّ عللًا.
+  ///
+  /// والصلاحية تسبق الدرجة ولا تُوزن معها: تخطيطٌ لا يُقرأ عنوانه ليس
+  /// «أدنى جودة» بل غير صالح للعرض، فلا يرفعه اصطفافٌ جميل فوق صالحٍ
+  /// أقلّ أناقة.
+  static int _rank(WishDesign a, WishDesign b) {
+    if (a.usable != b.usable) return a.usable ? -1 : 1;
+    final byScore = b.score.total.compareTo(a.score.total);
+    if (byScore != 0) return byScore;
+    return a.report.blocking.length.compareTo(b.report.blocking.length);
+  }
+
   Future<WishResult> design(
     DesignWish wish, {
     required Color brandColor,
@@ -196,28 +226,35 @@ class DesignWishService {
 
       final judged = [
         for (final j in raw.specs)
-          WishDesign(
-            report: SpecDoctor.review(
-              // الصيغة تأتي من التاجر لا من النموذج: هو اختارها في
-              // الشاشة، وما يقترحه النموذج في حقل `format` تخمينٌ قد
-              // يخالف اللوحة التي سيُرسم عليها فعلًا.
-              _withFormat(DesignSpec.fromJson(j), wish.format),
-              brandColor: brandColor,
-              hasLogo: hasLogo,
-            ),
-            attempt: attempt,
-          ),
+          () {
+            // الصيغة تأتي من التاجر لا من النموذج: هو اختارها في
+            // الشاشة، وما يقترحه النموذج في حقل `format` تخمينٌ قد
+            // يخالف اللوحة التي سيُرسم عليها فعلًا.
+            final spec = _withFormat(DesignSpec.fromJson(j), wish.format);
+            return WishDesign(
+              report: SpecDoctor.review(
+                spec,
+                brandColor: brandColor,
+                hasLogo: hasLogo,
+              ),
+              score: DesignCritic.score(
+                spec,
+                brandColor: brandColor,
+                hasLogo: hasLogo,
+              ),
+              attempt: attempt,
+            );
+          }(),
       ];
 
-      judged.sort((a, b) {
-        if (a.usable != b.usable) return a.usable ? -1 : 1;
-        return a.report.blocking.length.compareTo(b.report.blocking.length);
-      });
+      judged.sort(_rank);
 
+      // والمقارنة بين المحاولتين بالمعيار نفسه الذي رُتّبت به كلٌّ منهما.
+      // كانت تقارن عدد العلل وحده، فمحاولةٌ ثانية بلا علّة تُزيح أولى
+      // بلا علّة وإن كانت أدنى درجةً — أي أن إعادة الطلب كانت تُقامر
+      // بما في اليد.
       if (best.isEmpty ||
-          (judged.isNotEmpty &&
-              judged.first.report.blocking.length <
-                  best.first.report.blocking.length)) {
+          (judged.isNotEmpty && _rank(judged.first, best.first) < 0)) {
         best = judged;
       }
       if (best.isNotEmpty && best.first.usable) {

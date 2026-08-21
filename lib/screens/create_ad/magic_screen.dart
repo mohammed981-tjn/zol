@@ -479,7 +479,10 @@ class _MagicScreenState extends State<MagicScreen> {
       if (designs.isEmpty) return const [];
       _variants = designs;
       _variantAt = 0;
-      return [for (final d in designs.take(2)) _adFromSpec(d.spec)];
+      return [
+        for (final d in designs.take(2))
+          _adFromSpec(d.spec, score: d.score.total),
+      ];
     } catch (_) {
       return const [];
     }
@@ -508,7 +511,13 @@ class _MagicScreenState extends State<MagicScreen> {
     final v = _variants;
     if (v.length < 2) return;
     _variantAt = (_variantAt + 1) % v.length;
-    final next = _adFromSpec(v[_variantAt].spec);
+    // ودرجته معه: بطاقةٌ تحمل رقمًا ثم يختفي عند «تكوين آخر» تبدو
+    // تراجعًا — والدرجة موجودة في `LocalDesign` أصلًا، إغفالها سهوٌ لا
+    // اختيار.
+    final next = _adFromSpec(
+      v[_variantAt].spec,
+      score: v[_variantAt].score.total,
+    );
     setState(() {
       final list = [...ads];
       list[_selectedCard] = next;
@@ -547,7 +556,10 @@ class _MagicScreenState extends State<MagicScreen> {
       if (designs.isEmpty) return const [];
       _variants = designs;
       _variantAt = 0;
-      return [for (final d in designs.take(3)) _adFromSpec(d.spec)];
+      return [
+        for (final d in designs.take(3))
+          _adFromSpec(d.spec, score: d.score.total),
+      ];
     } catch (_) {
       // التوليد المحلّي إثراء لا شرط: عطلٌ فيه لا يمنع مسار السحابة.
       return const [];
@@ -558,9 +570,15 @@ class _MagicScreenState extends State<MagicScreen> {
   ///
   /// النصّ يُستخرج من عناصر المواصفة نفسها لا يُطلب ثانيةً: النموذج كتبه
   /// وهو يرى مكانه، ونصٌّ كُتب لموضعه أصدق من نصٍّ كُتب ثم حُشر فيه.
-  GeneratedAd _adFromDesign(WishDesign d) => _adFromSpec(d.spec);
+  GeneratedAd _adFromDesign(WishDesign d) =>
+      _adFromSpec(d.spec, score: d.score.total);
 
-  GeneratedAd _adFromSpec(DesignSpec spec) {
+  /// [score] درجة الناقد من مئة، إن قِيست.
+  ///
+  /// وتُعرض للتخطيطات المولَّدة كما تُعرض لنسخ القوالب: كان التاجر يرى
+  /// رقم توافقٍ على ما اقترحناه نحن، ولا يرى شيئًا على ما طلبه هو —
+  /// فيبدو المقيس أوثق من المطلوب لأنّ أحدهما وحده يحمل رقمًا.
+  GeneratedAd _adFromSpec(DesignSpec spec, {double? score}) {
     String? textOf(ElementRole r) {
       final t = spec.firstOf(r)?.text?.trim();
       return (t == null || t.isEmpty) ? null : t;
@@ -582,6 +600,9 @@ class _MagicScreenState extends State<MagicScreen> {
       // وجمهوره عربيّ. ولغة الإعلان المولَّد تُحسم في دفعتها الخاصّة.
       cta: textOf(ElementRole.cta) ?? 'اطلب الآن',
       angle: spec.note,
+      // الدرجة أصلًا من مئة هنا، بخلاف مسار البوّابة الذي يعيدها من
+      // عشرة فيضربها في `_toAds`. وضربُها ثانيةً كان سيُخرج ٨٤٠٪.
+      score: score?.round().clamp(0, 100),
       createdAt: DateTime.now(),
       spec: spec,
     );

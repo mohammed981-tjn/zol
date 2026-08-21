@@ -103,10 +103,15 @@ class DesignCritic {
     DesignSpec spec, {
     required Color brandColor,
     Color? seasonColor,
+    // يُمرَّر إلى الطبيب كما يمرّره من يستدعيه مباشرةً. بدونه يفحص
+    // الناقدُ نسخةً من المواصفة غير التي فحصها مستدعيه، فيختلف
+    // `blocked` عن `blocking` ويصير الترتيب محكومًا بحكمين متغايرين.
+    bool hasLogo = false,
   }) {
     final report = SpecDoctor.review(
       spec,
       brandColor: brandColor,
+      hasLogo: hasLogo,
       seasonColor: seasonColor,
     );
     final s = report.spec;

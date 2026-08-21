@@ -3397,6 +3397,111 @@ void main() {
     expect(result.designs.first.usable, isTrue);
   });
 
+  // انعدامُ العلل شرطُ عرضٍ لا دليلُ جودة.
+  //
+  // كان الفرز بـ`usable` ثم عدد العلل الحاجبة وحدهما، فتخطيطان بلا علّة
+  // واحدة يتساويان فيه مهما تباعدت درجتاهما — ويُحسم المعروض بترتيب
+  // النموذج لا بقياس. ولهذا يأتي الرديء **أوّلًا** في هذا الردّ: تحته
+  // كان يبقى أوّلًا.
+  test('الأمنية: يتقدّم الأجود درجةً لا الأقلّ عللًا', () async {
+    Map<String, dynamic> el(
+      String role,
+      double x,
+      double y,
+      double w,
+      double h, {
+      String? text,
+      String color = 'deep',
+      String? fill,
+      String align = 'center',
+      double? size,
+      int weight = 700,
+    }) => {
+      'role': role,
+      'rect': {'x': x, 'y': y, 'w': w, 'h': h},
+      if (text != null) 'text': text,
+      'color': color,
+      if (fill != null) 'fill': fill,
+      'align': align,
+      'maxLines': 1,
+      if (size != null) 'sizeFactor': size,
+      'weight': weight,
+    };
+
+    // رديء ومقبول معًا: كل النصّ بحجم واحد تقريبًا (لا تسلسل)، وحوافّ
+    // يساريّة متفاوتة (لا اصطفاف)، والكتل كلّها في الثلث الأعلى
+    // (لا توازن ولا فراغ) — ولا علّة حاجبة واحدة.
+    final poor = {
+      'backdrop': 'paper',
+      'variant': 2,
+      'note': 'الرديء',
+      'elements': [
+        el('headline', 0.10, 0.10, 0.50, 0.05,
+            text: 'عنوان', size: 0.040, align: 'start'),
+        el('subhead', 0.14, 0.17, 0.50, 0.05,
+            text: 'سطر ثانوي', color: 'base', size: 0.038, align: 'start'),
+        el('cta', 0.18, 0.24, 0.40, 0.05,
+            text: 'اطلب', color: 'auto', fill: 'deep', size: 0.036,
+            align: 'start'),
+        el('product', 0.12, 0.32, 0.45, 0.20),
+      ],
+    };
+
+    // جيّد: تسلسل واضح (٠٫٠٧ ثم ٠٫٠٤)، وحوافّ مصطفّة على ٠٫١، وتوزيع
+    // على اللوحة كلّها.
+    final good = {
+      'backdrop': 'paper',
+      'variant': 2,
+      'note': 'الجيّد',
+      'elements': [
+        el('headline', 0.10, 0.16, 0.80, 0.08,
+            text: 'عنوان', size: 0.070, weight: 800),
+        el('subhead', 0.10, 0.26, 0.80, 0.06,
+            text: 'سطر ثانوي', color: 'base', size: 0.040, weight: 600),
+        el('product', 0.15, 0.42, 0.70, 0.30),
+        el('cta', 0.25, 0.85, 0.50, 0.06,
+            text: 'اطلب', color: 'auto', fill: 'deep', size: 0.040),
+      ],
+    };
+
+    final service = wishService(
+      MockClient(
+        (req) async => http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'ok': true,
+              'model': 'gemini-3.5-flash',
+              'ms': 900,
+              'designs': [poor, good],
+            }),
+          ),
+          200,
+        ),
+      ),
+    );
+
+    final result = await service.design(
+      const DesignWish(text: 'رول أب', format: AdFormat.rollUp, count: 2),
+      brandColor: const Color(0xFF6B4A2F),
+    );
+
+    expect(result.designs, hasLength(2));
+    expect(
+      result.designs.every((d) => d.usable),
+      isTrue,
+      reason: 'لا علّة حاجبة في أيّهما — فلا يفرزهما إلا الناقد',
+    );
+    expect(
+      result.designs.first.spec.note,
+      'الجيّد',
+      reason: 'الرديء جاء أوّلًا في ردّ النموذج، والدرجة هي التي قدّمت الجيّد',
+    );
+    expect(
+      result.designs.first.score.total,
+      greaterThan(result.designs.last.score.total),
+    );
+  });
+
   testWidgets('شاشة السحر: يكتب ما يريد فيُرسم تخطيطه هو', (tester) async {
     MagicScreen.debugWishServiceOverride = () => wishService(
       MockClient(
