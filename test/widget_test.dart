@@ -221,7 +221,11 @@ void main() {
     expect(find.text('طلب طباعة'), findsOneWidget);
   });
 
-  testWidgets('Continue button stays disabled until name and image are set', (
+  // الصورة **ليست** شرطًا. كان هذا الاختبار يحرس العكس: «حتى يُضبط الاسم
+  // والصورة»، فيثبّت البوّابة التي كانت تمنع من يريد أن يصف تصميمه بالكلام
+  // كما يفعل في كانفا. والاسم وحده هو الشرط الحقيقي — بلا اسمٍ لا موضوع
+  // للإعلان أصلًا، وبلا صورةٍ يعمل محرّك الأمنيات كما هو.
+  testWidgets('Continue button needs only a name — the image is optional', (
     tester,
   ) async {
     await _pumpApp(tester);
@@ -245,7 +249,6 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
-    await tester.tap(find.text('اضغط لرفع صورة المنتج'));
     await tester.pump();
 
     await tester.scrollUntilVisible(
@@ -253,7 +256,35 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    // ولا صورة رُفعت — الاسم وحده فتح الباب.
     expect(tester.widget<ElevatedButton>(button).enabled, isTrue);
+  });
+
+  // من دخل بلا صورة جاء ليصف تصميمه، فيُستقبَل بدعوةٍ إلى الوصف لا بثلاث
+  // بطاقات قوالب لم يطلبها. وهذا ما كان يجعل الشاشة تبدو «قوالب فقط».
+  testWidgets('Magic screen without a photo invites a description', (
+    tester,
+  ) async {
+    await _pumpApp(tester);
+    await tester.tap(find.text('أنشئ إعلانك الآن'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'قهوة مختصة');
+    await tester.pump();
+
+    await tester.scrollUntilVisible(
+      find.text('اعرض شاشة السحر'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('اعرض شاشة السحر'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('اعرض شاشة السحر'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('صِف التصميم الذي تريده'), findsOneWidget);
+    // ولا توليدَ قوالب جرى خلف ظهره.
+    expect(find.text('اختر النسخة الأنسب'), findsNothing);
   });
 
   testWidgets('Magic screen renders Supabase variants with critic scores', (

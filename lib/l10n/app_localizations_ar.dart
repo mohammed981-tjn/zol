@@ -923,6 +923,20 @@ class LAr extends L {
   String get magicRealScene => 'مشهد واقعي بالذكاء';
 
   @override
+  String get magicAnotherScene => 'مشهد آخر';
+
+  @override
+  String get magicInviteTitle => 'صِف التصميم الذي تريده';
+
+  @override
+  String get magicInviteBody =>
+      'اكتب في الصندوق أسفل الشاشة ما تريده بلغتك — يظهر التخطيط فورًا على جهازك، ثم يمكنك طلب مشهد بالذكاء أو تعديل ما ظهر.';
+
+  @override
+  String get magicInviteSamples =>
+      'إعلان خصم ٣٠٪ لمقهى مختص، ألوان دافئة|إعلان افتتاح صالون، ستوري، فخم وهادئ|عرض توظيف: نبحث عن كاشير، مربّع';
+
+  @override
   String get magicCopyText => 'نسخ النص';
 
   @override

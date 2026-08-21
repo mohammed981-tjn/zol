@@ -1699,6 +1699,30 @@ abstract class L {
   /// **'مشهد واقعي بالذكاء'**
   String get magicRealScene;
 
+  /// No description provided for @magicAnotherScene.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشهد آخر'**
+  String get magicAnotherScene;
+
+  /// No description provided for @magicInviteTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'صِف التصميم الذي تريده'**
+  String get magicInviteTitle;
+
+  /// No description provided for @magicInviteBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب في الصندوق أسفل الشاشة ما تريده بلغتك — يظهر التخطيط فورًا على جهازك، ثم يمكنك طلب مشهد بالذكاء أو تعديل ما ظهر.'**
+  String get magicInviteBody;
+
+  /// أمثلة مفصولة بـ`|` — تُنقر فتملأ صندوق الأمنية.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعلان خصم ٣٠٪ لمقهى مختص، ألوان دافئة|إعلان افتتاح صالون، ستوري، فخم وهادئ|عرض توظيف: نبحث عن كاشير، مربّع'**
+  String get magicInviteSamples;
+
   /// No description provided for @magicCopyText.
   ///
   /// In ar, this message translates to:

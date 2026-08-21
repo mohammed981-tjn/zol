@@ -94,10 +94,26 @@ class _MagicScreenState extends State<MagicScreen> {
   /// ما فهمه القارئ المحلّي من آخر أمنية — يُعرض للتاجر لا يبقى خفيًّا.
   WishIntent? _reading;
 
+  /// هل الشاشة تنتظر أمنيةً بدل أن تولّد قوالب من تلقائها؟
+  ///
+  /// كانت [initState] تنادي [_generate] دائمًا، فيُستقبَل **كلّ** داخلٍ
+  /// بثلاث بطاقات قوالب لم يطلبها. ومن جاء بلا صورة جاء ليصف تصميمه
+  /// بالكلام، فيرى شاشةً امتلأت بافتراضاتنا ويظنّ أن هذا كلّ ما تفعله —
+  /// وصندوقُ «اكتب ما تريد» شريطٌ أسفلها تحت شريط البطاقات، يسهل ألّا
+  /// يُرى أصلًا. فالانطباع «قوالب فقط» لم يكن سوء فهم: هو ما تقوله
+  /// الشاشة بأوّل نظرة.
+  bool _awaitingWish = false;
+
   @override
   void initState() {
     super.initState();
-    _generate();
+    // بصورةٍ: القوالب مفيدة فورًا — لها ما تضع فيه الصورة.
+    // بلا صورة: لا نملأ الشاشة، بل ندعوه إلى الصندوق ونشرح ما يكتب.
+    if (widget.brief.hasProductImage) {
+      _generate();
+    } else {
+      _awaitingWish = true;
+    }
   }
 
   @override
@@ -122,6 +138,9 @@ class _MagicScreenState extends State<MagicScreen> {
     setState(() {
       _ads = null;
       _error = null;
+      // توليدٌ حقيقيّ بدأ، فشريط المراحل هو ما يُعرض لا الدعوة — وإلّا
+      // رأى من ضغط «أعد التوليد» صفحةَ دعوةٍ ساكنة بينما الطلب يجري.
+      _awaitingWish = false;
       _stage = 0;
       _selectedCard = 0;
       _localCount = 0;
@@ -591,6 +610,7 @@ class _MagicScreenState extends State<MagicScreen> {
               child: switch ((ads, _error)) {
                 (_, final GatewayException e) => _buildError(e),
                 (final List<GeneratedAd> list, _) => _buildResults(list),
+                _ when _awaitingWish => _buildInvite(),
                 _ => _buildGenerating(),
               },
             ),
@@ -609,6 +629,66 @@ class _MagicScreenState extends State<MagicScreen> {
               onFormat: (f) => setState(() => _wishFormat = f),
               onSubmit: _runWish,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// الدعوة إلى الوصف — ما يراه من دخل بلا صورة.
+  ///
+  /// وفيها أمثلةٌ تُنقر لا شرحٌ يُقرأ: أكثر من يقف أمام صندوق فارغ لا
+  /// يعجزه الكتابة بل لا يعرف **بأيّ لغة** يخاطب البرنامج — أيكتب كلمتين
+  /// أم فقرة، أيذكر اللون أم يُترك له. ومثالٌ واحد مكتوبٌ بالكامل يجيب
+  /// عن هذا كلّه في لمحة، ونقرُه يملأ الصندوق فيصير التعديل عليه أهون
+  /// من الإنشاء من الصفر.
+  Widget _buildInvite() {
+    final l = L.of(context);
+    final samples = l.magicInviteSamples.split('|');
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const IconCircle(
+              icon: Icons.edit_note_outlined,
+              background: AppColors.coral,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              l.magicInviteTitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: context.scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l.magicInviteBody,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: context.textMuted,
+                fontSize: 13.5,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            for (final s in samples)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: OutlinedButton(
+                  onPressed: _wishBusy
+                      ? null
+                      : () {
+                          _wishText.text = s;
+                          _runWish();
+                        },
+                  child: Text(s, textAlign: TextAlign.center),
+                ),
+              ),
           ],
         ),
       ),
@@ -799,10 +879,22 @@ class _MagicScreenState extends State<MagicScreen> {
                 onSave: () => _saveAd(ads[i]),
                 onCopy: () => _copyAd(ads[i]),
                 // المشهد السحابي عند الطلب — للصيغة التي أعجبت التاجر
-                // وحدها، لا للثلاث جزافًا.
-                onScene: ads[i].imageUrl == null && widget.brief.hasProductImage
-                    ? () => _generateScene(ads[i])
-                    : null,
+                // وحدها، لا للثلاث جزافًا. و**يبقى** بعد أوّل مشهد.
+                //
+                // كان الشرط `imageUrl == null && hasProductImage`، وفيه
+                // منعان لا مبرّر لهما:
+                //
+                // أوّلهما أنّ الزرّ يختفي بمجرّد أن تصير للبطاقة صورة،
+                // فالمشهد طلقةٌ واحدة: خرج غريبًا أو لم يعجب فلا سبيل إلى
+                // غيره إلّا إعادة التوليد من أوّله وفقدُ النصّ والتخطيط
+                // معًا. والمشهد مولَّدٌ عشوائيّ بطبعه — أن يُعطى محاولةً
+                // واحدة يخالف ما يتوقّعه كلّ من استعمل مولّد صور.
+                //
+                // وثانيهما اشتراط صورة منتج، و`ad-director` لا يشترطها:
+                // `product_b64` اختياريّ فيه، فإن غاب ولّد المشهد من
+                // النصّ وحده. فكان من يصف تصميمه بالكلام محرومًا من
+                // الصورة لأنه لم يرفع صورة.
+                onScene: () => _generateScene(ads[i]),
                 sceneLoading: _sceneLoading.contains(ads[i]),
                 // التكوين التالي محسوبٌ سلفًا: لا شبكة ولا حصّة، وكان
                 // التاجر يدفع إعادة توليدٍ كاملة لأن موضع عنوان لم
@@ -1280,28 +1372,50 @@ class _AdPreviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (onScene != null || sceneLoading) ...[
-                const SizedBox(height: 10),
-                // المشهد السحابي اختيار لا فرض: القالب المحلي جاهز فورًا
-                // وبلا حصة، ومن أراد مشهدًا واقعيًا ضغط — فيُصرف المفتاح
-                // على ما سيُنشر فعلًا.
-                Center(
-                  child: sceneLoading
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          ),
-                        )
-                      : OutlinedButton.icon(
-                          onPressed: onScene,
-                          icon: const Icon(Icons.auto_awesome, size: 18),
-                          label: Text(L.of(context).magicRealScene),
+            ],
+            // زرّ المشهد **خارج** سلسلة الشرط لا داخل فرعها الثاني.
+            //
+            // كان يسكن فرع `ad.kind == AdKind.image` وحده، فمتى صارت
+            // للبطاقة صورة انتقل العرض إلى الفرع الأوّل وسقط الزرّ من
+            // الشجرة أصلًا — وهو الذي كان يجعل المشهد طلقةً واحدة، لا
+            // شرطُ `imageUrl == null` في المنادي وحده. ولو أُصلح المنادي
+            // دون هذا لبقي العطل كما هو والإصلاح شيفرةً ميّتة.
+            //
+            // وخروجُه هنا يفتحه كذلك لبطاقات النصّ الخالص: `ad-director`
+            // يولّد من النصّ بلا صورة منتج، فلا سبب لحرمانها.
+            if (onScene != null || sceneLoading) ...[
+              const SizedBox(height: 10),
+              // المشهد السحابي اختيار لا فرض: القالب المحلي جاهز فورًا
+              // وبلا حصة، ومن أراد مشهدًا واقعيًا ضغط — فيُصرف المفتاح
+              // على ما سيُنشر فعلًا.
+              Center(
+                child: sceneLoading
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
                         ),
-                ),
-              ],
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: onScene,
+                        // التسمية تتبع الحال: «مشهد واقعي» دعوةٌ لمن لا
+                        // مشهد لديه، وهي كذبٌ صغير لمن عنده واحد — يقرؤها
+                        // فيظنّ الزرّ يفعل شيئًا آخر غير الإعادة.
+                        icon: Icon(
+                          ad.imageUrl == null
+                              ? Icons.auto_awesome
+                              : Icons.refresh,
+                          size: 18,
+                        ),
+                        label: Text(
+                          ad.imageUrl == null
+                              ? L.of(context).magicRealScene
+                              : L.of(context).magicAnotherScene,
+                        ),
+                      ),
+              ),
             ],
             const SizedBox(height: 16),
             Text(

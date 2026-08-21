@@ -70,8 +70,16 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
   AdBadge? _badge;
   bool _useDecorativeBackground = false;
 
-  bool get _canContinue =>
-      _imageBytes != null && _nameController.text.trim().isNotEmpty;
+  /// الصورة **ليست** شرطًا للمتابعة — الاسم وحده يكفي.
+  ///
+  /// كان الشرط `_imageBytes != null && name.isNotEmpty`، فيُقفل الباب على
+  /// من يريد أن **يصف** تصميمه بالكلام كما يفعل في كانفا. والمحرّك خلف
+  /// هذه الشاشة لا يحتاج صورة أصلًا: `AdBrief.imageBytes` محتملٌ للعدم
+  /// منذ بُني، و`hasProductImage` يُشتقّ منه فيهبط إلى `false` بلا كسر،
+  /// و`WishParser` يقرأ النصّ وحده. فالقدرة كانت موجودة والبوّابة وحدها
+  /// مغلقة — ومن أراد إعلان خصمٍ أو توظيفٍ أو خدمةٍ لا صورة لها كان
+  /// يُردّ بلا سبب يفهمه.
+  bool get _canContinue => _nameController.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -251,7 +259,7 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             if (!_canContinue) ...[
               const SizedBox(height: 10),
               Text(
-                'أضف صورة المنتج واسمه للمتابعة',
+                'اكتب اسم المنتج للمتابعة — والصورة اختيارية',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.textMuted, fontSize: 12),
               ),
@@ -542,6 +550,16 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                   Text(
                     'اضغط لرفع صورة المنتج',
                     style: TextStyle(color: context.textMuted),
+                  ),
+                  const SizedBox(height: 4),
+                  // الاختيارية تُقال هنا لا في السطر فوقه: ذاك النصّ
+                  // يستهدفه اختبار الرحلة الكاملة بمطابقة تامّة، وتذييلُه
+                  // بـ«(اختياري)» يكسر ستّ خطوات في ثلاثة اختبارات لأجل
+                  // كلمةٍ موضعها الطبيعيّ سطرُ الشرح أصلًا.
+                  Text(
+                    'اختياري — أو تابع بلا صورة وصِف تصميمك في شاشة السحر',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.textMuted, fontSize: 11.5),
                   ),
                 ],
               ),

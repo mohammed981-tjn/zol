@@ -931,6 +931,20 @@ class LEn extends L {
   String get magicRealScene => 'Realistic AI scene';
 
   @override
+  String get magicAnotherScene => 'Another scene';
+
+  @override
+  String get magicInviteTitle => 'Describe the design you want';
+
+  @override
+  String get magicInviteBody =>
+      'Type what you want in the box below, in your own words — the layout appears instantly on your device, and you can then ask for an AI scene or refine what you got.';
+
+  @override
+  String get magicInviteSamples =>
+      '30% off ad for a specialty coffee shop, warm colors|Salon opening ad, story, elegant and calm|Now hiring: cashier wanted, square';
+
+  @override
   String get magicCopyText => 'Copy text';
 
   @override
