@@ -286,6 +286,7 @@ class DesignWishService {
     backdrop: s.backdrop,
     elements: s.elements,
     variant: s.variant,
+    pairing: s.pairing,
     note: s.note,
   );
 

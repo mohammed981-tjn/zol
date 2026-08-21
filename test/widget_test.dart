@@ -57,6 +57,7 @@ import 'package:zol/screens/shell_screen.dart';
 import 'package:zol/theme/app_palette_source.dart';
 import 'package:zol/l10n/app_localizations.dart';
 import 'package:zol/widgets/product_image.dart';
+import 'package:zol/theme/art_fonts.dart';
 import 'package:zol/theme/art_palette.dart';
 import 'package:zol/widgets/art_backdrop.dart';
 import 'package:zol/widgets/art_text.dart';
@@ -3065,6 +3066,97 @@ void main() {
       expect(fx, closeTo(0.5, 0.02), reason: 'الأفقي انزاح في ${format.label}');
       expect(fy, closeTo(0.6, 0.02), reason: 'الرأسي انزاح في ${format.label}');
     }
+  });
+
+  // ── الاقتران الطباعي: وجهان لا حجمان ──────────────────────────────
+
+  test('الاقتران: خطّ العلامة يحلّ محلّ وجه العرض وحده', () {
+    final plain = ArtFonts.from(0);
+    expect(plain.display, isNot(plain.text), reason: 'وجهان متطابقان ليسا اقترانًا');
+
+    final branded = ArtFonts.from(0, brandDisplay: 'Almarai');
+    expect(branded.display, 'Almarai', reason: 'اختيار التاجر يظهر في العنوان');
+    expect(
+      branded.text,
+      plain.text,
+      reason: 'ولا يبتلع وجه المتن — وإلّا عاد التصميم إلى خطّ واحد',
+    );
+
+    // وحين يصادف خطّ العلامة وجهَ المتن يسقط المتن إلى غيره.
+    final clash = ArtFonts.from(0, brandDisplay: plain.text);
+    expect(clash.display, plain.text);
+    expect(clash.text, isNot(plain.text));
+  });
+
+  test('الاقتران: الوجه يتبع دور العنصر حين لا يُذكر', () {
+    DesignElement at(ElementRole r) =>
+        DesignElement(role: r, rect: const SpecRect(0, 0, 1, 0.1));
+
+    expect(at(ElementRole.headline).effectiveFont, SpecFont.display);
+    expect(at(ElementRole.badge).effectiveFont, SpecFont.display);
+    expect(at(ElementRole.cta).effectiveFont, SpecFont.accent);
+    expect(at(ElementRole.subhead).effectiveFont, SpecFont.text);
+    expect(at(ElementRole.tags).effectiveFont, SpecFont.text);
+
+    // والتصريح يغلب الدور: النموذج قد يريد عنوانًا صامتًا.
+    expect(
+      at(ElementRole.headline).copyWith(font: SpecFont.text).effectiveFont,
+      SpecFont.text,
+    );
+  });
+
+  testWidgets('العارض يرسم العنوان بوجه العرض والمتن بوجه المتن', (
+    tester,
+  ) async {
+    const spec = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.paper,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.1, 0.16, 0.8, 0.10),
+          text: 'عنوان',
+          color: ColorRole.deep,
+          align: SpecAlign.center,
+          maxLines: 1,
+          sizeFactor: 0.07,
+        ),
+        DesignElement(
+          role: ElementRole.subhead,
+          rect: SpecRect(0.1, 0.30, 0.8, 0.08),
+          text: 'متن',
+          color: ColorRole.base,
+          align: SpecAlign.center,
+          maxLines: 1,
+          sizeFactor: 0.04,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: SizedBox(
+            width: 400,
+            child: SpecRenderer(spec: spec, brandColor: Color(0xFFB03030)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    String familyOf(String text) =>
+        tester.widget<Text>(find.text(text)).style?.fontFamily ?? '';
+
+    final pair = ArtFonts.from(spec.pairing);
+    expect(familyOf('عنوان'), pair.display);
+    expect(familyOf('متن'), pair.text);
+    expect(
+      familyOf('عنوان'),
+      isNot(familyOf('متن')),
+      reason: 'هذا هو الفرق كلّه — وجهان لا حجمان من وجه واحد',
+    );
   });
 
   testWidgets('العارض يرسم كل دور بلا استثناء وبلا فيضان', (tester) async {

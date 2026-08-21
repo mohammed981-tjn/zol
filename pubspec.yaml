@@ -153,3 +153,32 @@ flutter:
         - asset: assets/fonts/Almarai-Regular.ttf
         - asset: assets/fonts/Almarai-Bold.ttf
           weight: 700
+
+    # وجوه **العرض** — لا وجوه متن.
+    #
+    # الثلاثة أعلاه (Cairo وTajawal وAlmarai) عائلات سانس إنسانية
+    # متقاربة البنية: تصلح للقراءة وتتفاوت قليلًا، فاقترانُ أيّها بأيّ
+    # يُخرج فرقًا لا يكاد يُرى. وأكثر ما يجعل التصميم يبدو **مصمَّمًا**
+    # اقترانٌ بين وجهين متباعدين: عنوانٌ ذو شخصية ومتنٌ صامت. ولم يكن
+    # في الحزمة وجهُ عرضٍ واحد.
+    #
+    # فأُضيفت ثلاثة بتراخيص OFL (والحقوق مثبتة في assets/fonts/OFL.txt):
+    #   Reem Kufi — كوفيّ هندسيّ، يقرأ كشعار.
+    #   Lalezar   — ثقيل ملصقيّ، لإعلانات الخصم العالية الصوت.
+    #   Amiri     — نسخيّ بتباين سميك ورفيع، للفخم والموسميّ.
+    - family: Reem Kufi
+      fonts:
+        - asset: assets/fonts/ReemKufi-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/ReemKufi-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/ReemKufi-Variable.ttf
+          weight: 700
+    - family: Lalezar
+      fonts:
+        - asset: assets/fonts/Lalezar-Regular.ttf
+    - family: Amiri
+      fonts:
+        - asset: assets/fonts/Amiri-Regular.ttf
+        - asset: assets/fonts/Amiri-Bold.ttf
+          weight: 700

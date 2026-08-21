@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../models/ad_format.dart';
 import '../models/design_spec.dart';
+import '../theme/art_fonts.dart';
 import '../theme/art_palette.dart';
 import '../theme/spec_palette.dart';
 import 'art_backdrop.dart';
@@ -75,6 +76,10 @@ class SpecRenderer extends StatelessWidget {
   Widget build(BuildContext context) {
     final art = ArtPalette.from(brandColor, variant: spec.variant);
     final seed = spec.elements.length * 31 + spec.variant;
+    // خطّ العلامة يحلّ محلّ وجه **العرض** لا وجهَي الاقتران معًا —
+    // راجع `ArtFonts`. وكان يُفرض على النصّ كلّه بـ`DefaultTextStyle`
+    // أدناه، فيعود التصميم إلى خطٍّ واحد مهما اقترنّا.
+    final fonts = ArtFonts.from(spec.pairing, brandDisplay: fontFamily);
 
     return AspectRatio(
       aspectRatio: spec.format.aspect,
@@ -82,7 +87,9 @@ class SpecRenderer extends StatelessWidget {
         builder: (context, c) {
           final w = c.maxWidth, h = c.maxHeight;
           return DefaultTextStyle.merge(
-            style: TextStyle(fontFamily: fontFamily),
+            // الافتراضي وجهُ المتن: ما لا يُذكر وجهُه نصٌّ ثانويّ، وكلُّ
+            // عنصر يحمل وجهه صراحةً في `_element` أدناه.
+            style: TextStyle(fontFamily: fonts.text),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -100,7 +107,7 @@ class SpecRenderer extends StatelessWidget {
                     top: e.rect.y * h,
                     width: e.rect.w * w,
                     height: e.rect.h * h,
-                    child: _element(e, art, w),
+                    child: _element(e, art, w, fonts),
                   ),
               ],
             ),
@@ -110,7 +117,12 @@ class SpecRenderer extends StatelessWidget {
     );
   }
 
-  Widget _element(DesignElement e, ArtPalette art, double canvasWidth) {
+  Widget _element(
+    DesignElement e,
+    ArtPalette art,
+    double canvasWidth,
+    ArtFonts fonts,
+  ) {
     final behind = backgroundBehind(e, spec, art, seasonColor: seasonColor);
     final ink = resolveColorRole(
       e.color,
@@ -194,6 +206,9 @@ class SpecRenderer extends StatelessWidget {
           },
           style: TextStyle(
             color: ink,
+            // الوجه من دور العنصر — وهنا يصير الاقتران مرئيًّا: عنوانٌ
+            // بوجه له شخصية فوق متنٍ صامت، لا حجمين من وجهٍ واحد.
+            fontFamily: fonts.familyFor(e.effectiveFont),
             fontWeight: _weight(e.weight),
             fontSize: (e.sizeFactor ?? _defaultSize(e.role)) * canvasWidth,
             height: 1.4, // النسبة المقيسة في تصاميم كانفا الحقيقية.

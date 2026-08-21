@@ -27,7 +27,10 @@
 ///      يجب أن يُرى، والمنتج لا يُغطّى. دورٌ مجهول لا يُفحص.
 library;
 
+import '../theme/art_fonts.dart';
 import 'ad_format.dart';
+
+export '../theme/art_fonts.dart' show SpecFont;
 
 /// دور العنصر — عليه تُبنى أحكام المدقّق وأولويات الإصلاح.
 enum ElementRole {
@@ -148,11 +151,17 @@ class DesignElement {
     /// المرجعية من تشريح كانفا: العنوان ≈ ٤٫٩٪ من العرض.
     this.sizeFactor,
     this.weight = 700,
+    this.font,
   });
 
   final ElementRole role;
   final SpecRect rect;
   final String? text;
+
+  /// وجه الحرف كدور. `null` يترك الاختيار لدور العنصر — راجع
+  /// [defaultFont]، وهو ما يجعل المواصفات القديمة والنموذجَ الذي لا
+  /// يذكر الحقل يخرجان باقتران صحيح بلا تغيير.
+  final SpecFont? font;
 
   /// لون المحتوى (الحروف أو الحدّ).
   final ColorRole color;
@@ -172,6 +181,20 @@ class DesignElement {
       role == ElementRole.badge ||
       role == ElementRole.tags;
 
+  /// الوجه المستحقّ لهذا العنصر حين لا يُذكر [font] صراحةً.
+  ///
+  /// والقسمة على الدور لا على الحجم: العنوان يُعرَف والمتن يُقرأ، وهذا
+  /// حكمٌ في وظيفة العنصر لا في مقاسه. وشارةُ الخصم من العرض وإن صغرت —
+  /// هي ما يُنظر إليه أوّلًا في إعلان عرضٍ، وإسكاتُها يُضيّع المقصود.
+  SpecFont get effectiveFont =>
+      font ??
+      switch (role) {
+        ElementRole.headline || ElementRole.badge || ElementRole.logo =>
+          SpecFont.display,
+        ElementRole.cta => SpecFont.accent,
+        _ => SpecFont.text,
+      };
+
   DesignElement copyWith({
     ElementRole? role,
     SpecRect? rect,
@@ -182,6 +205,7 @@ class DesignElement {
     int? maxLines,
     double? sizeFactor,
     int? weight,
+    SpecFont? font,
   }) => DesignElement(
     role: role ?? this.role,
     rect: rect ?? this.rect,
@@ -192,6 +216,7 @@ class DesignElement {
     maxLines: maxLines ?? this.maxLines,
     sizeFactor: sizeFactor ?? this.sizeFactor,
     weight: weight ?? this.weight,
+    font: font ?? this.font,
   );
 
   Map<String, dynamic> toJson() => {
@@ -204,6 +229,7 @@ class DesignElement {
     'maxLines': maxLines,
     if (sizeFactor != null) 'sizeFactor': sizeFactor,
     'weight': weight,
+    if (font != null) 'font': font!.name,
   };
 
   /// يقرأ عنصرًا من JSON النموذج.
@@ -227,6 +253,9 @@ class DesignElement {
     // يخرج نقطةً لا تُقرأ ولا بلاغ.
     sizeFactor: (j['sizeFactor'] as num?)?.toDouble().clamp(0.012, 0.22),
     weight: (j['weight'] as num?)?.toInt().clamp(100, 900) ?? 700,
+    // اسمٌ مجهول يعود `null` فيسقط إلى [effectiveFont] — ووجهٌ صحيح
+    // بحكم الدور خيرٌ من وجهٍ اخترعه النموذج أو من إسقاط العنصر.
+    font: _enumFrom(SpecFont.values, j['font']),
   );
 }
 
@@ -246,6 +275,7 @@ class DesignSpec {
     required this.backdrop,
     required this.elements,
     this.variant = 0,
+    this.pairing = 0,
     this.note,
   });
 
@@ -256,6 +286,13 @@ class DesignSpec {
   /// رقم الانسجام اللوني — يُمرَّر إلى `ArtPalette.from`.
   final int variant;
 
+  /// رقم الاقتران الطباعي — يُمرَّر إلى `ArtFonts.from`.
+  ///
+  /// نظيرُ [variant] في الطباعة: ذاك يختار علاقةً بين الألوان وهذا يختار
+  /// علاقةً بين الوجهين. ورقمٌ لا اسمَ عائلة، للسبب نفسه الذي جعل اللون
+  /// دورًا: النموذج لا يعرف ما في حزمتنا من خطوط.
+  final int pairing;
+
   /// شرح النموذج لاختياره. يُعرض للتاجر ويُفيد في التشخيص حين يخرج
   /// تصميم رديء: نعرف ما ظنّ أنه يفعل.
   final String? note;
@@ -264,6 +301,7 @@ class DesignSpec {
     'format': format.name,
     'backdrop': backdrop.name,
     'variant': variant,
+    'pairing': pairing,
     if (note != null) 'note': note,
     'elements': elements.map((e) => e.toJson()).toList(),
   };
@@ -273,6 +311,7 @@ class DesignSpec {
         _enumFrom(AdFormat.values, j['format']) ?? AdFormat.square,
     backdrop: _enumFrom(SpecBackdrop.values, j['backdrop']) ?? SpecBackdrop.mesh,
     variant: (j['variant'] as num?)?.toInt() ?? 0,
+    pairing: (j['pairing'] as num?)?.toInt() ?? 0,
     note: j['note'] as String?,
     elements: ((j['elements'] as List?) ?? const [])
         .whereType<Map>()
@@ -285,6 +324,7 @@ class DesignSpec {
     backdrop: backdrop,
     elements: next,
     variant: variant,
+    pairing: pairing,
     note: note,
   );
 
