@@ -100,12 +100,18 @@ async function gemini(key: string, system: string, user: string) {
   throw new Error(lastErr);
 }
 
-/** بعض النماذج تلفّ JSON بسياج ```json رغم الطلب الصريح. */
-function parseJson(text: string): Record<string, unknown> {
+/** بعض النماذج تلفّ JSON بسياج ```json رغم الطلب الصريح.
+ *
+ *  والمعاد `unknown` لا `Record`: المخرَج قد يكون **مصفوفة** في أعلى
+ *  المستوى، وتسميتها كائنًا تُخفي ذلك عن المترجم فيمرّ التعامل معها
+ *  كائنًا بلا إنذار — وهو ما كان يقع. */
+function parseJson(text: string): unknown {
   try { return JSON.parse(text); } catch { /* تحت */ }
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenced) { try { return JSON.parse(fenced[1]); } catch { /* تحت */ } }
-  const braced = text.match(/\{[\s\S]*\}/);
+  // القوس المعقوف **والمربّع**: آخر ملاذٍ كان يلتقط الكائن وحده، فنصٌّ
+  // حول مصفوفة يسقط كلّه.
+  const braced = text.match(/[[{][\s\S]*[\]}]/);
   if (braced) { try { return JSON.parse(braced[0]); } catch { /* تحت */ } }
   return {};
 }
@@ -206,11 +212,25 @@ Deno.serve(async (req: Request) => {
     const r = await gemini(key, p.content, user);
     const parsed = parseJson(r.text);
 
-    // شكلان مقبولان: مواصفة واحدة، أو مصفوفة تحت "designs". النموذج
-    // يخلط بينهما تحت الازدحام، ورفضُ الصالح لأن غلافه اختلف إهدار.
-    const raw = Array.isArray(parsed.designs)
-      ? parsed.designs as unknown[]
-      : (parsed.elements ? [parsed] : []);
+    // ثلاثة أشكال مقبولة: مصفوفة في أعلى المستوى، أو مصفوفة تحت
+    // "designs"، أو مواصفة واحدة. النموذج يخلط بينها، ورفضُ الصالح لأن
+    // غلافه اختلف إهدار.
+    //
+    // والشكل الأوّل كان مرفوضًا وهو **أطبعها**: حين يُطلب أكثر من تخطيط
+    // يردّ النموذج مصفوفةً عاريةً `[{…},{…}]` كما يفعل أيّ أحد طُلبت
+    // منه قائمة. و`count` الافتراضي في التطبيق **اثنان**، فكان هذا
+    // مسار الأغلبية لا حالةً نادرة: يسقط النداء بـ‎502‎، ويقرأ التاجر
+    // «تعذّر»، ويُنفَق نداء النموذج كاملًا على مخرَجٍ صالحٍ رميناه.
+    //
+    // وقد أخفاه المترجم: `parseJson` كان يَعِد بـ`Record<string,
+    // unknown>` فمرّت المصفوفة كائنًا بلا إنذار، و`parsed.designs`
+    // عليها `undefined` بلا خطأ. راجع تعليق `parseJson`.
+    const obj = (parsed ?? {}) as Record<string, unknown>;
+    const raw: unknown[] = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(obj.designs)
+      ? obj.designs as unknown[]
+      : (obj.elements ? [obj] : []);
 
     // الشكل يُفحص هنا لا في العميل وحده: مصفوفة فيها عنصر بلا
     // `elements` كانت تمرّ بـ`ok:true` فيرى التاجر تصميمًا فارغًا
