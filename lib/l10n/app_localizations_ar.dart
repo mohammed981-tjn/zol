@@ -937,6 +937,10 @@ class LAr extends L {
       'إعلان خصم ٣٠٪ لمقهى مختص، ألوان دافئة|إعلان افتتاح صالون، ستوري، فخم وهادئ|عرض توظيف: نبحث عن كاشير، مربّع';
 
   @override
+  String get uploadPhotoOptionalHint =>
+      'اختياري — أو تابع بلا صورة وصِف تصميمك في شاشة السحر';
+
+  @override
   String get magicCopyText => 'نسخ النص';
 
   @override

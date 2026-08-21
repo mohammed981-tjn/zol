@@ -1723,6 +1723,12 @@ abstract class L {
   /// **'إعلان خصم ٣٠٪ لمقهى مختص، ألوان دافئة|إعلان افتتاح صالون، ستوري، فخم وهادئ|عرض توظيف: نبحث عن كاشير، مربّع'**
   String get magicInviteSamples;
 
+  /// No description provided for @uploadPhotoOptionalHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختياري — أو تابع بلا صورة وصِف تصميمك في شاشة السحر'**
+  String get uploadPhotoOptionalHint;
+
   /// No description provided for @magicCopyText.
   ///
   /// In ar, this message translates to:

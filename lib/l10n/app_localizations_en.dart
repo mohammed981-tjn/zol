@@ -945,6 +945,10 @@ class LEn extends L {
       '30% off ad for a specialty coffee shop, warm colors|Salon opening ad, story, elegant and calm|Now hiring: cashier wanted, square';
 
   @override
+  String get uploadPhotoOptionalHint =>
+      'Optional — or continue without a photo and describe your design on the magic screen';
+
+  @override
   String get magicCopyText => 'Copy text';
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../config/app_config.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/ad_badge.dart';
 import '../../models/ad_brief.dart';
 import '../../models/ad_template.dart';
@@ -556,8 +557,14 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
                   // يستهدفه اختبار الرحلة الكاملة بمطابقة تامّة، وتذييلُه
                   // بـ«(اختياري)» يكسر ستّ خطوات في ثلاثة اختبارات لأجل
                   // كلمةٍ موضعها الطبيعيّ سطرُ الشرح أصلًا.
+                  //
+                  // ومن `L` لا محفورًا: سقّاطة `l10n_guard_test` تعدّ نصوص
+                  // هذا الملفّ وترفض أيّ زيادة على ٢٦، وسطرٌ عربيّ جديد
+                  // يرفعها إلى ٢٧ فيسقط البناء. والسقّاطة تُشدّ ولا تُرخى
+                  // — فالجواب أن يُترجَم النصّ الجديد لا أن يُرفع الرقم،
+                  // وإلّا صارت كل ميزة عذرًا لتوسيع الدَّين.
                   Text(
-                    'اختياري — أو تابع بلا صورة وصِف تصميمك في شاشة السحر',
+                    L.of(context).uploadPhotoOptionalHint,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: context.textMuted, fontSize: 11.5),
                   ),
