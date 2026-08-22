@@ -17,6 +17,7 @@ import '../../services/local_designer.dart';
 import '../../services/wish_parser.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/art_mood.dart';
 import '../../widgets/ad_design_preview.dart';
 import '../../widgets/icon_circle.dart';
 import '../../widgets/print_cost_calculator.dart';

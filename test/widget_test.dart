@@ -60,7 +60,6 @@ import 'package:zol/widgets/product_image.dart';
 import 'package:zol/theme/art_fonts.dart';
 import 'package:zol/theme/art_mood.dart';
 import 'package:zol/theme/art_palette.dart';
-import 'package:zol/theme/spec_palette.dart';
 import 'package:zol/widgets/art_backdrop.dart';
 import 'package:zol/widgets/art_text.dart';
 import 'package:zol/services/background_remover.dart';
