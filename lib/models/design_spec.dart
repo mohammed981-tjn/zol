@@ -276,6 +276,7 @@ class DesignSpec {
     required this.elements,
     this.variant = 0,
     this.pairing = 0,
+    this.mood,
     this.note,
   });
 
@@ -293,6 +294,17 @@ class DesignSpec {
   /// دورًا: النموذج لا يعرف ما في حزمتنا من خطوط.
   final int pairing;
 
+  /// المزاج اللونيّ — فهرسٌ في `ArtMood.moods`.
+  ///
+  /// و`null` **ليس صفرًا**: الصفر مزاجٌ بعينه (ليليّ وذهبيّ)، و`null`
+  /// يعني «اشتقّ اللوحة من لون العلامة كما كنت تفعل». فبقيت المواصفات
+  /// المحفوظة قبل الأمزجة تُرسم كما رُسمت يوم حُفظت، ولم يستيقظ تاجرٌ
+  /// على مكتبته وقد تبدّلت ألوانها كلّها.
+  ///
+  /// راجع `ArtMood` — ولماذا صار اللون يُختار بدل أن يُشتقّ من درجةٍ
+  /// واحدة.
+  final int? mood;
+
   /// شرح النموذج لاختياره. يُعرض للتاجر ويُفيد في التشخيص حين يخرج
   /// تصميم رديء: نعرف ما ظنّ أنه يفعل.
   final String? note;
@@ -302,6 +314,7 @@ class DesignSpec {
     'backdrop': backdrop.name,
     'variant': variant,
     'pairing': pairing,
+    if (mood != null) 'mood': mood,
     if (note != null) 'note': note,
     'elements': elements.map((e) => e.toJson()).toList(),
   };
@@ -312,6 +325,7 @@ class DesignSpec {
     backdrop: _enumFrom(SpecBackdrop.values, j['backdrop']) ?? SpecBackdrop.mesh,
     variant: (j['variant'] as num?)?.toInt() ?? 0,
     pairing: (j['pairing'] as num?)?.toInt() ?? 0,
+    mood: (j['mood'] as num?)?.toInt(),
     note: j['note'] as String?,
     elements: ((j['elements'] as List?) ?? const [])
         .whereType<Map>()
@@ -325,6 +339,7 @@ class DesignSpec {
     elements: next,
     variant: variant,
     pairing: pairing,
+    mood: mood,
     note: note,
   );
 

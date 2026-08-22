@@ -128,6 +128,15 @@ class LocalDesigner {
     Color? seasonColor,
     Map<String, int>? taste,
     int count = 3,
+
+    /// المزاج اللونيّ المختار. `null` يُبقي الاشتقاق من [brandColor].
+    ///
+    /// ولا يدخل حلقة البحث كمحورٍ سادس رغم أن الناقد **يقيس اللون**
+    /// (بخلاف الطباعة): البحث اليوم نحو ألف ومئتَي مرشَّح، وضربُه في
+    /// اثني عشر مزاجًا يجعله أربعة عشر ألفًا على جهاز التاجر لأجل
+    /// اختيارٍ هو اختيارُه هو أصلًا. فالمزاج **مُعطًى** لا مبحوث،
+    /// والبحث يبقى على ما يملكه المولّد: الهندسة.
+    int? mood,
   }) {
     // المصمّم **يُكمل** لا يصمت.
     //
@@ -196,6 +205,7 @@ class LocalDesigner {
                   elements: elements,
                   variant: variant.abs(),
                   pairing: pairing,
+                  mood: mood,
                   note: _noteFor(archetype),
                 );
                 final score = DesignCritic.score(

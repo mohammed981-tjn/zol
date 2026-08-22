@@ -58,7 +58,9 @@ import 'package:zol/theme/app_palette_source.dart';
 import 'package:zol/l10n/app_localizations.dart';
 import 'package:zol/widgets/product_image.dart';
 import 'package:zol/theme/art_fonts.dart';
+import 'package:zol/theme/art_mood.dart';
 import 'package:zol/theme/art_palette.dart';
+import 'package:zol/theme/spec_palette.dart';
 import 'package:zol/widgets/art_backdrop.dart';
 import 'package:zol/widgets/art_text.dart';
 import 'package:zol/services/background_remover.dart';
@@ -3066,6 +3068,119 @@ void main() {
       expect(fx, closeTo(0.5, 0.02), reason: 'الأفقي انزاح في ${format.label}');
       expect(fy, closeTo(0.6, 0.02), reason: 'الرأسي انزاح في ${format.label}');
     }
+  });
+
+  // ── المزاج اللونيّ: لوحة تُختار لا تُشتقّ ───────────────────────────
+
+  test('المزاج: null يشتقّ من لون العلامة، والرقم يأخذ اللوحة كما هي', () {
+    const brand = Color(0xFFB03030);
+    const bare = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      elements: [],
+    );
+
+    // بلا مزاج: نفس ما كان يحدث قبل الأمزجة، حرفيًّا.
+    final derived = paletteFor(bare, brand);
+    final before = ArtPalette.from(brand, variant: bare.variant);
+    expect(derived.base, before.base);
+    expect(derived.complement, before.complement);
+
+    // بمزاج: ألوانه هي هي، بلا اشتقاق ولا ضبط تشبّع.
+    const at = 2;
+    final mood = ArtMood.at(at);
+    final picked = paletteFor(
+      const DesignSpec(
+        format: AdFormat.square,
+        backdrop: SpecBackdrop.mesh,
+        elements: [],
+        mood: at,
+      ),
+      brand,
+    );
+    expect(picked.base, mood.base);
+    expect(picked.deep, mood.deep);
+    expect(picked.complement, mood.complement);
+    expect(picked.neutral, mood.neutral);
+    expect(
+      picked.base,
+      isNot(before.base),
+      reason: 'وإلّا لم يكن المزاج قد غيّر شيئًا',
+    );
+  });
+
+  test('المزاج: حبر كل مزاج مقروء فوق عمقه وفوق حياديّه', () {
+    // الأمزجة تُضاف بالعين، والعين تخطئ. وهذا ما يمنع مزاجًا جديدًا
+    // بذهبٍ فاتح على عاجيّ من أن يمرّ بنصٍّ لا يُقرأ.
+    for (final m in ArtMood.moods) {
+      final p = ArtPalette.fromMood(m);
+      expect(
+        ArtPalette.contrast(m.deep, p.ink),
+        greaterThanOrEqualTo(4.5),
+        reason: 'حبر ${m.id} فوق عمقه',
+      );
+      expect(
+        ArtPalette.contrast(m.neutral, p.onInk),
+        greaterThanOrEqualTo(4.5),
+        reason: 'حبر ${m.id} فوق حياديّه',
+      );
+    }
+  });
+
+  test('المزاج: المعرّفات فريدة، والمجهول يعود إلى الأوّل لا يرمي', () {
+    final ids = ArtMood.moods.map((m) => m.id).toList();
+    expect(ids.toSet().length, ids.length, reason: 'معرّف مكرّر يخلط حفظين');
+    expect(ArtMood.byId('لا-وجود-له').id, ArtMood.moods.first.id);
+    expect(ArtMood.indexOfId('لا-وجود-له'), 0);
+    expect(ArtMood.indexOfId(ids[3]), 3);
+  });
+
+  testWidgets('المزاج: الطبيب والعارض على لوحة واحدة لا لوحتين', (
+    tester,
+  ) async {
+    // أخطر ما في إضافة المزاج: أن يُضاف في العارض وحده، فيفحص الطبيب
+    // تباين لوحةٍ مشتقّة ويرسم العارض ألوان مزاج — فيمرّ نصّ لا يُقرأ
+    // من مدقّق يقول إنه فحصه.
+    const brand = Color(0xFFB03030);
+    const at = 7; // ورقيّ وحبر — فاتح، فالحبر عليه داكن لا أبيض.
+    const spec = DesignSpec(
+      format: AdFormat.square,
+      backdrop: SpecBackdrop.mesh,
+      mood: at,
+      elements: [
+        DesignElement(
+          role: ElementRole.headline,
+          rect: SpecRect(0.1, 0.2, 0.8, 0.12),
+          text: 'عنوان',
+          color: ColorRole.auto,
+          align: SpecAlign.center,
+          maxLines: 1,
+          sizeFactor: 0.07,
+        ),
+      ],
+    );
+
+    final expected = ArtPalette.fromMood(ArtMood.at(at)).ink;
+
+    // الطبيب يرى المزاج.
+    final report = SpecDoctor.review(spec, brandColor: brand);
+    expect(report.spec.mood, at, reason: 'الطبيب لا يُسقط المزاج وهو يُصلح');
+
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: SizedBox(
+            width: 400,
+            child: SpecRenderer(spec: spec, brandColor: brand),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // والعارض يرسم بالحبر الذي حسبه الطبيب على اللوحة نفسها.
+    expect(tester.widget<Text>(find.text('عنوان')).style?.color, expected);
   });
 
   // ── الاقتران الطباعي: وجهان لا حجمان ──────────────────────────────

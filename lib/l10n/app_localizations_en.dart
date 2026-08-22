@@ -949,6 +949,12 @@ class LEn extends L {
       'Optional — or continue without a photo and describe your design on the magic screen';
 
   @override
+  String get moodPickerTitle => 'Colour mood';
+
+  @override
+  String get moodFromBrand => 'From my brand colour';
+
+  @override
   String get magicCopyText => 'Copy text';
 
   @override

@@ -43,7 +43,7 @@ class SpecDoctor {
     bool hasLogo = false,
     Color? seasonColor,
   }) {
-    final art = ArtPalette.from(brandColor, variant: spec.variant);
+    final art = paletteFor(spec, brandColor);
     final margin = spec.format.safeMargin;
     final issues = <SpecIssue>[];
     final fixed = <DesignElement>[];

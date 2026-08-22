@@ -14,6 +14,7 @@ import '../../models/ad_format.dart';
 import '../../services/photo_enhancer.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/art_mood.dart';
 import '../../widgets/choice_chip_group.dart';
 import '../../widgets/section_header.dart';
 import 'magic_screen.dart';
@@ -212,6 +213,8 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
             const SizedBox(height: 8),
             _FormatHint(format: adFormatFromLabel(_selectedFormat)),
             const SizedBox(height: 24),
+            _buildMoodPicker(),
+            const SizedBox(height: 24),
             _buildSeasonPicker(),
             const SizedBox(height: 24),
             _buildBadgePicker(),
@@ -357,6 +360,83 @@ class _UploadDetailsScreenState extends State<UploadDetailsScreen> {
       ],
     );
   }
+
+  /// مزاج الألوان — الشكوى التي بُني لها `ArtMood`.
+  ///
+  /// وهو يكتب في `AppState` لا في حالة هذه الشاشة، بخلاف الموسم
+  /// والشارة: أولئك يخصّان هذا الإعلان، والمزاج تفضيلٌ يبقى — ومن اختار
+  /// «بحريّ بارد» لا يريد أن يعيد اختياره في كل إعلان. وتغييره من هنا
+  /// يغيّر ما يليه، فهو ظاهرٌ حيث يُستعمل لا مدفونٌ في الإعدادات.
+  ///
+  /// والرقاقة تعرض **الألوان نفسها** لا أسماءها وحدها: اسمٌ مثل «توتيّ
+  /// غنيّ» لا يُخبر أحدًا بما سيراه، وقُرصان صغيران يُخبران في لمحة.
+  Widget _buildMoodPicker() {
+    final state = AppStateScope.of(context);
+    final l = L.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l.moodPickerTitle,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: context.scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _moodChip(state, null, l.moodFromBrand, null),
+            for (final mood in ArtMood.moods)
+              _moodChip(state, mood.id, mood.name, mood),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _moodChip(AppState state, String? id, String label, ArtMood? mood) {
+    final isSelected = state.designMoodId == id;
+    return ChoiceChip(
+      key: ValueKey('mood-${id ?? 'brand'}'),
+      avatar: mood == null
+          ? null
+          // قرصان متداخلان: الأساس والمرافق — وهما ما يُرى في التصميم.
+          : SizedBox(
+              width: 26,
+              height: 18,
+              child: Stack(
+                children: [
+                  _dot(mood.base),
+                  Positioned(left: 9, child: _dot(mood.complement)),
+                ],
+              ),
+            ),
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => state.setDesignMood(id),
+      selectedColor: mood?.base ?? context.scheme.primary,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : context.scheme.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: context.cardBg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      side: BorderSide.none,
+    );
+  }
+
+  Widget _dot(Color c) => Container(
+    width: 17,
+    height: 17,
+    decoration: BoxDecoration(
+      color: c,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1),
+    ),
+  );
 
   Widget _seasonChip(
     SeasonalTheme? season,

@@ -1729,6 +1729,18 @@ abstract class L {
   /// **'اختياري — أو تابع بلا صورة وصِف تصميمك في شاشة السحر'**
   String get uploadPhotoOptionalHint;
 
+  /// No description provided for @moodPickerTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزاج الألوان'**
+  String get moodPickerTitle;
+
+  /// No description provided for @moodFromBrand.
+  ///
+  /// In ar, this message translates to:
+  /// **'من لون علامتي'**
+  String get moodFromBrand;
+
   /// No description provided for @magicCopyText.
   ///
   /// In ar, this message translates to:

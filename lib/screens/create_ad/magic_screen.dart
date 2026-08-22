@@ -289,6 +289,15 @@ class _MagicScreenState extends State<MagicScreen> {
     }
   }
 
+  /// المزاج اللونيّ المختار كفهرس، أو `null` أي «اشتقّ من لون العلامة».
+  ///
+  /// والترجمة من معرّف إلى فهرس تقع هنا لا في الحالة: الحالة تحفظ
+  /// المعرّف لأنه يصمد أمام إعادة ترتيب القائمة، والمواصفة تحمل الفهرس
+  /// لأن النموذج يتكلّم بالأرقام. راجع `ArtMood`.
+  int? _mood(AppState state) => state.designMoodId == null
+      ? null
+      : ArtMood.indexOfId(state.designMoodId);
+
   /// المواصفة المعروضة الآن — أساسُ التعديل حين يطلبه التاجر.
   DesignSpec? get _shownSpec {
     final ads = _ads;
@@ -371,6 +380,9 @@ class _MagicScreenState extends State<MagicScreen> {
           tone: widget.brief.tone,
           hasImage: widget.brief.hasProductImage,
           base: base,
+          // والمزاج من الأساس حين نعدّله، للسبب نفسه الذي جعل الصيغة
+          // منه: من طلب «كبّر العنوان» لم يطلب تبديل ألوان لوحته.
+          mood: base?.mood ?? _mood(state),
         ),
         brandColor: Color(brandArgb),
         hasLogo: state.brandLogoBytes != null,
@@ -475,6 +487,7 @@ class _MagicScreenState extends State<MagicScreen> {
         seasonColor: _seasonColor,
         taste: state.designTaste,
         count: 8,
+        mood: _mood(state),
       );
       if (designs.isEmpty) return const [];
       _variants = designs;
@@ -552,6 +565,7 @@ class _MagicScreenState extends State<MagicScreen> {
         seasonColor: _seasonColor,
         taste: AppStateScope.of(context).designTaste,
         count: 8,
+        mood: _mood(AppStateScope.of(context)),
       );
       if (designs.isEmpty) return const [];
       _variants = designs;

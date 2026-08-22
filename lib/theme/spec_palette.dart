@@ -1,7 +1,22 @@
 import 'dart:ui';
 
 import '../models/design_spec.dart';
+import 'art_mood.dart';
 import 'art_palette.dart';
+
+/// لوحة المواصفة — مزاجُها المختار، أو الاشتقاق من لون العلامة.
+///
+/// موضعها هنا لا في كلٍّ من الطبيب والناقد والعارض، وللسبب المذكور
+/// أدناه في [resolveColorRole] نفسه: **ثلاثتها تبني اللوحة**، فلو
+/// أضيف المزاج في العارض وحده لفحص الطبيبُ تباينَ لوحةٍ مشتقّة ورسم
+/// العارضُ ألوان مزاجٍ آخر — فيمرّ نصٌّ لا يُقرأ من مدقّقٍ يقول إنه
+/// فحصه. وهذا أسوأ من غياب الفحص لأنه يُطمئن.
+///
+/// و`spec.mood == null` يعني الاشتقاق كما كان — راجع `DesignSpec.mood`.
+ArtPalette paletteFor(DesignSpec spec, Color brandColor) =>
+    spec.mood == null
+    ? ArtPalette.from(brandColor, variant: spec.variant)
+    : ArtPalette.fromMood(ArtMood.at(spec.mood!));
 
 /// ترجمة أدوار الألوان إلى ألوان.
 ///

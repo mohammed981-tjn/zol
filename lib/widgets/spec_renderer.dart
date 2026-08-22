@@ -74,7 +74,7 @@ class SpecRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final art = ArtPalette.from(brandColor, variant: spec.variant);
+    final art = paletteFor(spec, brandColor);
     final seed = spec.elements.length * 31 + spec.variant;
     // خطّ العلامة يحلّ محلّ وجه **العرض** لا وجهَي الاقتران معًا —
     // راجع `ArtFonts`. وكان يُفرض على النصّ كلّه بـ`DefaultTextStyle`

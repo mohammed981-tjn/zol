@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../models/ad_format.dart';
 import '../models/design_spec.dart';
 import '../theme/art_palette.dart';
+import '../theme/spec_palette.dart';
 import 'spec_doctor.dart';
 
 /// درجة تصميم مفصَّلة — لا رقمًا واحدًا مبهمًا.
@@ -115,7 +116,7 @@ class DesignCritic {
       seasonColor: seasonColor,
     );
     final s = report.spec;
-    final art = ArtPalette.from(brandColor, variant: s.variant);
+    final art = paletteFor(s, brandColor);
 
     return DesignScore(
       blocked: report.blocking,

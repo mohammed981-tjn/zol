@@ -26,6 +26,7 @@ class DesignWish {
     this.hasImage = false,
     this.count = 2,
     this.base,
+    this.mood,
   });
 
   /// ما كتبه التاجر حرفيًّا. لا نُعيد صياغته ولا نُلحق به قوالبنا: كلّ
@@ -48,6 +49,14 @@ class DesignWish {
   /// عن تكوينه وأزعجه حجم عنوان لا يجوز أن نُجبره على مقامرة بتكوين
   /// جديد كاملًا.
   final DesignSpec? base;
+
+  /// المزاج اللونيّ الذي اختاره التاجر، أو `null` أي الاشتقاق من لون
+  /// علامته.
+  ///
+  /// يُرسل إلى النموذج **ويُفرض على ما يعود**: اختيارٌ صريح اتّخذه
+  /// التاجر بيده لا يجوز أن يُلغيه تخمينُ نموذج. والنموذج يبقى حرًّا
+  /// حين لا يختار التاجر شيئًا.
+  final int? mood;
 
   /// النصّ كما يصل النموذج.
   ///
@@ -75,6 +84,7 @@ class DesignWish {
     if (tone != null && tone!.trim().isNotEmpty) 'tone': tone,
     'has_image': hasImage,
     'count': count.clamp(1, 4),
+    if (mood != null) 'mood': mood,
   };
 }
 
@@ -227,10 +237,11 @@ class DesignWishService {
       final judged = [
         for (final j in raw.specs)
           () {
-            // الصيغة تأتي من التاجر لا من النموذج: هو اختارها في
-            // الشاشة، وما يقترحه النموذج في حقل `format` تخمينٌ قد
-            // يخالف اللوحة التي سيُرسم عليها فعلًا.
-            final spec = _withFormat(DesignSpec.fromJson(j), wish.format);
+            final spec = _withChoices(
+              DesignSpec.fromJson(j),
+              wish.format,
+              wish.mood,
+            );
             return WishDesign(
               report: SpecDoctor.review(
                 spec,
@@ -281,14 +292,24 @@ class DesignWishService {
     );
   }
 
-  DesignSpec _withFormat(DesignSpec s, AdFormat format) => DesignSpec(
-    format: format,
-    backdrop: s.backdrop,
-    elements: s.elements,
-    variant: s.variant,
-    pairing: s.pairing,
-    note: s.note,
-  );
+  /// يفرض ما اختاره التاجر على ما أعاده النموذج.
+  ///
+  /// الصيغة تأتي منه لا من النموذج: هو اختارها في الشاشة، وما يقترحه
+  /// النموذج في `format` تخمينٌ قد يخالف اللوحة التي سيُرسم عليها فعلًا.
+  ///
+  /// والمزاج مثلها حين يُختار: تاجرٌ ضغط «بحريّ بارد» ثم رأى تصميمًا
+  /// ترابيًّا يظنّ الزرّ معطّلًا. أمّا حين لا يختار ([wishMood] فارغ)
+  /// فيبقى ما اقترحه النموذج — أو `null` فيُشتقّ من لون العلامة.
+  DesignSpec _withChoices(DesignSpec s, AdFormat format, int? wishMood) =>
+      DesignSpec(
+        format: format,
+        backdrop: s.backdrop,
+        elements: s.elements,
+        variant: s.variant,
+        pairing: s.pairing,
+        mood: wishMood ?? s.mood,
+        note: s.note,
+      );
 
   Future<({List<Map<String, dynamic>> specs, String model})> _call(
     DesignWish wish, {

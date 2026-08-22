@@ -941,6 +941,12 @@ class LAr extends L {
       'اختياري — أو تابع بلا صورة وصِف تصميمك في شاشة السحر';
 
   @override
+  String get moodPickerTitle => 'مزاج الألوان';
+
+  @override
+  String get moodFromBrand => 'من لون علامتي';
+
+  @override
   String get magicCopyText => 'نسخ النص';
 
   @override

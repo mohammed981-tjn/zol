@@ -45,6 +45,7 @@ class AppState extends ChangeNotifier {
   static const _categoryKey = 'business_category';
   static const _trashKey = 'trashed_ads';
   static const _tasteKey = 'design_taste';
+  static const _moodKey = 'design_mood';
 
   final List<GeneratedAd> savedAds = [];
   final List<PrintOrder> orders = [];
@@ -97,6 +98,16 @@ class AppState extends ChangeNotifier {
   int? brandColorValue;
   Uint8List? brandLogoBytes;
   BrandFont? brandFont;
+
+  /// المزاج اللونيّ المختار — معرّفٌ من `ArtMood.moods`، أو `null` أي
+  /// «اشتقّ من لون علامتي».
+  ///
+  /// ويُحفظ بالمعرّف لا بالفهرس: إعادةُ ترتيب القائمة أو إدخال مزاجٍ في
+  /// وسطها كان سيُبدّل مزاج كل تاجرٍ حفظ رقمًا.
+  ///
+  /// والافتراض `null` عمدًا — لا مزاجٌ نفرضه: من ضبط لون علامته يراه،
+  /// ومن أراد غيره اختار. راجع `ArtMood`.
+  String? designMoodId;
   Color? get brandColor =>
       brandColorValue == null ? null : Color(brandColorValue!);
 
@@ -168,6 +179,7 @@ class AppState extends ChangeNotifier {
     }
 
     brandColorValue = prefs.getInt(_brandColorKey);
+    designMoodId = prefs.getString(_moodKey);
     final fontName = prefs.getString(_brandFontKey);
     brandFont = BrandFont.values.cast<BrandFont?>().firstWhere(
       (f) => f?.name == fontName,
@@ -429,6 +441,17 @@ class AppState extends ChangeNotifier {
     }
     notifyListeners();
     _pushBrandIdentity();
+  }
+
+  /// `null` يعيد الاشتقاق من لون العلامة.
+  void setDesignMood(String? id) {
+    designMoodId = id;
+    if (id == null) {
+      _prefs?.remove(_moodKey);
+    } else {
+      _prefs?.setString(_moodKey, id);
+    }
+    notifyListeners();
   }
 
   void setBrandFont(BrandFont? font) {
