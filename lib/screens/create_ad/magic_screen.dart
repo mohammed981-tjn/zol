@@ -14,6 +14,7 @@ import '../../services/ad_generator.dart';
 import '../../services/ai_gateway.dart';
 import '../../services/design_wish_service.dart';
 import '../../services/local_designer.dart';
+import '../../services/spec_doctor.dart';
 import '../../services/wish_parser.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
@@ -369,6 +370,21 @@ class _MagicScreenState extends State<MagicScreen> {
       if (_pages.hasClients) _pages.jumpToPage(0);
     }
 
+    // كاتب النصّ يجري **بموازاة** المصمّم لا قبله.
+    //
+    // نصّ الأمنية كان يكتبه نموذج **التخطيط** وهو منشغل بالإحداثيات —
+    // كاتبٌ بالعَرَض لا بالقصد. وكاتب النصّ الحقيقيّ (`ad-magic` بسلسلة
+    // كاتب ← ناقد) موصولٌ منذ زمن لكن لمسار القوالب وحده، فبطاقاتُ
+    // القوالب تحمل نصًّا مكتوبًا ومُقيَّمًا وبطاقاتُ الأمنية لا.
+    //
+    // والتوازي لا التتابع: نداءٌ قبل نداء يضيف زمنه كاملًا إلى انتظار
+    // التاجر، وهذان لا يحتاج أحدهما مخرَج الآخر — المصمّم يضع
+    // المستطيلات والكاتب يملؤها. فإن تأخّر الكاتب أو سقط بقي التخطيط
+    // كما هو بنصّ النموذج، ولم يخسر التاجر إلّا التحسين.
+    // وفي وضع التنقيح لا يُنادى: من كتب «كبّر العنوان» طلب تعديل تكوين
+    // لا كلماتٍ جديدة، وإعادةُ كتابتها تحته تُضيّع ما رضي عنه.
+    final copy = base != null ? null : _writeCopy(text);
+
     try {
       final result = await _wishes.design(
         DesignWish(
@@ -390,7 +406,17 @@ class _MagicScreenState extends State<MagicScreen> {
       );
       if (!mounted) return;
 
-      final made = [for (final d in result.designs) _adFromDesign(d)];
+      final written = await copy;
+      if (!mounted) return;
+
+      // لكل تخطيطٍ صيغتُه: الاثنان مرتّبان بالأفضل أوّلًا (التخطيطات
+      // بدرجة الناقد، والصيغ بدرجة ناقد النصّ)، فتقابُلهما بالفهرس يعطي
+      // بطاقاتٍ تختلف **تكوينًا ونصًّا** معًا. ولو أخذت كلُّها الصيغة
+      // الأولى لرأى التاجر ثلاث بطاقات بالكلمات نفسها.
+      final made = [
+        for (var i = 0; i < result.designs.length; i++)
+          _adFromDesign(result.designs[i], copy: _copyAt(written, i)),
+      ];
       setState(() {
         _wishBusy = false;
         // تخطيطات السحابة تحلّ محلّ المحلّية لا تُضاف إليها: التاجر طلب
@@ -581,19 +607,80 @@ class _MagicScreenState extends State<MagicScreen> {
     }
   }
 
+  /// ينادي كاتب النصّ على وصف الأمنية. `null` عند أي تعثّر.
+  ///
+  /// ونصّ الأمنية يُمرَّر في `description` لا في اسم المنتج: الكاتب
+  /// يدمج الاسم والوصف في موجزٍ واحد، فيصل إليه ما طلبه التاجر بلفظه
+  /// («خصم ٣٠٪ لمقهى مختص») لا اسم المنتج وحده.
+  Future<PreviewResult?> _writeCopy(String wish) async {
+    try {
+      return await _gateway.generatePreview(
+        widget.brief.copyWith(description: wish),
+      );
+    } catch (_) {
+      // بلا `_say`: التاجر لا يعنيه أن كاتبًا مساعدًا تعثّر ما دام
+      // تصميمه في يده. والعطل يظهر في سجل الخادم لمن يبحث عنه.
+      return null;
+    }
+  }
+
+  /// الصيغة المقابلة للتخطيط رقم [i]، إن كُتبت.
+  CopyVariant? _copyAt(PreviewResult? r, int i) =>
+      r == null || i >= r.variants.length ? null : r.variants[i];
+
+  /// لون العلامة كما تحسبه بقيّة الشاشة — بترتيب الأسبقية نفسه.
+  Color _brandColor() => Color(
+    AppStateScope.of(context).brandColorValue ??
+        widget.brief.brandColor ??
+        widget.brief.paletteColor ??
+        0xFF2C6BED,
+  );
+
+  GeneratedAd _adFromDesign(WishDesign d, {CopyVariant? copy}) =>
+      _adFromSpec(d.spec, score: d.score.total, copy: copy);
+
   /// يحوّل التخطيط إلى إعلان تعرفه بقية الشاشات.
   ///
-  /// النصّ يُستخرج من عناصر المواصفة نفسها لا يُطلب ثانيةً: النموذج كتبه
-  /// وهو يرى مكانه، ونصٌّ كُتب لموضعه أصدق من نصٍّ كُتب ثم حُشر فيه.
-  GeneratedAd _adFromDesign(WishDesign d) =>
-      _adFromSpec(d.spec, score: d.score.total);
-
-  /// [score] درجة الناقد من مئة، إن قِيست.
+  /// [score] درجة الناقد من مئة، إن قِيست. وتُعرض للتخطيطات المولَّدة كما
+  /// تُعرض لنسخ القوالب: كان التاجر يرى رقم توافقٍ على ما اقترحناه نحن،
+  /// ولا يرى شيئًا على ما طلبه هو — فيبدو المقيس أوثق من المطلوب لأنّ
+  /// أحدهما وحده يحمل رقمًا.
   ///
-  /// وتُعرض للتخطيطات المولَّدة كما تُعرض لنسخ القوالب: كان التاجر يرى
-  /// رقم توافقٍ على ما اقترحناه نحن، ولا يرى شيئًا على ما طلبه هو —
-  /// فيبدو المقيس أوثق من المطلوب لأنّ أحدهما وحده يحمل رقمًا.
-  GeneratedAd _adFromSpec(DesignSpec spec, {double? score}) {
+  /// و[copy] صيغةُ كاتب النصّ إن كُتبت. بدونها يبقى نصّ المواصفة كما
+  /// كان — وهو ما كان يحدث دائمًا: النموذج يكتبه وهو يرى مكانه، وذلك
+  /// أصدق من لا شيء لكنه ليس كتابةً إعلانية. فحين يصل الكاتب **يغلب**:
+  /// كلماتُه مرّت على ناقدٍ يقيسها، وكلماتُ المصمّم أثرٌ جانبيّ لعملٍ
+  /// آخر.
+  ///
+  /// ويُكتب في **المواصفة** لا في `GeneratedAd` وحده: العارض يرسم من
+  /// المواصفة، فنصٌّ يُبدَّل في الإعلان دون عناصره يجعل البطاقة تقول
+  /// شيئًا والصورةَ تقول غيره.
+  GeneratedAd _adFromSpec(
+    DesignSpec spec, {
+    double? score,
+    CopyVariant? copy,
+  }) {
+    if (copy != null) {
+      spec = spec
+          .withRoleText(ElementRole.headline, copy.headline)
+          .withRoleText(ElementRole.subhead, copy.body)
+          .withRoleText(ElementRole.cta, copy.cta);
+      if (copy.hashtags.isNotEmpty) {
+        spec = spec.withRoleText(ElementRole.tags, copy.hashtags.join(' '));
+      }
+
+      // والطبيب يُعاد بعد التبديل، لا قبله وحده.
+      //
+      // خدمة الأمنية فحصت المواصفة بنصّ **النموذج**، ثم بدّلناه هنا
+      // بنصّ الكاتب — وهو أطول عادةً لأنه كُتب ليُقنع لا ليملأ مستطيلًا.
+      // فحكمُ الطبيب صار على نصٍّ غير الذي سيُرسم، وهو عين العلّة التي
+      // منعناها في اللوحة اللونية: مدقّقٌ يقول إنه فحص، ورسمٌ لشيء آخر.
+      //
+      // ولا يكفي أن `ArtText` يُصغّر ما يفيض: التصغير يُنجّي من الفيضان
+      // ولا يُنجّي من التداخل ولا من حرفٍ خرج عن الهامش الآمن.
+      spec = SpecDoctor.review(spec, brandColor: _brandColor()).spec;
+    }
+
     String? textOf(ElementRole r) {
       final t = spec.firstOf(r)?.text?.trim();
       return (t == null || t.isEmpty) ? null : t;

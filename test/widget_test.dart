@@ -3755,10 +3755,84 @@ void main() {
         .widgetList<Text>(find.byType(Text))
         .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
         .toList();
+
+    // كان هذا الاختبار يحرس أن عنوان **نموذج التخطيط** («مذاق الفخامة»)
+    // يصل إلى الشاشة. وصار كاتب النصّ يُنادى بموازاة المصمّم وكلماتُه
+    // تغلب — فالحارس ينقلب: عنوان الكاتب هو ما يُرسم، وعنوان المصمّم
+    // ينزاح.
+    //
+    // ووصولُ تخطيط التاجر يحرسه `SpecRenderer` أعلاه: العارض لا يُستعمل
+    // إلا للمواصفة، فوجودُه دليلٌ على أن ما رُسم تخطيطُه هو لا أحد
+    // القوالب الأحد عشر.
+    expect(
+      drawn.any((t) => t.contains('ربع السعر طايح')),
+      isTrue,
+      reason: 'عنوان كاتب النصّ لم يصل إلى الشاشة: $drawn',
+    );
+    expect(
+      drawn.any((t) => t.contains('مذاق الفخامة')),
+      isFalse,
+      reason: 'نصّ المصمّم كان يجب أن ينزاح لنصّ الكاتب: $drawn',
+    );
+  });
+
+  // وحين يتعثّر الكاتب يبقى نصّ المصمّم — الكاتب إثراءٌ لا شرط.
+  testWidgets('شاشة السحر: سقوط كاتب النصّ لا يُفرّغ التخطيط', (tester) async {
+    MagicScreen.debugWishServiceOverride = () => wishService(
+      MockClient(
+        (req) async => http.Response.bytes(utf8.encode(liveDesignBody()), 200),
+      ),
+    );
+    // بوّابة تسقط: الكاتب لا يردّ شيئًا.
+    MagicScreen.debugGatewayOverride = () => AiGateway(
+      baseUrl: 'http://test.local',
+      useSupabase: true,
+      supabaseUrl: 'http://test.local',
+      merchantId: 'merchant-test',
+      client: MockClient((req) async => http.Response('boom', 500)),
+    );
+    addTearDown(() {
+      MagicScreen.debugWishServiceOverride = null;
+      MagicScreen.debugGatewayOverride = _fakeGateway;
+    });
+
+    final state = AppState();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: L.localizationsDelegates,
+        supportedLocales: L.supportedLocales,
+        theme: buildAppTheme(Brightness.light),
+        home: AppStateScope(
+          notifier: state,
+          child: MagicScreen(
+            brief: AdBrief(
+              productName: 'قهوة مختصة',
+              description: 'حبّ مختار',
+              tone: 'فخم',
+              platform: 'إنستغرام',
+              format: 'ستوري',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).last,
+      'استاند رول لمقهى بخصم ٣٠٪',
+    );
+    await tester.tap(find.byIcon(Icons.arrow_upward));
+    await tester.pumpAndSettle();
+
+    final drawn = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((w) => (w.data ?? '').replaceAll(RegExp(r'\s+'), ' ').trim())
+        .toList();
     expect(
       drawn.any((t) => t.contains('مذاق الفخامة')),
       isTrue,
-      reason: 'عنوان التخطيط المولَّد لم يصل إلى الشاشة: $drawn',
+      reason: 'سقوط الكاتب أضاع نصّ المصمّم بدل أن يُبقيه: $drawn',
     );
   });
 

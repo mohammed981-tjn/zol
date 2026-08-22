@@ -101,13 +101,14 @@ class AdBrief {
 
   AdBrief copyWith({
     String? format,
+    String? description,
     Uint8List? imageBytes,
     double? productScale,
     double? productDx,
     double? productDy,
   }) => AdBrief(
     productName: productName,
-    description: description,
+    description: description ?? this.description,
     tone: tone,
     platform: platform,
     format: format ?? this.format,
