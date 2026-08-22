@@ -11,6 +11,7 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
  */
 export function cors(allowedOrigins: string[]): RequestHandler {
   const allowAll = allowedOrigins.includes('*');
+  const allowLocal = allowedOrigins.includes('localhost:*');
   const allowed = new Set(allowedOrigins.map((o) => o.replace(/\/$/, '')));
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -18,7 +19,7 @@ export function cors(allowedOrigins: string[]): RequestHandler {
 
     if (origin) {
       const normalized = origin.replace(/\/$/, '');
-      if (allowAll || allowed.has(normalized)) {
+      if (allowAll || allowed.has(normalized) || (allowLocal && isLocalhost(normalized))) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Vary', 'Origin');
       }
@@ -39,7 +40,30 @@ export function cors(allowedOrigins: string[]): RequestHandler {
   };
 }
 
-/** يقرأ الأصول المسموح بها من البيئة، وافتراضها منافذ التطوير المحلية. */
+/**
+ * أصل محلي؟ (أي منفذ على localhost أو 127.0.0.1)
+ *
+ * لا يُقبل إلا حين تُدرَج `localhost:*` صراحةً. صفحة على جهاز المطوّر لا
+ * تصل إلى منسّق إنتاجي، لأن المتصفح يمنع الخلط بين http وhttps أصلاً،
+ * والأهم أن الإنتاج لا يضع هذه القيمة في ALLOWED_ORIGINS.
+ */
+function isLocalhost(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * يقرأ الأصول المسموح بها من البيئة.
+ *
+ * الافتراض `localhost:*` لا منفذاً بعينه: `flutter run -d chrome` يختار
+ * منفذاً عشوائياً في كل تشغيل، فقائمة بمنفذ ثابت كانت تُسقط الطلب بخطأ
+ * CORS مبهم ما لم يُمرَّر --web-port يدوياً في كل مرة. الإنتاج يضبط
+ * ALLOWED_ORIGINS بأصوله الصريحة فيسقط هذا التساهل تلقائياً.
+ */
 export function allowedOriginsFromEnv(env = process.env): string[] {
   const raw = env.ALLOWED_ORIGINS?.trim();
   if (raw) {
@@ -48,5 +72,5 @@ export function allowedOriginsFromEnv(env = process.env): string[] {
       .map((o) => o.trim())
       .filter(Boolean);
   }
-  return ['http://localhost:8877', 'http://127.0.0.1:8877', 'http://localhost:5000'];
+  return ['localhost:*'];
 }

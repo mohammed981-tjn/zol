@@ -1,29 +1,78 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'screens/home_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/app_role.dart';
+import 'l10n/app_localizations.dart';
+import 'screens/admin_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/print_shop_screen.dart';
+import 'screens/shell_screen.dart';
+import 'services/supabase_config.dart';
+import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  runApp(const AdCraftApp());
+/// مدخل نكهة التاجر — الافتراضية.
+Future<void> main() => bootstrap();
+
+/// الإقلاع المشترك بين كل النكهات.
+///
+/// مفصولٌ عن [main] عمدًا: ملفّ مدخل نكهةٍ جديدة يصير سطرًا واحدًا
+/// (`void main() => bootstrap(pinned: AppRole.printShop);`) بدل نسخ
+/// التهيئة كلّها ثم افتراقها عن أصلها عند أوّل تعديل.
+Future<void> bootstrap({AppRole? pinned}) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    publishableKey: SupabaseConfig.publishableKey,
+  );
+  // استرجاع الإعلانات والطلبات والتفضيلات المحفوظة على الجهاز، وجلسة
+  // حساب التاجر من Supabase إن كانت محفوظة من زيارة سابقة.
+  final state = await AppState.load(client: Supabase.instance.client);
+  runApp(ZolApp(state: state, pinnedRole: pinned));
 }
 
-class AdCraftApp extends StatelessWidget {
-  const AdCraftApp({super.key});
+class ZolApp extends StatelessWidget {
+  const ZolApp({super.key, required this.state, this.pinnedRole});
+
+  final AppState state;
+
+  /// دورٌ يفرضه مدخل النكهة. `null` يترك الحسم لهوية الحساب.
+  final AppRole? pinnedRole;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AdCraft AI Marketplace',
-      debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const HomeScreen(),
+    return AppStateScope(
+      notifier: state,
+      child: ListenableBuilder(
+        listenable: state,
+        builder: (context, _) => MaterialApp(
+          title: 'zol',
+          debugShowCheckedModeBanner: false,
+          theme: buildAppTheme(Brightness.light),
+          darkTheme: buildAppTheme(Brightness.dark),
+          themeMode: state.themeMode,
+          // `null` ⇒ يتبع Flutter لغة الجهاز ويختار أقربها من
+          // المدعومة. فرضُ `Locale('ar')` كان يجعل الاتجاه والنصّ
+          // عربيَّين على كل جهاز مهما كانت لغته.
+          locale: state.locale,
+          supportedLocales: L.supportedLocales,
+          localizationsDelegates: L.localizationsDelegates,
+          home: _home(),
+        ),
+      ),
     );
+  }
+
+  /// الجذر يتبع دور **البناء** لا صفة الحساب — راجع [rootRole].
+  ///
+  /// وشاشة الترحيب تخصّ التاجر وحده: مطبعةٌ تفتح لوحتها لا تحتاج ثلاث
+  /// صفحات تشرح توليد الإعلانات.
+  Widget _home() {
+    return switch (rootRole(pinned: pinnedRole)) {
+      AppRole.admin => const AdminScreen(),
+      AppRole.printShop => const PrintShopScreen(),
+      AppRole.merchant => state.hasOnboarded
+          ? const ShellScreen()
+          : const OnboardingScreen(),
+    };
   }
 }

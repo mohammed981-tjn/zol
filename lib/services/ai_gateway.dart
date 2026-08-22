@@ -1,14 +1,96 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 
+import '../config/app_config.dart';
 import '../models/ad_brief.dart';
 import '../models/generation.dart';
+import '../models/seasonal_theme.dart';
+import 'image_store.dart';
+
+/// لون العلامة كما يُرسل للخادم في `primary` — لون زرّ الدعوة وميزان
+/// الانسجام عند الناقد البصري.
+///
+/// لون فاتح جدًّا يُظلم إلى نفس الدرجة اللونية: نص الزر يُرسم بلون
+/// [accentFromBrand] الفاتح، وفاتح على فاتح لا يُقرأ — أما داكن من عائلة
+/// العلامة نفسها فيبقى هويةً وتُقرأ حروفه.
+String primaryFromBrand(int rgb) {
+  final hsl = _rgbToHsl(rgb);
+  if (hsl.l <= 0.55) {
+    return '#${(rgb & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  }
+  return _hslToHex(hsl.h, hsl.s, 0.32);
+}
+
+/// مرافق فاتح للون العلامة — حروف العنوان تُرسم فوق تظليل أسود في أعلى
+/// الصورة، فتحتاج لونًا فاتحًا من عائلة العلامة نفسها لا ذهبيًا عامًّا.
+///
+/// نحفظ درجة اللون ونرفع الإضاءة إلى ٠٫٨ ونكبح التشبّع كي لا يصرخ اللون
+/// فوق الصورة الفوتوغرافية.
+String accentFromBrand(int rgb) {
+  final hsl = _rgbToHsl(rgb);
+  return _hslToHex(hsl.h, math.min(hsl.s, 0.60), 0.80);
+}
+
+({double h, double s, double l}) _rgbToHsl(int rgb) {
+  final r = ((rgb >> 16) & 0xFF) / 255.0;
+  final g = ((rgb >> 8) & 0xFF) / 255.0;
+  final b = (rgb & 0xFF) / 255.0;
+  final maxC = math.max(r, math.max(g, b));
+  final minC = math.min(r, math.min(g, b));
+  final l = (maxC + minC) / 2;
+  final d = maxC - minC;
+  if (d == 0) return (h: 0, s: 0, l: l);
+  final s = d / (1 - (2 * l - 1).abs());
+  double h;
+  if (maxC == r) {
+    h = 60 * (((g - b) / d) % 6);
+  } else if (maxC == g) {
+    h = 60 * ((b - r) / d + 2);
+  } else {
+    h = 60 * ((r - g) / d + 4);
+  }
+  if (h < 0) h += 360;
+  return (h: h, s: s, l: l);
+}
+
+String _hslToHex(double h, double s, double l) {
+  final c = (1 - (2 * l - 1).abs()) * s;
+  final x = c * (1 - ((h / 60) % 2 - 1).abs());
+  final m = l - c / 2;
+  final (r, g, b) = switch (h) {
+    < 60 => (c, x, 0.0),
+    < 120 => (x, c, 0.0),
+    < 180 => (0.0, c, x),
+    < 240 => (0.0, x, c),
+    < 300 => (x, 0.0, c),
+    _ => (c, 0.0, x),
+  };
+  int ch(double v) => ((v + m) * 255).round().clamp(0, 255);
+  final val = (ch(r) << 16) | (ch(g) << 8) | ch(b);
+  return '#${val.toRadixString(16).padLeft(6, '0')}';
+}
+
+/// نتيجة مشهد مولَّد عند الطلب لصيغة اختارها التاجر.
+class SceneResult {
+  const SceneResult({required this.url, this.verified});
+
+  final String url;
+
+  /// هل قرأ المدقّق كل الحروف من الصورة النهائية؟ null = تعذّر التدقيق.
+  final bool? verified;
+}
 
 /// خطأ يحمل رسالة عربية جاهزة للعرض على المستخدم.
 class GatewayException implements Exception {
-  GatewayException(this.message, {this.isQuota = false, this.retryable = false});
+  GatewayException(
+    this.message, {
+    this.isQuota = false,
+    this.retryable = false,
+  });
 
   final String message;
 
@@ -33,8 +115,42 @@ class AiGateway {
     http.Client? client,
     this.accountId = 'demo',
     this.plan = 'free',
-    this.timeout = const Duration(seconds: 90),
-  }) : _client = client ?? http.Client();
+    // توليد ثلاث صور بالتوازي يضاعف الزمن؛ ٩٠ ثانية كانت تكفي النص وحده.
+    this.timeout = const Duration(seconds: 150),
+    // الإعداد يُحقن ولا يُقرأ من الثوابت العامة داخل الدوال: ثابت
+    // String.fromEnvironment لا يمكن ضبطه وقت الاختبار، فقراءته في العمق
+    // تجعل المسار غير قابل للاختبار أصلاً.
+    bool? useSupabase,
+    String? supabaseUrl,
+    String? supabaseAnonKey,
+    String? merchantId,
+  }) : _client = client ?? http.Client(),
+       useSupabase = useSupabase ?? AppConfig.useSupabase,
+       supabaseUrl = supabaseUrl ?? AppConfig.supabaseUrl,
+       supabaseAnonKey = supabaseAnonKey ?? AppConfig.supabaseAnonKey,
+       merchantId = merchantId ?? AppConfig.merchantId;
+
+  /// هل يُستعمل عقل Supabase المنشور بدل منسّق Node المحلي؟
+  final bool useSupabase;
+  final String supabaseUrl;
+  final String supabaseAnonKey;
+  final String merchantId;
+
+  /// معرّف التاجر: المحقون إن وُجد، وإلا صاحب الجلسة المسجَّلة.
+  ///
+  /// كان يُقرأ من ‎--dart-define‎ وحده — وهو إعداد وقت بناء لا يعرف من
+  /// يستعمل التطبيق، فكان كل تاجر يُنسب إليه معرّف واحد أو لا يُنسب أصلًا.
+  /// وبعد أن قامت المصادقة صار صاحب الجلسة هو التاجر: `merchants.id` يشير
+  /// إلى `auth.users.id` فالمعرّفان واحد.
+  String get resolvedMerchantId {
+    if (merchantId.isNotEmpty) return merchantId;
+    try {
+      return supa.Supabase.instance.client.auth.currentUser?.id ?? '';
+    } catch (_) {
+      // الحزمة غير مهيّأة (اختبارات، أو إقلاع فاشل) — لا معرّف، ولا رمي.
+      return '';
+    }
+  }
 
   /// عنوان المنسّق. في التطوير المحلي: http://10.0.2.2:8899 لمحاكي أندرويد،
   /// أو http://localhost:8899 للويب وسطح المكتب.
@@ -46,16 +162,18 @@ class AiGateway {
   final http.Client _client;
 
   Map<String, String> get _headers => {
-        'content-type': 'application/json',
-        'x-account-id': accountId,
-        'x-account-plan': plan,
-      };
+    'content-type': 'application/json',
+    'x-account-id': accountId,
+    'x-account-plan': plan,
+  };
 
   /// المعاينة الرخيصة: نص + صورة خلفية. لا فيديو — الفيديو خلف بوابة الدفع.
   Future<PreviewResult> generatePreview(
     AdBrief brief, {
     bool includeImage = true,
   }) async {
+    if (useSupabase) return _previewViaSupabase(brief);
+
     final uri = Uri.parse('$baseUrl/api/generate/preview');
 
     late http.Response res;
@@ -66,9 +184,8 @@ class AiGateway {
             headers: _headers,
             body: jsonEncode({
               'productName': brief.productName,
-              if (brief.productDescription != null &&
-                  brief.productDescription!.trim().isNotEmpty)
-                'productDescription': brief.productDescription,
+              if (brief.description.trim().isNotEmpty)
+                'productDescription': brief.description,
               'tone': brief.tone,
               'platform': brief.platform,
               'includeImage': includeImage,
@@ -88,6 +205,242 @@ class AiGateway {
     }
 
     return _parse(res);
+  }
+
+  /// المعاينة عبر دالة `ad-copy` في Supabase — العقل المنشور.
+  ///
+  /// نصّ فقط: الصورة تأتي من دالة `ad-image` المنفصلة، فلا تُطلب هنا.
+  /// الصيغ تصل مرتّبة بدرجة الوكيل الناقد، ولكل واحدة درجتها وملاحظتها.
+  Future<PreviewResult> _previewViaSupabase(AdBrief brief) async {
+    // رسائل موجَّهة للتاجر لا للمطوِّر: من يقرأها على جهازه لا يملك إعادة
+    // البناء بـ‎--dart-define‎ ولا يعنيه أن يعرف ما هي.
+    if (supabaseUrl.isEmpty) {
+      throw GatewayException(
+        'تعذّر الوصول إلى الخادم. حدّث التطبيق إلى آخر إصدار.',
+      );
+    }
+    final merchant = resolvedMerchantId;
+    if (merchant.isEmpty) {
+      throw GatewayException('سجّل الدخول أولًا حتى تُحفظ إعلاناتك باسمك.');
+    }
+
+    // ad-magic لا ad-copy: السلسلة الكاملة في نداء واحد — كاتب ← ناقد ←
+    // ثلاث صور بالتوازي بحروف عربية مرسومة ومدقَّقة ← السجل. النصّ وحده
+    // كان يترك التصميم كله على عاتق الجهاز.
+    final uri = Uri.parse(
+      '${supabaseUrl.replaceAll(RegExp(r'/+$'), '')}'
+      '/functions/v1/ad-magic',
+    );
+
+    // وصف المنتج يُدمج في اسمه: دالة ad-copy تأخذ حقل منتج واحداً، وإسقاط
+    // الوصف يفقد أدقّ ما يكتبه التاجر عن سلعته.
+    final product = brief.description.trim().isEmpty
+        ? brief.productName
+        : '${brief.productName} — ${brief.description.trim()}';
+
+    // هوية العلامة تسافر مع الطلب: لون التاجر الصريح يغلب المستخرَج من
+    // صورة المنتج، وكلاهما خير من افتراضيات خادمٍ يجهل صاحب الإعلان.
+    final brandRgb = brief.brandColor ?? brief.paletteColor;
+    final brandName = brief.brandName?.trim() ?? '';
+
+    late http.Response res;
+    try {
+      res = await _client
+          .post(
+            uri,
+            headers: {
+              'content-type': 'application/json',
+              if (supabaseAnonKey.isNotEmpty) ...{
+                'apikey': supabaseAnonKey,
+                'authorization': 'Bearer $supabaseAnonKey',
+              },
+            },
+            body: jsonEncode({
+              'merchant_id': merchant,
+              'product': product,
+              'platform': brief.platform,
+              'tone': brief.tone,
+              if (brief.season != null) 'season': brief.season!.label,
+              if (brandName.isNotEmpty) 'brand_name': brandName,
+              if (brandRgb != null) ...{
+                'primary': primaryFromBrand(brandRgb),
+                'accent': accentFromBrand(brandRgb),
+              },
+              // نصّ أولًا: البطاقات تُعرض فورًا بالقوالب المحلية وصورة
+              // المنتج المحسَّنة على الجهاز، والمشهد السحابي يُولَّد عند
+              // الطلب لصيغةٍ اختارها التاجر — نداءان بدل عشرة، و١٥ ثانية
+              // بدل ٧٥، والمفتاح يُصرف على ما سيُنشر فعلًا لا على الكل.
+              'images': false,
+            }),
+          )
+          .timeout(timeout);
+    } on TimeoutException {
+      throw GatewayException(
+        'استغرق التوليد وقتاً أطول من المعتاد. حاول مرة أخرى.',
+        retryable: true,
+      );
+    } catch (_) {
+      throw GatewayException(
+        'تعذّر الوصول إلى الخدمة. تحقّق من اتصالك ثم أعد المحاولة.',
+        retryable: true,
+      );
+    }
+
+    Map<String, dynamic> json;
+    try {
+      json = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } catch (_) {
+      throw GatewayException('وصل رد غير مفهوم من الخدمة.');
+    }
+
+    if (res.statusCode != 200 || json['ok'] != true) {
+      throw GatewayException(
+        _arabicError(json),
+        retryable: res.statusCode >= 500,
+      );
+    }
+
+    final result = PreviewResult.fromAdCopyJson(json);
+    if (result.variants.isEmpty) {
+      throw GatewayException('لم تُنتج الخدمة أي صيغة. حاول بوصف أوضح للمنتج.');
+    }
+    return result;
+  }
+
+  /// صورة المنتج مضغوطة للإرسال في نداء المشهد.
+  ///
+  /// ٧٢٠ بكسل من أول تمريرة: المنتج يشغل ثلث الإعلان الأوسط فلا يستفيد
+  /// من أكثر، ورفعُ أضعافِ ذلك من جوال التاجر يقطع الاتصال قبل أن يصل.
+  /// وإن بقيت القصاصة ضخمة (PNG شفاف مفصّل) تُصغَّر ثانيةً — والإسقاط
+  /// آخر الدواء: مشهد بلا منتج خير من طلب يموت في الطريق.
+  Future<String?> _productB64(AdBrief brief) async {
+    const maxLen = 900000;
+    final bytes = brief.imageBytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    try {
+      var compact = await ImageStore.compressForStorage(bytes, maxWidth: 720);
+      var encoded = base64Encode(compact);
+      if (encoded.length > maxLen) {
+        compact = await ImageStore.compressForStorage(compact, maxWidth: 480);
+        encoded = base64Encode(compact);
+      }
+      return encoded.length <= maxLen ? encoded : null;
+    } catch (_) {
+      // الصورة إثراء لا شرط — تعذّر ضغطها لا يمنع التوليد.
+      return null;
+    }
+  }
+
+  /// مشهد بالذكاء لصيغة واحدة اختارها التاجر — جوهر «المفتاح عند الضرورة»:
+  /// نداء مخرجٍ واحد لما سيُنشر فعلًا بدل ستة نداءات لصور لم يُطلب أكثرها.
+  Future<SceneResult> generateScene(
+    AdBrief brief, {
+    required String headline,
+    String? body,
+    String? cta,
+  }) async {
+    if (supabaseUrl.isEmpty) {
+      throw GatewayException(
+        'تعذّر الوصول إلى الخادم. حدّث التطبيق إلى آخر إصدار.',
+      );
+    }
+    final uri = Uri.parse(
+      '${supabaseUrl.replaceAll(RegExp(r'/+$'), '')}'
+      '/functions/v1/ad-director',
+    );
+    final brandRgb = brief.brandColor ?? brief.paletteColor;
+    final productB64 = await _productB64(brief);
+
+    late http.Response res;
+    try {
+      res = await _client
+          .post(
+            uri,
+            headers: {
+              'content-type': 'application/json',
+              if (supabaseAnonKey.isNotEmpty) ...{
+                'apikey': supabaseAnonKey,
+                'authorization': 'Bearer $supabaseAnonKey',
+              },
+            },
+            body: jsonEncode({
+              // الهوية تُرسل ليأخذ التاجر حصّته الخاصّة.
+              //
+              // وغيابها لا يمنع النداء: الدالّة تنسب المجهول إلى حصّة
+              // صغيرة مشتركة بدل أن تردّه. وهذا مقصود — نسخٌ مثبَّتة
+              // على أجهزة لا ترسل المعرّف بعد، وردُّها يُعطّل الميزة
+              // عند من لم يحدّث عقوبةً على ذنبٍ لم يقترفه.
+              if (resolvedMerchantId.isNotEmpty)
+                'merchant_id': resolvedMerchantId,
+              'name': 'scene-${DateTime.now().millisecondsSinceEpoch}',
+              'headline': headline,
+              if (body != null && body.trim().isNotEmpty) 'subline': body,
+              if (cta != null && cta.trim().isNotEmpty) 'cta': cta,
+              'bg_prompt':
+                  'Professional vertical product photograph related to: '
+                  '${brief.productName}, rich moody backdrop with depth and '
+                  'warm color, dramatic lighting, not a plain white studio, '
+                  'clean space at top and bottom, no text, no letters, no logos',
+              'verify': true,
+              'quality': 'fast',
+              'storyboard': false,
+              if (brandRgb != null) ...{
+                'primary': primaryFromBrand(brandRgb),
+                'accent': accentFromBrand(brandRgb),
+              },
+              'product_b64': ?productB64,
+            }),
+          )
+          .timeout(timeout);
+    } on TimeoutException {
+      throw GatewayException(
+        'استغرق توليد المشهد وقتاً أطول من المعتاد. حاول مرة أخرى.',
+        retryable: true,
+      );
+    } catch (_) {
+      throw GatewayException(
+        'تعذّر الوصول إلى الخدمة. تحقّق من اتصالك ثم أعد المحاولة.',
+        retryable: true,
+      );
+    }
+
+    Map<String, dynamic> json;
+    try {
+      json = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    } catch (_) {
+      throw GatewayException('وصل رد غير مفهوم من الخدمة.');
+    }
+    final url = json['url'];
+    if (res.statusCode != 200 || json['ok'] != true || url is! String) {
+      throw GatewayException(
+        _arabicError(json),
+        retryable: res.statusCode >= 500,
+      );
+    }
+    return SceneResult(
+      url: url,
+      verified:
+          (json['verify'] as Map<String, dynamic>?)?['all_present'] as bool?,
+    );
+  }
+
+  /// رسائل دالة ad-copy رموز تقنية؛ نترجم المعروف منها ونمرّر الباقي.
+  String _arabicError(Map<String, dynamic> json) {
+    final code = (json['error'] ?? json['step'] ?? '').toString();
+    if (code.startsWith('no_api_key')) {
+      return 'مفتاح المزوّد غير مضبوط في بيئة الدالة.';
+    }
+    if (code.startsWith('openrouter_all_failed')) {
+      return 'كل النماذج المجانية مزدحمة الآن. أعد المحاولة بعد قليل.';
+    }
+    if (code == 'daily_quota') {
+      return 'وصلت حدّ توليدات اليوم لحسابك — يتجدد تلقائيًا خلال ساعات.';
+    }
+    if (code.contains('_429') || code.contains('quota')) {
+      return 'تجاوزت حصة المزوّد. أعد المحاولة لاحقاً.';
+    }
+    if (code == 'writer') return 'لم يُنتج النموذج صيغاً صالحة. أعد المحاولة.';
+    return code.isEmpty ? 'حدث خطأ غير متوقع.' : code;
   }
 
   Future<QuotaStatus> fetchUsage() async {
@@ -113,7 +466,9 @@ class AiGateway {
     if (res.statusCode == 200) {
       final result = PreviewResult.fromJson(json);
       if (result.variants.isEmpty) {
-        throw GatewayException('لم تُنتج الخدمة أي صيغة. حاول بوصف أوضح للمنتج.');
+        throw GatewayException(
+          'لم تُنتج الخدمة أي صيغة. حاول بوصف أوضح للمنتج.',
+        );
       }
       return result;
     }

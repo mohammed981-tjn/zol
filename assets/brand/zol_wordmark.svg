@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 332 180" width="332" height="180" role="img" aria-label="zol">
+  <title>zol</title>
+  <!--
+    شعار zol — النسخة الأفقية (wordmark).
+    الفكرة: حروف هندسية جريئة، وحرف o حلقة تحتضن «شرارة» الذكاء الاصطناعي
+    التي تحوّل الفكرة إلى إعلان. ألوان الهوية: كحلي + مرجاني + ذهبي.
+  -->
+  <defs>
+    <linearGradient id="sparkGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F9E795"/>
+      <stop offset="100%" stop-color="#F96167"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="#1F2A5E">
+    <!-- z: شريط علوي + قطر + شريط سفلي -->
+    <rect x="40" y="60" width="90" height="22" rx="4"/>
+    <polygon points="108,60 130,60 62,150 40,150"/>
+    <rect x="40" y="128" width="90" height="22" rx="4"/>
+
+    <!-- o: حلقة -->
+    <circle cx="200" cy="105" r="34" fill="none" stroke="#1F2A5E" stroke-width="22"/>
+
+    <!-- l: عمود بامتداد علوي -->
+    <rect x="262" y="20" width="22" height="130" rx="6"/>
+  </g>
+
+  <!-- الشرارة داخل حرف o -->
+  <path d="M200,86 Q204,101 219,105 Q204,109 200,124 Q196,109 181,105 Q196,101 200,86 Z"
+        fill="url(#sparkGrad)"/>
+</svg>

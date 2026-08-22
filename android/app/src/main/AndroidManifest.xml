@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- تحميل خرائط OpenStreetMap وطلبات الشبكة -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- تحديد موقع العميل لاختيار عنوان التوصيل على الخريطة -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <application
-        android:label="adcraft_marketplace"
+        android:label="zol"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

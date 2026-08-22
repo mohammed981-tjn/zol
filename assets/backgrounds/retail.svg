@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <g id="bag" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 18 L44 18 L40 54 L10 54 Z"/>
+      <path d="M14 18 Q14 2 25 2 Q36 2 36 18"/>
+    </g>
+  </defs>
+  <g opacity="0.9">
+    <use href="#bag" x="30" y="26" transform="rotate(-6 55 72)"/>
+    <use href="#bag" x="250" y="16" transform="rotate(10 275 62)"/>
+    <use href="#bag" x="130" y="150" transform="rotate(-10 155 196)"/>
+    <use href="#bag" x="300" y="180" transform="rotate(8 325 226)"/>
+    <use href="#bag" x="30" y="270" transform="rotate(6 55 316)"/>
+    <use href="#bag" x="210" y="290" transform="rotate(-8 235 336)"/>
+    <use href="#bag" x="330" y="290" transform="rotate(12 355 336)"/>
+  </g>
+</svg>

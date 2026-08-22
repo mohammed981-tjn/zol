@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ملفّات تجارب مؤقّتة لوكلاء الفحص — لا تُشحن
+test/scratch/

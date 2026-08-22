@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <g id="wrench" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 8 A14 14 0 1 0 30 30 L52 52"/>
+      <path d="M4 4 L14 14 M14 4 L4 14"/>
+    </g>
+  </defs>
+  <g opacity="0.9">
+    <use href="#wrench" x="30" y="26" transform="rotate(-10 60 60)"/>
+    <use href="#wrench" x="250" y="18" transform="rotate(20 280 52)"/>
+    <use href="#wrench" x="130" y="150" transform="rotate(-16 160 184)"/>
+    <use href="#wrench" x="300" y="180" transform="rotate(12 330 214)"/>
+    <use href="#wrench" x="30" y="270" transform="rotate(8 60 304)"/>
+    <use href="#wrench" x="210" y="290" transform="rotate(-12 240 324)"/>
+    <use href="#wrench" x="330" y="290" transform="rotate(16 360 324)"/>
+  </g>
+</svg>

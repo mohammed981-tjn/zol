@@ -1,11 +1,11 @@
 {
-    "name": "adcraft_marketplace",
-    "short_name": "adcraft_marketplace",
+    "name": "zol — سوق الدعاية والإعلان",
+    "short_name": "zol",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "AdCraft AI Marketplace - سوق الدعاية والإعلان الشامل",
+    "description": "zol — سوق الدعاية والإعلان الشامل",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

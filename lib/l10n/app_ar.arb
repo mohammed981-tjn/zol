@@ -1,0 +1,457 @@
+{
+  "@@locale": "ar",
+  "appTitle": "zol",
+  "@appTitle": {
+    "description": "اسم التطبيق — لا يُترجَم"
+  },
+  "navHome": "الرئيسية",
+  "navMarket": "السوق",
+  "navTemplates": "القوالب",
+  "navMyAds": "إعلاناتي",
+  "navOrders": "طلباتي",
+  "navSettings": "الإعدادات",
+  "homeTagline": "سوق الدعاية والإعلان الشامل",
+  "homeSubtitle": "من الفكرة إلى الإعلان المطبوع والمُوصَّل خلال دقائق",
+  "homeCta": "أنشئ إعلانك الآن",
+  "homeCtaHint": "معاينة فورية في أقل من 90 ثانية",
+  "homeStatAds": "إعلان محفوظ",
+  "homeStatOrders": "طلب طباعة",
+  "homeWelcome": "مرحبًا، {name} 👋",
+  "@homeWelcome": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "templatesSearchHint": "ابحث في القوالب — ستوري، بنر، كرت…",
+  "templatesEmpty": "لا توجد قوالب مطابقة لبحثك",
+  "templatesKicker": "ابدأ من قالب",
+  "templatesTitle": "اختر الشكل الذي تريده",
+  "templatesSampleProduct": "اسم منتجك",
+  "templatesSampleTone": "حماسي",
+  "templatesPrintable": "قابل للطباعة",
+  "templatesTrending": "🔥 رائج",
+  "myAdsTrash": "سلة المهملات",
+  "myAdsEmptyTitle": "مكتبتك فارغة",
+  "myAdsEmptyBody": "احفظ النسخ التي تعجبك من «شاشة السحر» لتجدها هنا جاهزة لإعادة الاستخدام أو الطباعة.",
+  "myAdsKicker": "المكتبة",
+  "myAdsTitle": "إعلاناتك المحفوظة",
+  "myAdsOpenHint": "اضغط لفتح التصميم وإعادة تصديره أو طباعته",
+  "myAdsCopyText": "نسخ النص",
+  "myAdsDelete": "حذف",
+  "myAdsCopied": "تم نسخ النص الإعلاني",
+  "myAdsMovedToTrash": "نُقل الإعلان إلى سلة المهملات",
+  "actionUndo": "تراجع",
+  "ordersEmptyTitle": "لا توجد طلبات بعد",
+  "ordersEmptyBody": "عند اختيار «اطبعه وصلّه» بعد توليد إعلانك، سيظهر الطلب هنا مع خط زمني لتتبع حالته.",
+  "ordersKicker": "التتبع",
+  "ordersTitle": "حالة طلبات الطباعة",
+  "ordersDeliverTo": "التوصيل إلى: {address}",
+  "@ordersDeliverTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersShop": "المطبعة: {shop}",
+  "@ordersShop": {
+    "placeholders": {
+      "shop": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersPaidByCard": "مدفوع بالبطاقة ✓",
+  "ordersCashOnDelivery": "الدفع عند الاستلام",
+  "ordersShowOnMap": "عرض على الخريطة",
+  "ordersSimulate": "محاكاة التقدم (تجريبي)",
+  "trashTitle": "سلة المهملات",
+  "trashEmptyAction": "إفراغ السلة",
+  "trashEmptyTitle": "سلة المهملات فارغة",
+  "trashEmptyBody": "الإعلانات التي تحذفها من «إعلاناتي» تبقى هنا لمدة {days} يومًا قبل حذفها نهائيًا،\nوتقدر تسترجعها في أي وقت قبل ذلك.",
+  "@trashEmptyBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashKicker": "استعادة أو حذف نهائي",
+  "trashCount": "{count, plural, =1{إعلان واحد في السلة} =2{إعلانان في السلة} few{{count} إعلانات في السلة} other{{count} إعلانًا في السلة}}",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashConfirmTitle": "إفراغ السلة نهائيًا؟",
+  "trashConfirmBody": "{count, plural, =1{سيُحذف إعلان واحد نهائيًا ولا يمكن التراجع.} =2{سيُحذف إعلانان نهائيًا ولا يمكن التراجع.} few{سيُحذف {count} إعلانات نهائيًا ولا يمكن التراجع.} other{سيُحذف {count} إعلانًا نهائيًا ولا يمكن التراجع.}}",
+  "@trashConfirmBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "actionCancel": "إلغاء",
+  "trashConfirmAction": "إفراغ نهائيًا",
+  "trashExpiringSoon": "سيُحذف نهائيًا قريبًا",
+  "trashExpiresIn": "يُحذف نهائيًا خلال {days} يومًا",
+  "@trashExpiresIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRestore": "استعادة",
+  "trashDeleteForever": "حذف نهائي",
+  "marketTitle": "السوق",
+  "marketSearchHint": "ابحث عن مصوّر، مطبعة، مصمّم…",
+  "marketClearSearch": "مسح البحث",
+  "marketAll": "الكل",
+  "marketAllCities": "كل المدن",
+  "marketEmptyTitle": "لا مزوّد يطابق بحثك",
+  "marketEmptyBody": "جرّب مدينة أخرى أو أزل المرشّحات",
+  "marketClearFilters": "إزالة المرشّحات",
+  "marketVerified": "موثّق",
+  "marketPriceFrom": "من {price} ر.س",
+  "@marketPriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "marketOnRequest": "حسب الطلب",
+  "marketRespondsIn": "يردّ خلال {hours} ساعات",
+  "@marketRespondsIn": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "marketRatingSemantics": "التقييم {rating} من ٥، {reviews} مراجعة",
+  "@marketRatingSemantics": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "reviews": {
+        "type": "int"
+      }
+    }
+  },
+  "marketReviewsCount": "({reviews} مراجعة)",
+  "@marketReviewsCount": {
+    "placeholders": {
+      "reviews": {
+        "type": "int"
+      }
+    }
+  },
+  "storefrontMine": "متجري",
+  "storefrontNamed": "متجر {store}",
+  "@storefrontNamed": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "storefrontEmptyHint": "اعرض هويتك وأعمالك — ابدأ بحفظ إعلان",
+  "storefrontAdsCount": "واجهة عرضك: {count, plural, =1{إعلان واحد} =2{إعلانان} few{{count} إعلانات} other{{count} إعلانًا}}",
+  "@storefrontAdsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storefrontShare": "شارك واجهتك",
+  "storefrontEmptyTitle": "واجهتك جاهزة وتنتظر أول عمل",
+  "storefrontEmptyBody": "كل إعلان تحفظه من شاشة السحر يظهر هنا معروضًا.",
+  "storefrontShowcase": "المعروض ({count})",
+  "@storefrontShowcase": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storefrontShareEmpty": "احفظ إعلانًا أولًا لتصير واجهتك قابلة للمشاركة",
+  "storefrontSharePending": "الرابط العام لواجهة {store} قيد التجهيز",
+  "@storefrontSharePending": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "storefrontHarmony": "الانسجام: {scheme}",
+  "@storefrontHarmony": {
+    "placeholders": {
+      "scheme": {
+        "type": "String"
+      }
+    }
+  },
+  "storefrontBrandColor": "لون العلامة",
+  "storefrontSupportColor": "لون مساند",
+  "providerPrice": "السعر",
+  "providerResponseTime": "زمن الردّ",
+  "providerResponseHours": "~{hours} ساعات",
+  "@providerResponseHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "providerStatus": "الحالة",
+  "providerWorks": "أعمال سابقة",
+  "providerRequestQuote": "اطلب عرض سعر",
+  "providerDisclaimer": "طلبك يصل المزوّد المسجَّل مباشرة. ومزوّدو شبكة المطابع تصلهم رسالتك من زرّ «أرسله بنفسك».",
+  "providerReviewsCount": "({reviews} مراجعة)",
+  "@providerReviewsCount": {
+    "placeholders": {
+      "reviews": {
+        "type": "int"
+      }
+    }
+  },
+  "printPricesNote": "الأسعار لكل وحدة قبل التوصيل ({delivery}) وضريبة القيمة المضافة {vat}٪.",
+  "@printPricesNote": {
+    "placeholders": {
+      "delivery": {
+        "type": "String"
+      },
+      "vat": {
+        "type": "int"
+      }
+    }
+  },
+  "printOrder": "اطلب",
+  "printNeedsDesign": "صمّم إعلانًا واحفظه أولًا — الطباعة تحتاج تصميمًا",
+  "printWhichDesign": "أيّ تصميم تطبع؟",
+  "marketNewProvider": "جديد — بلا تقييمات بعد",
+  "providerSignupTitle": "سجّل خدمتك في السوق",
+  "providerSignupIntro": "اعرض خدمتك على تجّار zol. التسجيل مجاني، والمراجعة بشرية وتستغرق يومًا أو يومين — لا يظهر إدراجك في السوق قبلها.",
+  "providerSignupKind": "نوع الخدمة",
+  "providerSignupName": "اسم النشاط",
+  "providerSignupNameError": "اكتب اسمًا من حرفين على الأقل",
+  "providerSignupCity": "المدينة",
+  "providerSignupCityError": "اكتب اسم المدينة",
+  "providerSignupTagline": "ماذا تقدّم؟",
+  "providerSignupTaglineHelp": "سطر واحد يقول ما تجيده — لا شعارًا تسويقيًّا",
+  "providerSignupTaglineError": "اكتب عشرة أحرف على الأقل ليفهم التاجر خدمتك",
+  "providerSignupPrice": "أقلّ سعر بالريال (اختياري)",
+  "providerSignupPriceHelp": "اتركه فارغًا إن كانت خدمتك «حسب الطلب»",
+  "providerSignupPriceError": "اكتب رقمًا صحيحًا",
+  "providerSignupHours": "زمن الردّ بالساعات (اختياري)",
+  "providerSignupHoursHelp": "متوسط ما تستغرقه للردّ على طلب",
+  "providerSignupHoursError": "اكتب عدد ساعات بين ١ و٧٢٠",
+  "providerSignupWorks": "أعمال سابقة (اختياري)",
+  "providerSignupWorksHelp": "عنوان كل عمل في سطر — حتى اثني عشر عملًا",
+  "providerSignupSubmit": "أرسل للمراجعة",
+  "providerSignupReviewNote": "التوثيق (الشارة الذهبية) يُمنح بعد مراجعة سجلك التجاري، ولا يُطلب من هنا.",
+  "providerSignupSent": "وصل طلبك — سنراجعه ونبلغك",
+  "providerSignupDuplicate": "لديك إدراج بهذا النوع من الخدمة بالفعل",
+  "providerSignupFailed": "تعذّر الإرسال — تحقّق من اتصالك وحاول مجددًا",
+  "providerSignupNeedsAccount": "سجّل حسابك أولًا لتسجيل خدمتك في السوق",
+  "providerSignupOneListing": "إدراج واحد لكل نوع خدمة. لتعديل بياناتك أو إضافة نوع آخر، راسلنا من الإعدادات.",
+  "marketJoin": "سجّل خدمتك",
+  "wishHint": "اكتب ما تريد… مثال: استاند رول بخصم ٣٠٪ وفخم",
+  "wishRun": "نفّذ",
+  "wishFailed": "تعذّر تنفيذ الطلب. حاول مجددًا.",
+  "roleHeadline": "العنوان",
+  "roleSubhead": "السطر الثانوي",
+  "roleProduct": "المنتج",
+  "roleCta": "زرّ الحثّ",
+  "roleBadge": "الشارة",
+  "roleLogo": "الشعار",
+  "roleTags": "الهاشتاقات",
+  "roleShape": "شكل",
+  "roleOrnament": "الزخرفة",
+  "guideTitle": "دليل الاستخدام",
+  "shopPanelTitle": "لوحة المطبعة",
+  "orderNoShopYet": "لا مطبعة معتمدة تخدم موقعك بعد. صمّم واحفظ الآن، ويمكنك طلب عرض سعر من تبويب السوق.",
+  "orderShopLacksProduct": "مطبعة {shop} لا تقدّم {product} حاليًا. جرّب منتجًا آخر أو اطلب عرض سعر من السوق.",
+  "orderQuoteFailed": "تعذّر تسعير الطلب الآن. تحقّق من اتصالك وحاول ثانية.",
+  "orderArtworkCaptureFailed": "تعذّر تجهيز ملفّ التصميم على هذا الجهاز.",
+  "orderArtworkUploadFailed": "تعذّر رفع ملفّ التصميم. سجّل الدخول ثم أعد المحاولة.",
+  "orderPaymentIncomplete": "لم يكتمل الدفع. طلبك محفوظ غير مدفوع ويمكنك إكماله.",
+  "orderNeedsAccount": "يلزم تسجيل الدخول قبل طلب الطباعة — الطلب يُنسب إلى صاحبه.",
+  "orderOffline": "تعذّر الوصول إلى الخادم. لم يُنشأ طلب ولم يُقبض شيء.",
+  "orderShopUnavailable": "المطبعة غير متاحة الآن.",
+  "orderProductUnavailable": "هذا المنتج غير متاح لدى المطبعة.",
+  "orderBelowMinQty": "الكمية أقل من الحدّ الأدنى لدى المطبعة.",
+  "orderCreateFailed": "تعذّر إنشاء الطلب. لم يُقبض شيء.",
+  "orderPriceChangedTitle": "تغيّر السعر",
+  "orderPriceChangedBody": "سعر المطبعة {actual} بدل {shown} المعروض. المبلغ المعروض تقديريّ، والمعتمد ما تسعّره المطبعة.",
+  "commonCancel": "إلغاء",
+  "commonContinue": "متابعة",
+  "priceVatIncluded": "شامل ضريبة القيمة المضافة {amount}",
+  "pricePlatformFee": "رسم المنصّة",
+  "@orderShopLacksProduct": {
+    "placeholders": { "shop": {}, "product": {} }
+  },
+  "@orderPriceChangedBody": {
+    "placeholders": { "actual": {}, "shown": {} }
+  },
+  "@priceVatIncluded": {
+    "placeholders": { "amount": {} }
+  },
+  "shopPanelHeading": "لوحة المطبعة قيد البناء",
+  "shopPanelBody": "طوابير الطباعة وحالاتها تحتاج صلاحية مطبعة في الخادم، وهي المرحلة التالية. ولم يصل طلب طباعة إلى أي مطبعة بعد، فلا شيء يُعرض هنا اليوم إلا هذا السطر الصادق.",
+  "shopPanelOpenMerchant": "افتح واجهة التاجر",
+  "shopPanelEntrySubtitle": "طوابير الطباعة وحالاتها",
+  "guideUnavailable": "تعذّر فتح الدليل على هذا الجهاز.",
+  "editorTitle": "تحرير التصميم",
+  "editorResizeHandle": "مقبض التحجيم",
+  "editorSpecHint": "المس عنصرًا لتحدّده، ثم اسحبه لتحريكه أو اسحب المقبض لتحجيمه",
+  "editorProductHint": "اسحب لتحريك المنتج، وباعد إصبعيك لتكبيره",
+  "editorNoProductHint": "أضف صورة منتج لتتمكن من تحريكها",
+  "editorResetProduct": "إرجاع المنتج لوضعه",
+  "editorResetLayout": "إرجاع التخطيط كما وُلِّد",
+  "editorEditText": "تحرير النص",
+  "editorEditElement": "تحرير العنصر المحدّد",
+  "editorElementText": "نصّ العنصر",
+  "editorFieldHeadline": "العنوان",
+  "editorFieldBody": "النص الفرعي",
+  "editorFieldCta": "زر الدعوة",
+  "editorApply": "تطبيق",
+  "editorSaveChanges": "حفظ التعديلات",
+  "editorDone": "تم",
+  "executeEditTemplate": "تحرير التصميم (نص وموضع المنتج)",
+  "executeEditSpec": "تحرير التصميم (حرّك العناصر وغيّر نصّها)",
+  "executeGeneratedNote": "هذا تخطيط ركّبه الذكاء لطلبك، فلا ينطبق عليه اختيار القوالب. حرّكه كما تشاء أو اطلب تخطيطًا آخر من شاشة السحر.",
+  "wishRefineChip": "عدّل هذا التصميم",
+  "wishRefineHint": "اكتب ما تريد تغييره… مثال: كبّر العنوان واجعل الخلفية فاتحة",
+  "wishRead": "فهمتُ",
+  "wishReadDiscount": "خصم {pct}٪",
+  "wishOfferDiscount": "خصم",
+  "wishOfferOpening": "افتتاح",
+  "wishOfferNewItem": "صنف جديد",
+  "wishOfferHiring": "توظيف",
+  "wishOfferDelivery": "توصيل",
+  "wishOfferSeason": "موسم",
+  "wishOfferGeneral": "إعلان عام",
+  "@wishReadDiscount": {
+    "placeholders": { "pct": { "type": "int" } }
+  },
+  "wishPresetDiscount": "إعلان خصم ٥٠٪ لنهاية الأسبوع",
+  "wishPresetOpening": "افتتاح فرع جديد",
+  "wishPresetNewItem": "وصل منتج جديد",
+  "wishPresetHiring": "نطلب موظفين",
+  "wishPresetDelivery": "توصيل مجاني اليوم",
+  "wishPresetRamadan": "عرض رمضان",
+  "quoteSheetTitle": "اطلب تسعيرة",
+  "quoteNeedLabel": "ما الذي تحتاجه؟",
+  "quoteNeedHelp": "اكتب المطلوب بوضوح: الكمّية والمقاس والموعد إن وُجد",
+  "quoteNeedError": "اكتب عشرة أحرف على الأقل ليفهم المزوّد طلبك",
+  "quoteBudgetLabel": "الميزانية التقريبية بالريال (اختياري)",
+  "quoteContactLabel": "كيف يردّ عليك؟",
+  "quoteContactHelp": "رقم واتساب أو بريد — بلا وسيلة ردّ لا تصلك تسعيرة",
+  "quoteContactError": "اكتب رقمًا أو بريدًا صحيحًا",
+  "quoteSend": "أرسل الطلب",
+  "quoteShare": "أرسله بنفسك",
+  "quoteDelivered": "وصل طلبك إلى المزوّد",
+  "quoteOffline": "تعذّر الإرسال عبر التطبيق — أرسِله بنفسك من الزرّ أدناه",
+  "quoteNeedsAccount": "سجّل حسابك أوّلًا ليُنسب الطلب إليك ويصلك الردّ",
+  "quoteNotRoutable": "هذا المزوّد من شبكة المطابع ولا يستقبل عبر التطبيق — انسخ الطلب وأرسله إليه",
+  "quoteCopied": "نُسخ نصّ الطلب",
+  "settingsLanguage": "اللغة",
+  "settingsLanguageSystem": "لغة الجهاز",
+  "settingsLanguageArabic": "العربية",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageNote": "تغيير اللغة يغيّر واجهة التطبيق فقط. نصّ الإعلان يبقى بلغة جمهورك.",
+  "onboardingSkip": "تخطٍّ",
+  "onboardingNext": "التالي",
+  "onboardingStart": "ابدأ الآن",
+  "onboardingPickFirst": "اختر نشاطك للمتابعة",
+  "onboardingT1": "إعلانك يولد في ثوانٍ",
+  "onboardingB1": "ارفع صورة منتجك واختر النبرة والمنصة، ونحن نخرج لك نصًا وتصميمًا جاهزين للنشر.",
+  "onboardingT2": "اطبعه عند أقرب مطبعة",
+  "onboardingB2": "بنرات، استيكرات، كروت ورول أب بأسعار فورية — ويُسند طلبك تلقائيًا لأقرب مطبعة شريكة لموقعك.",
+  "onboardingT3": "ويصلك حتى الباب",
+  "onboardingB3": "حدّد موقعك على الخريطة وتابع طلبك خطوة بخطوة حتى يصل بين يديك.",
+  "onboardingCategoryTitle": "ما نشاطك؟",
+  "onboardingCategoryBody": "نكتب لك نصوصًا بمفردات مجالك — لا جملًا عامة تصلح لأي شيء.",
+  "onboardingCategoryHint": "يمكنك تغييره لاحقًا من الإعدادات",
+  "authEmailError": "أدخل بريدًا إلكترونيًا صحيحًا",
+  "authPasswordError": "كلمة المرور 6 أحرف على الأقل",
+  "authNameError": "أدخل اسمك",
+  "authStoreError": "أدخل اسم متجرك أو نشاطك",
+  "authTitleLogin": "تسجيل الدخول",
+  "authTitleSignup": "إنشاء حساب تاجر",
+  "authIntroLogin": "سجّل دخولك لمتابعة إعلاناتك وطلباتك",
+  "authIntroSignup": "أنشئ حساب تاجر لحفظ إعلاناتك وتتبع طلباتك",
+  "authFieldName": "الاسم *",
+  "authHintName": "اسمك الكامل",
+  "authFieldStore": "اسم المتجر *",
+  "authHintStore": "مثال: محمصة الفجر",
+  "authFieldEmail": "البريد الإلكتروني *",
+  "authFieldPassword": "كلمة المرور *",
+  "authHintPassword": "6 أحرف على الأقل",
+  "authSubmitLogin": "دخول",
+  "authSubmitSignup": "إنشاء الحساب",
+  "authSwitchToSignup": "ليس لديك حساب؟ أنشئ حسابًا جديدًا",
+  "authSwitchToLogin": "لديك حساب بالفعل؟ سجّل دخولك",
+  "authWelcomeBack": "مرحبًا بعودتك، {name}!",
+  "@authWelcomeBack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authAccountCreated": "تم إنشاء حسابك بنجاح، {name}!",
+  "@authAccountCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wishLocalOnly": "صُمّم على جهازك — تعذّر الوصول إلى الذكاء السحابي",
+  "magicTitle": "شاشة السحر",
+  "magicRegenerate": "إعادة توليد",
+  "magicFailed": "تعذّر إكمال التوليد. حاول مجددًا.",
+  "magicSceneFailed": "تعذّر توليد المشهد. حاول مجددًا.",
+  "magicQuotaTitle": "انتهت حصتك لهذا الشهر",
+  "magicErrorTitle": "تعذّر التوليد",
+  "magicRetry": "إعادة المحاولة",
+  "magicBackAndEdit": "العودة وتعديل الوصف",
+  "magicWorking": "الذكاء الاصطناعي يعمل على إعلانك…",
+  "magicStepKicker": "الخطوة 2 من 3",
+  "magicPickBest": "اختر النسخة الأنسب",
+  "magicSaveAndPublish": "حفظ ونشر",
+  "magicPrintAndDeliver": "اطبعه وصلّه",
+  "magicSavedToLibrary": "تم الحفظ في «إعلاناتي»",
+  "magicCopied": "تم نسخ النص الإعلاني",
+  "magicRealScene": "مشهد واقعي بالذكاء",
+  "magicAnotherScene": "مشهد آخر",
+  "magicInviteTitle": "صِف التصميم الذي تريده",
+  "magicInviteBody": "اكتب في الصندوق أسفل الشاشة ما تريده بلغتك — يظهر التخطيط فورًا على جهازك، ثم يمكنك طلب مشهد بالذكاء أو تعديل ما ظهر.",
+  "magicInviteSamples": "إعلان خصم ٣٠٪ لمقهى مختص، ألوان دافئة|إعلان افتتاح صالون، ستوري، فخم وهادئ|عرض توظيف: نبحث عن كاشير، مربّع",
+  "uploadPhotoOptionalHint": "اختياري — أو تابع بلا صورة وصِف تصميمك في شاشة السحر",
+  "moodPickerTitle": "مزاج الألوان",
+  "moodFromBrand": "من لون علامتي",
+  "magicCopyText": "نسخ النص",
+  "magicSave": "حفظ",
+  "magicMatchScore": "توافق {score}%",
+  "@magicMatchScore": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "magicNextComposition": "تكوين آخر",
+  "magicRegenerateConfirm": "إعادة التوليد تمسح التصاميم التي صنعتها بطلبك. أتريد المتابعة؟"
+}

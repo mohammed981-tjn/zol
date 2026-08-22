@@ -9,6 +9,10 @@ class CopyVariant {
     required this.body,
     required this.cta,
     required this.hashtags,
+    this.score,
+    this.fixNote,
+    this.imageUrl,
+    this.imageVerified,
   });
 
   final String angle;
@@ -16,6 +20,19 @@ class CopyVariant {
   final String body;
   final String cta;
   final List<String> hashtags;
+
+  /// درجة الوكيل الناقد من 10 — يعيدها عقل Supabase لكل صيغة.
+  /// تبقى null مع منسّق Node لأنه يرشّح الأفضل ولا يمنح أرقاماً.
+  final double? score;
+
+  /// ملاحظة المراجع: ما الذي يرفع هذه الصيغة لو عُدِّلت.
+  final String? fixNote;
+
+  /// الإعلان المولَّد صورةً كاملة (مشهد + حروف عربية مرسومة) من ad-magic.
+  final String? imageUrl;
+
+  /// حكم مدقّق الحروف: هل قُرئت النصوص من الصورة كما كُتبت؟
+  final bool? imageVerified;
 
   factory CopyVariant.fromJson(Map<String, dynamic> json) {
     return CopyVariant(
@@ -26,6 +43,10 @@ class CopyVariant {
       hashtags: ((json['hashtags'] as List?) ?? const [])
           .whereType<String>()
           .toList(growable: false),
+      score: (json['score_total'] as num?)?.toDouble(),
+      fixNote: json['fix_note'] as String?,
+      imageUrl: json['image_url'] as String?,
+      imageVerified: json['image_verified'] as bool?,
     );
   }
 
@@ -36,6 +57,10 @@ class CopyVariant {
       body: body ?? this.body,
       cta: cta ?? this.cta,
       hashtags: hashtags,
+      score: score,
+      fixNote: fixNote,
+      imageUrl: imageUrl,
+      imageVerified: imageVerified,
     );
   }
 }
@@ -93,6 +118,25 @@ class PreviewResult {
       default:
         return 4 / 5;
     }
+  }
+
+  /// شكل ردّ دالة `ad-copy` في Supabase.
+  ///
+  /// تختلف عن منسّق Node في ثلاثة أشياء: الصيغ تصل مرتّبة بالدرجة تنازلياً
+  /// (فالأفضل دائماً عند 0)، ولكل صيغة درجة وملاحظة مراجع، ولا تُرجع صورة
+  /// ولا حصة — الصورة من دالة `ad-image` والحصة تُدار خارجها.
+  factory PreviewResult.fromAdCopyJson(Map<String, dynamic> json) {
+    return PreviewResult(
+      variants: ((json['variants'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((v) => CopyVariant.fromJson(v.cast<String, dynamic>()))
+          .toList(growable: false),
+      bestIndex: 0,
+      critiqued: ((json['variants'] as List?) ?? const []).whereType<Map>().any(
+        (v) => v['score_total'] != null,
+      ),
+      quota: const QuotaStatus(used: 0, limit: 0),
+    );
   }
 
   factory PreviewResult.fromJson(Map<String, dynamic> json) {
